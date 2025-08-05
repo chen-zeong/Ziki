@@ -1,0 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  margin: 0;
+  overflow: hidden;
+}
+
+html {
+  overflow: hidden;
+}
+
+/* 隐藏所有滚动条 */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom styles for quality range input */
+input[type="range"].quality-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 9999px;
+  outline: none;
+  background: transparent;
+}
+
+input[type="range"].quality-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 12px;
+  cursor: pointer;
+  animate: 0.2s;
+  background: linear-gradient(to right, #f59e0b, #d97706);
+  border-radius: 9999px;
+}
+
+html.dark input[type="range"].quality-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #f59e0b, #fbbf24);
+}
+
+input[type="range"].quality-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  width: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  margin-top: -8px;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease-in-out;
+}
+
+input[type="range"].quality-slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+html.dark input[type="range"].quality-slider::-webkit-slider-thumb {
+  background: #1f2937;
+  border: 2px solid #4b5563;
+}
+
+/* Comparison slider styles */
+.comparison-slider {
+  --position: 50%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.comparison-slider .after-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  clip-path: polygon(var(--position) 0, 100% 0, 100% 100%, var(--position) 100%);
+}
+
+.comparison-slider .slider {
+  position: absolute;
+  top: 0;
+  left: var(--position);
+  transform: translateX(-50%);
+  width: 4px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.9);
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+.comparison-slider .slider-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+}
+
+.comparison-slider .slider:hover .slider-handle {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.comparison-slider img {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+
+.comparison-slider .absolute {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+
+/* 允许输入框和可编辑元素选中 */
+input, textarea, select, [contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
