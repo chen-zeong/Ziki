@@ -2,7 +2,7 @@
   <div class="relative" ref="selectRef">
     <button
       type="button"
-      class="relative w-full cursor-pointer rounded-lg bg-white dark:bg-gray-800 py-3 pl-4 pr-10 text-left shadow-md border border-gray-200 dark:border-gray-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all duration-200 hover:shadow-lg"
+      class="relative w-full cursor-pointer rounded-lg bg-white dark:bg-gray-800 py-3 pl-4 pr-10 text-left border border-gray-200 dark:border-gray-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all duration-200"
       @click="toggleDropdown"
       :class="{
         'ring-2 ring-amber-500 border-amber-500': isOpen
@@ -38,7 +38,7 @@
     >
       <div
         v-if="isOpen"
-        class="absolute z-[9999] mt-2 w-full rounded-lg bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-600 max-h-60 overflow-auto custom-scrollbar"
+        class="absolute z-[99999] mt-2 w-full rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 max-h-60 overflow-auto custom-scrollbar"
       >
         <div class="py-1">
           <div

@@ -1,5 +1,5 @@
 <template>
-  <div class="comparison-container">
+  <div class="comparison-container overflow-hidden h-full">
     <div class="flex justify-between items-center mb-4">
       <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 truncate">
         {{ title || '处理与预览' }}
@@ -69,7 +69,8 @@
     <Transition name="modal" appear>
       <div 
         v-if="isFullscreen" 
-        class="fixed inset-0 bg-white backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        style="background-color: #f9fafb;"
         @click="closeFullscreen"
       >
         <!-- 模态框内容容器 -->
@@ -81,7 +82,7 @@
           <button 
             @click="closeFullscreen" 
             class="absolute top-2 right-2 z-50 w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-300 hover:scale-125 border-2 border-white border-opacity-30"
-            style="box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 0 0 3px rgba(255,255,255,0.2); background-color: #ffffff; background-image: none; border: none; outline: none;"
+            style="box-shadow: 0 0 0 3px rgba(255,255,255,0.2); background-color: #ffffff; background-image: none; border: none; outline: none;"
             title="关闭全屏 (ESC)"
           >
             <svg class="w-5 h-5 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
@@ -159,9 +160,9 @@
       </div>
     </div>
     
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 overflow-hidden">
       <!-- 视频设置 -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg overflow-hidden">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg overflow-hidden max-h-full">
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">视频格式</label>
@@ -218,7 +219,7 @@
       </div>
       
       <!-- 音频设置 -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg overflow-hidden">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg overflow-hidden max-h-full">
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">音频格式</label>
@@ -243,24 +244,32 @@
              <div class="flex justify-between items-center mb-2">
                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">画质</label>
                <!-- Tab 切换 -->
-               <div class="flex bg-gray-100 dark:bg-gray-600 rounded-md p-0.5 h-8">
+               <div class="relative flex bg-gray-100 dark:bg-gray-600 rounded-md p-1 h-8">
+                 <!-- 滑动背景 -->
+                 <div 
+                   class="absolute top-1 bottom-1 bg-amber-500 rounded-md transition-all duration-300 ease-out shadow-md"
+                   :style="{
+                     width: 'calc(50% - 4px)',
+                     left: qualityMode === 'crf' ? '4px' : 'calc(50% + 2px)',
+                     transform: qualityMode === 'crf' ? 'translateX(0)' : 'translateX(-2px)'
+                   }"
+                 ></div>
+                 
                  <button
                    type="button"
-                   class="px-4 py-1 text-sm font-medium transition-all duration-300 ease-in-out rounded-md transform hover:scale-102 relative overflow-hidden"
-                   :class="qualityMode === 'crf' ? 'bg-amber-500 text-white shadow-md scale-105' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'"
+                   class="flex-1 px-4 py-1 text-xs font-medium transition-all duration-300 ease-out rounded-md relative z-10 whitespace-nowrap"
+                   :class="qualityMode === 'crf' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'"
                    @click="qualityMode = 'crf'"
                  >
-                   <span class="relative z-10">CRF</span>
-                   <div v-if="qualityMode === 'crf'" class="absolute inset-0 bg-amber-500 rounded-md transition-all duration-300 ease-in-out transform scale-100"></div>
+                   CRF
                  </button>
                  <button
                    type="button"
-                   class="px-4 py-1 text-sm font-medium transition-all duration-300 ease-in-out rounded-md transform hover:scale-102 relative overflow-hidden"
-                   :class="qualityMode === 'bitrate' ? 'bg-amber-500 text-white shadow-md scale-105' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'"
+                   class="flex-1 px-4 py-1 text-xs font-medium transition-all duration-300 ease-out rounded-md relative z-10 whitespace-nowrap"
+                   :class="qualityMode === 'bitrate' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'"
                    @click="qualityMode = 'bitrate'"
                  >
-                   <span class="relative z-10">码率</span>
-                   <div v-if="qualityMode === 'bitrate'" class="absolute inset-0 bg-amber-500 rounded-md transition-all duration-300 ease-in-out transform scale-100"></div>
+                   码率
                  </button>
                </div>
              </div>

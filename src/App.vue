@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-
 import FileUploader from './components/FileUploader.vue';
 import VideoComparison from './components/VideoComparison.vue';
 import TaskList from './components/TaskList.vue';
+import OutputFolder from './components/OutputFolder.vue';
 import { useFileHandler } from './composables/useFileHandler';
 import { useTheme } from './composables/useTheme';
 import type { CompressionSettings } from './types';
@@ -21,7 +21,6 @@ const {
 
 const { isDark, toggleTheme } = useTheme();
 
-
 const showOutputFolder = ref(false);
 const outputPath = ref('');
 
@@ -29,23 +28,20 @@ const toggleOutputFolder = () => {
   showOutputFolder.value = !showOutputFolder.value;
 };
 
-const selectOutputFolder = async () => {
-  try {
-    // For now, just set a placeholder path
-    // In a real implementation, you would use Tauri's dialog API
-    outputPath.value = '/Users/Desktop/Output';
-    showOutputFolder.value = false;
-  } catch (error) {
-    console.error('Failed to select folder:', error);
-  }
+const handleOutputPathUpdate = (path: string) => {
+  outputPath.value = path;
+};
+
+const handleOutputFolderClose = () => {
+  showOutputFolder.value = false;
 };
 
 const beforeImage = computed(() => {
-  return currentFile.value?.originalUrl || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+  return currentFile.value?.originalUrl || '';
 });
 
 const afterImage = computed(() => {
-  return currentFile.value?.compressedUrl || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=20&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+  return currentFile.value?.compressedUrl || '';
 });
 
 const onFilesSelected = async (files: FileList) => {
@@ -58,7 +54,7 @@ const onCompress = async (settings: CompressionSettings) => {
   }
   
   try {
-    await startCompression(settings);
+    await startCompression(settings, outputPath.value);
   } catch (error) {
     console.error('Compression failed in App.vue:', error);
   }
@@ -130,12 +126,14 @@ const onReset = () => {
           <div class="flex justify-end items-center space-x-2 mb-4">
             <!-- Output Folder Icon -->
             <button 
-              class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-colors"
+              class="relative p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-colors"
               @click="toggleOutputFolder"
+              title="输出文件夹设置"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
               </svg>
+
             </button>
             
             <!-- Theme Toggle -->
@@ -153,36 +151,11 @@ const onReset = () => {
           </div>
           
           <!-- Output Folder Settings (Expandable) -->
-          <transition 
-            enter-active-class="transition-all duration-300 ease-out"
-            enter-from-class="opacity-0 transform -translate-y-2 scale-95"
-            enter-to-class="opacity-100 transform translate-y-0 scale-100"
-            leave-active-class="transition-all duration-300 ease-in"
-            leave-from-class="opacity-100 transform translate-y-0 scale-100"
-            leave-to-class="opacity-0 transform -translate-y-2 scale-95"
-          >
-            <div 
-              v-if="showOutputFolder"
-              class="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl p-4 mb-4"
-            >
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">选择输出文件夹</label>
-            <div class="flex space-x-2">
-              <input 
-                v-model="outputPath"
-                type="text" 
-                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-amber-500 focus:border-amber-500"
-                placeholder="选择输出路径..."
-                readonly
-              >
-              <button 
-                class="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-md hover:bg-amber-600 transition-colors"
-                @click="selectOutputFolder"
-              >
-                选择
-              </button>
-            </div>
-            </div>
-          </transition>
+          <OutputFolder 
+            :show-output-folder="showOutputFolder"
+            @update:output-path="handleOutputPathUpdate"
+            @close="handleOutputFolderClose"
+          />
           
           <!-- Task List -->
           <div class="flex-1 overflow-hidden">
@@ -193,3 +166,23 @@ const onReset = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 确保任务列表容器能够自适应高度变化 */
+.lg\:col-span-2 {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 优化按钮悬停效果 */
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+</style>

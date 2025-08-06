@@ -89,7 +89,7 @@ export function useFileHandler() {
     isUploaderVisible.value = true;
   };
 
-  const startCompression = async (settings: CompressionSettings) => {
+  const startCompression = async (settings: CompressionSettings, outputDirectory?: string) => {
     if (!currentFile.value) {
       return;
     }
@@ -105,13 +105,13 @@ export function useFileHandler() {
     task.progress = 0;
     
     try {
-      // Get desktop path for output
-      const desktopPath = await invoke<string>('get_desktop_path');
+      // Use provided output directory or get default desktop path
+      const outputDir = outputDirectory || await invoke<string>('get_desktop_path');
       
       // Generate output filename
       const fileExtension = `.${settings.format}`;
       const baseName = task.file.name.replace(/\.[^/.]+$/, '');
-      const outputPath = `${desktopPath}/${baseName}_compressed${fileExtension}`;
+      const outputPath = `${outputDir}/${baseName}_compressed${fileExtension}`;
       
       // Update progress
       task.progress = 10;
