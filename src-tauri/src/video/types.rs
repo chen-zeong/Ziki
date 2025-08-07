@@ -1,6 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TimeRange {
+    pub start: Option<f64>,
+    pub end: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CompressionSettings {
     pub format: String,
     pub codec: String,
@@ -11,6 +17,7 @@ pub struct CompressionSettings {
     pub bitrate: Option<String>,
     pub audio_format: String,
     pub sample_rate: String,
+    pub time_range: Option<TimeRange>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

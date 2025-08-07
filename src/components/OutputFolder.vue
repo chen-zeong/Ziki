@@ -85,20 +85,17 @@ const emit = defineEmits<Emits>();
 // Reactive data
 const outputPath = ref('');
 const defaultOutputPath = ref('');
-
 // 初始化默认输出路径
 const initializeOutputPath = async () => {
+  let path = '';
   try {
-    const defaultPath = await invoke<string>('get_desktop_path');
-    outputPath.value = defaultPath;
-    defaultOutputPath.value = defaultPath;
-    emit('update:outputPath', defaultPath);
+    path = await invoke<string>('get_desktop_path');
   } catch (error) {
     console.error('Failed to get default output path:', error);
-    const fallbackPath = '~/Desktop/zipzap';
-    outputPath.value = fallbackPath;
-    defaultOutputPath.value = fallbackPath;
-    emit('update:outputPath', fallbackPath);
+  } finally {
+    outputPath.value = path;
+    defaultOutputPath.value = path;
+    emit('update:outputPath', path);
   }
 };
 
@@ -125,7 +122,7 @@ const selectOutputFolder = async () => {
   }
 };
 
-// 组件挂载时初始化输出路径
+// Watch for Tauri to be ready
 onMounted(() => {
   initializeOutputPath();
 });

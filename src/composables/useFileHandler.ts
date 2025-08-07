@@ -129,7 +129,11 @@ export function useFileHandler() {
         crf_value: settings.crfValue,
         bitrate: settings.bitrate,
         audio_format: settings.audioFormat,
-        sample_rate: settings.sampleRate
+        sample_rate: settings.sampleRate,
+        time_range: settings.timeRange ? {
+          start: settings.timeRange.start,
+          end: settings.timeRange.end
+        } : null
       };
       
       // Update progress

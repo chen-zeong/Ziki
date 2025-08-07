@@ -53,6 +53,8 @@ const onCompress = async (settings: CompressionSettings) => {
     return;
   }
   
+  console.log('Starting compression with output path:', outputPath.value);
+
   try {
     await startCompression(settings, outputPath.value);
   } catch (error) {
@@ -96,7 +98,7 @@ const onReset = () => {
       <main class="grid grid-cols-1 lg:grid-cols-5 gap-8 flex-1 overflow-hidden">
         <!-- Left Column: Main Operations -->
         <div class="lg:col-span-3 overflow-hidden">
-          <div class="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl p-6 sm:p-8 h-full overflow-auto">
+          <div class="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl px-6 sm:px-8 pt-4 sm:pt-6 pb-6 sm:pb-8 h-full overflow-auto">
             <!-- File Upload (Visible by default) -->
             <FileUploader 
               v-if="isUploaderVisible"
@@ -151,7 +153,7 @@ const onReset = () => {
           </div>
           
           <!-- Output Folder Settings (Expandable) -->
-          <OutputFolder 
+          <OutputFolder
             :show-output-folder="showOutputFolder"
             @update:output-path="handleOutputPathUpdate"
             @close="handleOutputFolderClose"
@@ -178,11 +180,5 @@ button {
   transition: all 0.2s ease-in-out;
 }
 
-button:hover {
-  transform: translateY(-1px);
-}
-
-button:active {
-  transform: translateY(0);
-}
+/* 移除全局button hover效果，避免与组件内部样式冲突 */
 </style>

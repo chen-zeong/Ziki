@@ -27,6 +27,11 @@ export interface CustomResolution {
   height: number;
 }
 
+export interface TimeRange {
+  start: number | null;
+  end: number | null;
+}
+
 export interface CompressionSettings {
   format: 'mp4' | 'webm' | 'avi' | 'mkv' | 'mov' | 'flv' | 'wmv' | 'avif';
   codec: 'libx264' | 'libx265' | 'libvpx-vp9' | 'libaom-av1' | 'mpeg4' | 'libxvid';
@@ -37,6 +42,8 @@ export interface CompressionSettings {
   bitrate?: string;
   audioFormat: 'aac' | 'mp3' | 'libvorbis' | 'flac' | 'copy';
   sampleRate: 'original' | '22050' | '44100' | '48000' | '96000';
+  timeRange?: TimeRange;
+  hardwareAcceleration?: 'cpu' | 'intel' | 'nvidia';
 }
 
 export interface CompressionResult {

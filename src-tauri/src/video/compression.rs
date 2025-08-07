@@ -33,7 +33,30 @@ pub async fn compress_video(
         .len();
     
     let mut cmd = Command::new(&ffmpeg_path);
+    
+    // Add time range parameters if specified
+    if let Some(time_range) = &settings.time_range {
+        if let Some(start) = time_range.start {
+            cmd.arg("-ss").arg(start.to_string());
+        }
+    }
+    
     cmd.arg("-i").arg(&inputPath);
+    
+    // Add duration parameter if end time is specified
+    if let Some(time_range) = &settings.time_range {
+        if let Some(end) = time_range.end {
+            if let Some(start) = time_range.start {
+                let duration = end - start;
+                if duration > 0.0 {
+                    cmd.arg("-t").arg(duration.to_string());
+                }
+            } else {
+                // If only end time is specified, treat it as duration from start
+                cmd.arg("-t").arg(end.to_string());
+            }
+        }
+    }
     
     // Set video codec
     cmd.arg("-c:v").arg(&settings.codec);
