@@ -37,7 +37,7 @@ interface Props {
   compressedVideoFilePath?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   title: '处理与预览'
 });
 

@@ -1,4 +1,7 @@
 use std::path::PathBuf;
+use std::process::Command;
+use tauri::Manager;
+use crate::video::types::VideoMetadata;
 
 pub fn get_desktop_directory() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
@@ -91,6 +94,250 @@ pub fn get_desktop_path() -> Result<String, String> {
 #[tauri::command]
 pub fn get_file_size(filePath: String) -> Result<u64, String> {
     std::fs::metadata(&filePath)
-        .map_err(|e| format!("Failed to get file size: {}", e))
+        .map_err(|e| format!("Failed to get file metadata: {}", e))
         .map(|metadata| metadata.len())
+}
+
+#[tauri::command]
+pub fn get_video_metadata(videoPath: String) -> Result<VideoMetadata, String> {
+    let ffprobe_binary = get_ffprobe_binary();
+    
+    let output = Command::new(ffprobe_binary)
+        .args([
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_format",
+            "-show_streams",
+            &videoPath
+        ])
+        .output()
+        .map_err(|e| format!("Failed to execute ffprobe: {}", e))?;
+    
+    if !output.status.success() {
+        return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+    
+    let json_str = String::from_utf8(output.stdout)
+        .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
+    
+    parse_ffprobe_json(&json_str)
+}
+
+pub fn get_ffprobe_binary() -> &'static str {
+    "ffprobe"
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct Codec {
+    pub name: String,
+    pub codec_type: String, // "encoder" or "decoder"
+    pub media_type: String, // "video" or "audio"
+    pub description: String,
+    pub hardware_type: Option<String>, // Some("Apple VideoToolbox") or None for software
+}
+
+#[tauri::command]
+pub fn detect_all_codecs(app_handle: tauri::AppHandle) -> Result<Vec<Codec>, String> {
+    // In development mode, use the bin directory in src-tauri
+    // In production, use the resource directory
+    let ffmpeg_path = if cfg!(debug_assertions) {
+        // Development mode: use bin directory relative to src-tauri
+        let current_exe = std::env::current_exe().unwrap();
+        let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+        src_tauri_dir.join("bin").join(get_ffmpeg_binary())
+    } else {
+        // Production mode: use resource directory
+        let resource_dir = app_handle.path().resource_dir().unwrap();
+        resource_dir.join("bin").join(get_ffmpeg_binary())
+    };
+    
+    println!("FFmpeg path for codec detection: {:?}", ffmpeg_path);
+    
+    if !ffmpeg_path.exists() {
+        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
+    }
+    
+    let mut all_codecs = Vec::new();
+    
+    // 获取所有编码器
+    let encoders_output = Command::new(&ffmpeg_path)
+        .args(["-encoders"])
+        .output()
+        .map_err(|e| format!("Failed to execute ffmpeg -encoders: {}", e))?;
+    
+    if encoders_output.status.success() {
+        let output_str = String::from_utf8(encoders_output.stdout)
+            .map_err(|e| format!("Failed to parse ffmpeg output: {}", e))?;
+        
+        for line in output_str.lines() {
+            if line.starts_with(" V") || line.starts_with(" A") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 3 {
+                    let codec_name = parts[1].to_string();
+                    let description = parts[2..].join(" ");
+                    let media_type = if line.starts_with(" V") { "video" } else { "audio" };
+                    
+                    // 检测硬件加速类型
+                    let hardware_type = if codec_name.contains("videotoolbox") || codec_name.contains("vt_") {
+                        Some("Apple VideoToolbox".to_string())
+                    } else if codec_name.contains("nvenc") || codec_name.contains("cuda") {
+                        Some("NVIDIA NVENC".to_string())
+                    } else if codec_name.contains("qsv") {
+                        Some("Intel Quick Sync Video".to_string())
+                    } else if codec_name.contains("amf") {
+                        Some("AMD AMF".to_string())
+                    } else {
+                        None
+                    };
+                    
+                    all_codecs.push(Codec {
+                        name: codec_name,
+                        codec_type: "encoder".to_string(),
+                        media_type: media_type.to_string(),
+                        description,
+                        hardware_type,
+                    });
+                }
+            }
+        }
+    }
+    
+    // 获取所有解码器
+    let decoders_output = Command::new(&ffmpeg_path)
+        .args(["-decoders"])
+        .output()
+        .map_err(|e| format!("Failed to execute ffmpeg -decoders: {}", e))?;
+    
+    if decoders_output.status.success() {
+        let output_str = String::from_utf8(decoders_output.stdout)
+            .map_err(|e| format!("Failed to parse ffmpeg output: {}", e))?;
+        
+        for line in output_str.lines() {
+            if line.starts_with(" V") || line.starts_with(" A") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 3 {
+                    let codec_name = parts[1].to_string();
+                    let description = parts[2..].join(" ");
+                    let media_type = if line.starts_with(" V") { "video" } else { "audio" };
+                    
+                    // 检测硬件加速类型
+                    let hardware_type = if codec_name.contains("videotoolbox") || codec_name.contains("vt_") {
+                        Some("Apple VideoToolbox".to_string())
+                    } else if codec_name.contains("cuvid") || codec_name.contains("cuda") {
+                        Some("NVIDIA CUVID".to_string())
+                    } else if codec_name.contains("qsv") {
+                        Some("Intel Quick Sync Video".to_string())
+                    } else if codec_name.contains("amf") {
+                        Some("AMD AMF".to_string())
+                    } else {
+                        None
+                    };
+                    
+                    all_codecs.push(Codec {
+                        name: codec_name,
+                        codec_type: "decoder".to_string(),
+                        media_type: media_type.to_string(),
+                        description,
+                        hardware_type,
+                    });
+                }
+            }
+        }
+    }
+    
+    Ok(all_codecs)
+}
+
+fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
+    use serde_json::Value;
+    
+    let json: Value = serde_json::from_str(json_str)
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    
+    let format = json["format"].as_object()
+        .ok_or("No format information found")?;
+    
+    let streams = json["streams"].as_array()
+        .ok_or("No streams information found")?;
+    
+    // 查找视频流
+    let video_stream = streams.iter()
+        .find(|stream| stream["codec_type"].as_str() == Some("video"))
+        .ok_or("No video stream found")?;
+    
+    // 查找音频流
+    let audio_stream = streams.iter()
+        .find(|stream| stream["codec_type"].as_str() == Some("audio"));
+    
+    // 获取格式信息
+    let container_format = format["format_name"].as_str()
+        .unwrap_or("unknown")
+        .split(',').next().unwrap_or("unknown")
+        .to_uppercase();
+    
+    // 获取视频编码
+    let video_codec = video_stream["codec_name"].as_str()
+        .unwrap_or("unknown")
+        .to_uppercase();
+    
+    // 获取音频编码
+    let audio_codec = if let Some(audio) = audio_stream {
+        audio["codec_name"].as_str().unwrap_or("none").to_uppercase()
+    } else {
+        "none".to_string()
+    };
+    
+    // 获取分辨率
+    let width = video_stream["width"].as_u64().unwrap_or(0);
+    let height = video_stream["height"].as_u64().unwrap_or(0);
+    let resolution = format!("{}x{}", width, height);
+    
+    // 获取码率
+    let bitrate = format["bit_rate"].as_str()
+        .and_then(|br| br.parse::<u64>().ok())
+        .map(|br| format!("{} kbps", br / 1000))
+        .unwrap_or("unknown".to_string());
+    
+    // 获取音频采样率
+    let sample_rate = if let Some(audio) = audio_stream {
+        audio["sample_rate"].as_str()
+            .map(|sr| format!("{} Hz", sr))
+            .unwrap_or("unknown".to_string())
+    } else {
+        "none".to_string()
+    };
+    
+    // 获取时长
+    let duration = format["duration"].as_str()
+        .and_then(|d| d.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    
+    // 获取帧率
+    let fps = video_stream["r_frame_rate"].as_str()
+        .and_then(|fps_str| {
+            let parts: Vec<&str> = fps_str.split('/').collect();
+            if parts.len() == 2 {
+                let num = parts[0].parse::<f64>().ok()?;
+                let den = parts[1].parse::<f64>().ok()?;
+                if den != 0.0 {
+                    Some(num / den)
+                } else {
+                    None
+                }
+            } else {
+                fps_str.parse::<f64>().ok()
+            }
+        })
+        .unwrap_or(0.0);
+    
+    Ok(VideoMetadata {
+        format: container_format,
+        video_codec,
+        audio_codec,
+        resolution,
+        bitrate,
+        sample_rate,
+        duration,
+        fps,
+    })
 }

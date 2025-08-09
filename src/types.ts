@@ -1,3 +1,17 @@
+// 导出视频格式相关类型
+export type { VideoFormatsConfig, VideoFormat, VideoCodec, AudioCodec } from './types/videoFormats';
+
+export interface VideoMetadata {
+  format: string; // 视频格式，如 'mp4', 'mkv' 等
+  videoCodec: string; // 视频编码，如 'H.264', 'H.265' 等
+  audioCodec: string; // 音频编码，如 'AAC', 'MP3' 等
+  resolution: string; // 分辨率，如 '1920x1080'
+  bitrate: string; // 码率，如 '2000 kbps'
+  sampleRate: string; // 音频采样率，如 '48000 Hz'
+  duration: number; // 视频时长（秒）
+  fps: number; // 帧率
+}
+
 export interface VideoFile {
   id: string;
   name: string;
@@ -7,6 +21,7 @@ export interface VideoFile {
   originalUrl?: string;
   compressedUrl?: string;
   compressedPath?: string;
+  metadata?: VideoMetadata; // 视频元数据
 }
 
 export interface CompressionTask {
@@ -33,17 +48,17 @@ export interface TimeRange {
 }
 
 export interface CompressionSettings {
-  format: 'mp4' | 'webm' | 'avi' | 'mkv' | 'mov' | 'flv' | 'wmv' | 'avif';
-  codec: 'libx264' | 'libx265' | 'libvpx-vp9' | 'libaom-av1' | 'mpeg4' | 'libxvid';
+  format: string; // 视频容器格式，如 'mp4', 'mkv', 'webm' 等
+  videoCodec: string; // 视频编码，如 'H.264', 'H.265', 'VP9' 等
+  audioCodec: string; // 音频编码，如 'AAC', 'MP3', 'FLAC' 等
   resolution: 'original' | '1920x1080' | '1280x720' | '854x480' | 'custom';
   customResolution?: CustomResolution;
   qualityType: 'crf' | 'bitrate';
   crfValue?: number;
   bitrate?: string;
-  audioFormat: 'aac' | 'mp3' | 'libvorbis' | 'flac' | 'copy';
   sampleRate: 'original' | '22050' | '44100' | '48000' | '96000';
   timeRange?: TimeRange;
-  hardwareAcceleration?: 'cpu' | 'intel' | 'nvidia';
+  hardwareAcceleration?: 'cpu' | 'intel' | 'nvidia' | 'amd';
 }
 
 export interface CompressionResult {

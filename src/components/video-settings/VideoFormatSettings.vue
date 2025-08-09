@@ -2,7 +2,12 @@
   <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">输出格式</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">输出格式</label>
+          <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ metadata.format.toUpperCase() }}</span>
+          </div>
+        </div>
         <CustomSelect 
           v-model="format"
           :options="formatOptions"
@@ -11,9 +16,14 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">视频编码器</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">视频编码器</label>
+          <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ formatVideoCodec(metadata.videoCodec) }}</span>
+          </div>
+        </div>
         <CustomSelect 
-          v-model="codec"
+          v-model="videoCodec"
           :options="videoCodecOptions"
           placeholder="选择编码器"
         />
@@ -68,10 +78,12 @@
 import { ref, computed, watch } from 'vue';
 import CustomSelect from '../common/CustomSelect.vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
-import type { CompressionSettings } from '../../types';
+import { useVideoFormats } from '../../composables/useVideoFormats';
+import type { CompressionSettings, VideoMetadata } from '../../types';
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
+  metadata?: VideoMetadata;
 }
 
 interface Emits {
@@ -100,12 +112,12 @@ const format = computed({
   }
 });
 
-const codec = computed({
+const videoCodec = computed({
   get() {
-    return props.modelValue.codec || 'libx264';
+    return props.modelValue.videoCodec || 'H.264';
   },
   set(value) {
-    emit('update:modelValue', { ...props.modelValue, codec: value });
+    emit('update:modelValue', { ...props.modelValue, videoCodec: value });
   }
 });
 
@@ -121,34 +133,65 @@ const resolution = computed({
 const customResolution = ref({ width: 1920, height: 1080 });
 const isCustomResolution = ref(false);
 
-const formatOptions = [
-  { value: 'original', label: '保持原格式' },
-  { value: 'mp4', label: 'MP4' },
-  { value: 'webm', label: 'WebM' },
-  { value: 'avi', label: 'AVI' },
-  { value: 'mkv', label: 'MKV' },
-  { value: 'mov', label: 'MOV' },
-  { value: 'flv', label: 'FLV' },
-  { value: 'wmv', label: 'WMV' },
-  { value: 'avif', label: 'AVIF' }
-];
+// 使用视频格式配置
+const {
+  formatOptions: videoFormatOptions,
+  supportedVideoCodecs,
+  setFormat
+} = useVideoFormats();
 
-const videoCodecOptions = [
-  { value: 'libx264', label: 'H.264' },
-  { value: 'libx265', label: 'H.265 (HEVC)' },
-  { value: 'libvpx-vp9', label: 'VP9' },
-  { value: 'libaom-av1', label: 'AV1' },
-  { value: 'mpeg4', label: 'MPEG-4' },
-  { value: 'libxvid', label: 'Xvid' }
-];
+// 格式选项（添加保持原格式选项）
+const formatOptions = computed(() => [
+  { value: 'original', label: '保持原格式', description: '不改变原始文件格式' },
+  ...videoFormatOptions.value
+]);
 
-const resolutionOptions = [
-  { value: 'original', label: '原始分辨率' },
-  { value: '1920x1080', label: '1920x1080 (1080p)' },
-  { value: '1280x720', label: '1280x720 (720p)' },
-  { value: '854x480', label: '854x480 (480p)' },
-  { value: 'custom', label: '自定义分辨率' }
-];
+// 视频编码选项（根据当前选择的格式动态更新）
+const videoCodecOptions = computed(() => {
+  if (format.value === 'original') {
+    // 如果选择保持原格式，显示所有编码选项
+    return [
+      { value: 'H.264', label: 'H.264' },
+      { value: 'H.265', label: 'H.265 (HEVC)' },
+      { value: 'VP9', label: 'VP9' },
+      { value: 'AV1', label: 'AV1' },
+      { value: 'MPEG-4', label: 'MPEG-4' },
+      { value: 'Xvid', label: 'Xvid' }
+    ];
+  }
+  
+  // 根据选择的格式返回支持的编码
+  setFormat(format.value);
+  return supportedVideoCodecs.value.map(codec => ({
+    value: codec,
+    label: codec
+  }));
+});
+
+const resolutionOptions = computed(() => {
+  const options = [];
+  
+  // 如果有metadata，显示实际的原始分辨率
+  if (props.metadata) {
+    options.push({
+      value: 'original',
+      label: `${props.metadata.resolution} (原始)`,
+      description: '保持原始分辨率'
+    });
+  } else {
+    options.push({ value: 'original', label: '原始分辨率' });
+  }
+  
+  // 添加其他分辨率选项
+  options.push(
+    { value: '1920x1080', label: '1920x1080 (1080p)' },
+    { value: '1280x720', label: '1280x720 (720p)' },
+    { value: '854x480', label: '854x480 (480p)' },
+    { value: 'custom', label: '自定义分辨率' }
+  );
+  
+  return options;
+});
 
 const toggleCustomResolution = () => {
   isCustomResolution.value = !isCustomResolution.value;
@@ -183,5 +226,33 @@ watch(isCustomResolution, (isCustom) => {
     delete newSettings.customResolution;
   }
   settings.value = newSettings;
+});
+
+// 格式化视频编码名称
+const formatVideoCodec = (codec: string): string => {
+  const codecMap: Record<string, string> = {
+    'H264': 'H.264',
+    'H265': 'H.265',
+    'HEVC': 'H.265/HEVC',
+    'AV1': 'AV1',
+    'VP8': 'VP8',
+    'VP9': 'VP9',
+    'MPEG4': 'MPEG-4',
+    'MPEG2VIDEO': 'MPEG-2'
+  };
+  return codecMap[codec?.toUpperCase()] || codec || '未知';
+};
+
+// 监听格式变化，自动调整编码选项
+watch(format, (newFormat) => {
+  if (newFormat !== 'original') {
+    setFormat(newFormat);
+    // 检查当前视频编码是否兼容新格式
+    const supportedCodecs = supportedVideoCodecs.value;
+    if (supportedCodecs.length > 0 && !supportedCodecs.includes(videoCodec.value)) {
+      // 如果当前编码不兼容，选择第一个支持的编码
+      videoCodec.value = supportedCodecs[0];
+    }
+  }
 });
 </script>

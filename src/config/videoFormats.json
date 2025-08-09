@@ -1,0 +1,286 @@
+{
+  "videoFormats": {
+    "mp4": {
+      "name": "MP4",
+      "extension": ".mp4",
+      "videoCodecs": ["H.264", "H.265", "AV1"],
+      "audioCodecs": ["AAC", "MP3"],
+      "description": "最常用的视频格式，兼容性最好",
+      "recommended": true
+    },
+    "mkv": {
+      "name": "MKV",
+      "extension": ".mkv",
+      "videoCodecs": ["H.264", "H.265", "VP9", "AV1"],
+      "audioCodecs": ["AAC", "FLAC", "DTS", "AC-3"],
+      "description": "开源格式，支持多音轨、字幕、章节",
+      "recommended": true
+    },
+    "avi": {
+      "name": "AVI",
+      "extension": ".avi",
+      "videoCodecs": ["H.264", "Xvid", "DivX"],
+      "audioCodecs": ["MP3", "PCM"],
+      "description": "老牌格式，兼容性好但文件较大",
+      "recommended": false
+    },
+    "mov": {
+      "name": "MOV",
+      "extension": ".mov",
+      "videoCodecs": ["H.264", "H.265", "ProRes"],
+      "audioCodecs": ["AAC", "MP3", "PCM"],
+      "description": "Apple开发，Mac系统原生支持",
+      "recommended": true
+    },
+    "wmv": {
+      "name": "WMV",
+      "extension": ".wmv",
+      "videoCodecs": ["WMV9", "VC-1"],
+      "audioCodecs": ["WMA", "MP3"],
+      "description": "Microsoft格式，Windows系统优化",
+      "recommended": false
+    },
+    "webm": {
+      "name": "WebM",
+      "extension": ".webm",
+      "videoCodecs": ["VP8", "VP9", "AV1"],
+      "audioCodecs": ["Vorbis", "Opus"],
+      "description": "Google开发，专为网络优化",
+      "recommended": true
+    },
+    "flv": {
+      "name": "FLV",
+      "extension": ".flv",
+      "videoCodecs": ["H.264", "VP6"],
+      "audioCodecs": ["AAC", "MP3"],
+      "description": "Flash视频格式，逐渐被淘汰",
+      "recommended": false
+    },
+    "3gp": {
+      "name": "3GP",
+      "extension": ".3gp",
+      "videoCodecs": ["H.263", "H.264"],
+      "audioCodecs": ["AMR", "AAC"],
+      "description": "移动设备专用，文件小",
+      "recommended": false
+    },
+    "m4v": {
+      "name": "M4V",
+      "extension": ".m4v",
+      "videoCodecs": ["H.264", "H.265"],
+      "audioCodecs": ["AAC"],
+      "description": "iTunes专用格式，支持DRM",
+      "recommended": false
+    },
+    "ts": {
+      "name": "TS",
+      "extension": ".ts",
+      "videoCodecs": ["H.264", "H.265", "MPEG-2"],
+      "audioCodecs": ["AAC", "AC-3", "DTS"],
+      "description": "传输流格式，适合广播",
+      "recommended": false
+    },
+    "m2ts": {
+      "name": "M2TS",
+      "extension": ".m2ts",
+      "videoCodecs": ["H.264", "H.265", "MPEG-2"],
+      "audioCodecs": ["AAC", "AC-3", "DTS"],
+      "description": "蓝光光盘格式",
+      "recommended": false
+    },
+    "avif": {
+      "name": "AVIF",
+      "extension": ".avif",
+      "videoCodecs": ["AV1"],
+      "audioCodecs": [],
+      "description": "新一代图像格式，支持动画，压缩率极高",
+      "recommended": true
+    }
+  },
+  "videoCodecs": {
+    "H.264": {
+      "name": "H.264/AVC",
+      "description": "最广泛支持的视频编码",
+      "quality": "good",
+      "compression": "good",
+      "hardwareSupport": true
+    },
+    "H.265": {
+      "name": "H.265/HEVC",
+      "description": "新一代高效视频编码",
+      "quality": "excellent",
+      "compression": "excellent",
+      "hardwareSupport": true
+    },
+    "AV1": {
+      "name": "AV1",
+      "description": "开源的下一代视频编码",
+      "quality": "excellent",
+      "compression": "excellent",
+      "hardwareSupport": false
+    },
+    "VP8": {
+      "name": "VP8",
+      "description": "Google开发的开源编码",
+      "quality": "good",
+      "compression": "good",
+      "hardwareSupport": false
+    },
+    "VP9": {
+      "name": "VP9",
+      "description": "VP8的改进版本",
+      "quality": "excellent",
+      "compression": "excellent",
+      "hardwareSupport": true
+    },
+    "Xvid": {
+      "name": "Xvid",
+      "description": "开源MPEG-4编码",
+      "quality": "fair",
+      "compression": "fair",
+      "hardwareSupport": false
+    },
+    "DivX": {
+      "name": "DivX",
+      "description": "商业MPEG-4编码",
+      "quality": "fair",
+      "compression": "fair",
+      "hardwareSupport": false
+    },
+    "ProRes": {
+      "name": "Apple ProRes",
+      "description": "Apple专业视频编码",
+      "quality": "excellent",
+      "compression": "fair",
+      "hardwareSupport": true
+    },
+    "WMV9": {
+      "name": "WMV9",
+      "description": "Windows Media Video 9",
+      "quality": "good",
+      "compression": "good",
+      "hardwareSupport": false
+    },
+    "VC-1": {
+      "name": "VC-1",
+      "description": "Microsoft高级视频编码",
+      "quality": "good",
+      "compression": "good",
+      "hardwareSupport": true
+    },
+    "VP6": {
+      "name": "VP6",
+      "description": "Flash视频编码",
+      "quality": "fair",
+      "compression": "fair",
+      "hardwareSupport": false
+    },
+    "H.263": {
+      "name": "H.263",
+      "description": "早期移动视频编码",
+      "quality": "poor",
+      "compression": "poor",
+      "hardwareSupport": false
+    },
+    "MPEG-2": {
+      "name": "MPEG-2",
+      "description": "DVD和广播标准",
+      "quality": "fair",
+      "compression": "poor",
+      "hardwareSupport": true
+    },
+    "Theora": {
+      "name": "Theora",
+      "description": "开源视频编码",
+      "quality": "fair",
+      "compression": "fair",
+      "hardwareSupport": false
+    },
+    "WMV": {
+      "name": "WMV",
+      "description": "Windows Media Video",
+      "quality": "fair",
+      "compression": "fair",
+      "hardwareSupport": false
+    },
+    "DNxHD": {
+      "name": "DNxHD",
+      "description": "Avid专业编码",
+      "quality": "excellent",
+      "compression": "fair",
+      "hardwareSupport": false
+    }
+  },
+  "audioCodecs": {
+    "AAC": {
+      "name": "AAC",
+      "description": "高级音频编码，最广泛支持",
+      "quality": "excellent",
+      "compression": "excellent",
+      "recommendedBitrate": "128-320 kbps"
+    },
+    "MP3": {
+      "name": "MP3",
+      "description": "最通用的音频格式",
+      "quality": "good",
+      "compression": "good",
+      "recommendedBitrate": "128-320 kbps"
+    },
+    "FLAC": {
+      "name": "FLAC",
+      "description": "无损音频压缩",
+      "quality": "lossless",
+      "compression": "fair",
+      "recommendedBitrate": "700-1400 kbps"
+    },
+    "DTS": {
+      "name": "DTS",
+      "description": "数字影院音频",
+      "quality": "excellent",
+      "compression": "fair",
+      "recommendedBitrate": "768-1536 kbps"
+    },
+    "AC-3": {
+      "name": "AC-3/Dolby Digital",
+      "description": "杜比数字音频",
+      "quality": "good",
+      "compression": "good",
+      "recommendedBitrate": "192-640 kbps"
+    },
+    "PCM": {
+      "name": "PCM",
+      "description": "未压缩音频",
+      "quality": "lossless",
+      "compression": "none",
+      "recommendedBitrate": "1411 kbps"
+    },
+    "WMA": {
+      "name": "WMA",
+      "description": "Windows Media Audio",
+      "quality": "good",
+      "compression": "good",
+      "recommendedBitrate": "128-320 kbps"
+    },
+    "Vorbis": {
+      "name": "Vorbis",
+      "description": "开源音频编码",
+      "quality": "excellent",
+      "compression": "excellent",
+      "recommendedBitrate": "128-320 kbps"
+    },
+    "Opus": {
+      "name": "Opus",
+      "description": "现代开源音频编码",
+      "quality": "excellent",
+      "compression": "excellent",
+      "recommendedBitrate": "64-256 kbps"
+    },
+    "AMR": {
+      "name": "AMR",
+      "description": "自适应多速率音频",
+      "quality": "poor",
+      "compression": "excellent",
+      "recommendedBitrate": "4.75-12.2 kbps"
+    }
+  }
+}

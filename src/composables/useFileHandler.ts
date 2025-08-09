@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
-import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult } from '../types';
+import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 
 export function useFileHandler() {
   const selectedFiles = ref<VideoFile[]>([]);
@@ -52,6 +52,19 @@ export function useFileHandler() {
           console.warn('Failed to generate thumbnail for', file.name, ':', error);
         }
         
+        // Get video metadata for video files
+        if (file.type.startsWith('video/')) {
+          try {
+            const metadata = await invoke<VideoMetadata>('get_video_metadata', {
+              videoPath: filePath
+            });
+            videoFile.metadata = metadata;
+            console.log('Video metadata for', file.name, ':', metadata);
+          } catch (error) {
+            console.warn('Failed to get video metadata for', file.name, ':', error);
+          }
+        }
+        
         selectedFiles.value.push(videoFile);
         
         // Set current file if it's the first one
@@ -69,11 +82,11 @@ export function useFileHandler() {
           originalSize: actualSize,
           settings: {
             format: 'mp4',
-            codec: 'libx264',
+            videoCodec: 'libx264',
             resolution: 'original',
             qualityType: 'crf',
             crfValue: 23,
-            audioFormat: 'aac',
+            audioCodec: 'aac',
             sampleRate: 'original'
           },
           createdAt: new Date()
@@ -119,7 +132,7 @@ export function useFileHandler() {
       // Prepare compression settings for backend
       const backendSettings = {
         format: settings.format,
-        codec: settings.codec,
+        codec: settings.videoCodec,
         resolution: settings.resolution,
         custom_resolution: settings.customResolution ? {
           width: settings.customResolution.width,
@@ -128,7 +141,7 @@ export function useFileHandler() {
         quality_type: settings.qualityType,
         crf_value: settings.crfValue,
         bitrate: settings.bitrate,
-        audio_format: settings.audioFormat,
+        audio_format: settings.audioCodec,
         sample_rate: settings.sampleRate,
         time_range: settings.timeRange ? {
           start: settings.timeRange.start,

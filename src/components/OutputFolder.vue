@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 
@@ -72,7 +72,7 @@ interface Props {
   showOutputFolder: boolean;
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 // Emits
 interface Emits {
@@ -100,9 +100,9 @@ const initializeOutputPath = async () => {
 };
 
 // 检查是否使用自定义路径
-const isCustomPath = computed(() => {
-  return outputPath.value !== defaultOutputPath.value;
-});
+// const isCustomPath = computed(() => {
+//   return outputPath.value !== defaultOutputPath.value;
+// });
 
 const selectOutputFolder = async () => {
   try {

@@ -27,6 +27,21 @@ pub struct CustomResolution {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct VideoMetadata {
+    pub format: String,
+    #[serde(rename = "videoCodec")]
+    pub video_codec: String,
+    #[serde(rename = "audioCodec")]
+    pub audio_codec: String,
+    pub resolution: String,
+    pub bitrate: String,
+    #[serde(rename = "sampleRate")]
+    pub sample_rate: String,
+    pub duration: f64,
+    pub fps: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CompressionResult {
     pub success: bool,
     #[serde(rename = "outputPath")]

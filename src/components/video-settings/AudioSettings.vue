@@ -2,16 +2,26 @@
   <div class="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">音频格式</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">音频格式</label>
+          <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ formatAudioCodec(metadata.audioCodec) }}</span>
+          </div>
+        </div>
         <CustomSelect 
-          v-model="audioFormat"
+          v-model="audioCodec"
           :options="audioFormatOptions"
           placeholder="选择音频格式"
         />
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">采样率</label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">采样率</label>
+          <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
+            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ metadata.sampleRate }}</span>
+          </div>
+        </div>
         <CustomSelect 
           v-model="sampleRate"
           :options="sampleRateOptions"
@@ -101,13 +111,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { computed, watch } from 'vue';
 import CustomSelect from '../common/CustomSelect.vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
-import type { CompressionSettings } from '../../types';
+import { useVideoFormats } from '../../composables/useVideoFormats';
+import type { CompressionSettings, VideoMetadata } from '../../types';
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
+  metadata?: VideoMetadata;
 }
 
 interface Emits {
@@ -127,12 +139,13 @@ const settings = computed({
 });
 
 // 为每个字段创建独立的computed属性以确保响应式更新
-const audioFormat = computed({
+const audioCodec = computed({
   get() {
-    return props.modelValue.audioFormat || 'aac';
+    return selectedAudioCodec.value || props.modelValue.audioCodec || 'AAC';
   },
   set(value) {
-    emit('update:modelValue', { ...props.modelValue, audioFormat: value });
+    selectedAudioCodec.value = value;
+    emit('update:modelValue', { ...props.modelValue, audioCodec: value });
   }
 });
 
@@ -171,13 +184,37 @@ const bitrateValue = computed({
   }
 });
 
-const audioFormatOptions = [
-  { value: 'copy', label: '保持原格式' },
-  { value: 'aac', label: 'AAC' },
-  { value: 'mp3', label: 'MP3' },
-  { value: 'libvorbis', label: 'Vorbis' },
-  { value: 'flac', label: 'FLAC' }
-];
+// 使用视频格式配置
+const {
+  supportedAudioCodecs,
+  selectedFormat,
+  selectedAudioCodec
+} = useVideoFormats();
+
+// 音频格式选项（根据当前选择的视频格式动态更新）
+const audioFormatOptions = computed(() => {
+  const baseOptions = [{ value: 'copy', label: '保持原格式' }];
+  
+  // 如果没有选择格式或选择保持原格式，显示所有常用音频编码
+  if (!selectedFormat.value || selectedFormat.value === 'original') {
+    return [
+      ...baseOptions,
+      { value: 'AAC', label: 'AAC' },
+      { value: 'MP3', label: 'MP3' },
+      { value: 'Vorbis', label: 'Vorbis' },
+      { value: 'FLAC', label: 'FLAC' },
+      { value: 'Opus', label: 'Opus' }
+    ];
+  }
+  
+  // 根据选择的视频格式返回支持的音频编码
+  const supportedOptions = supportedAudioCodecs.value.map(codec => ({
+    value: codec,
+    label: codec
+  }));
+  
+  return [...baseOptions, ...supportedOptions];
+});
 
 const sampleRateOptions = [
   { value: 'original', label: '原始采样率' },
@@ -204,4 +241,38 @@ const crfQualityText = computed(() => {
   if (crf <= 35) return '低质量';
   return '极低质量';
 });
+
+// 监听视频格式变化，自动调整音频编码选项
+watch(selectedFormat, (newFormat) => {
+  if (newFormat && newFormat !== 'original') {
+    // 检查当前音频编码是否兼容新格式
+    const supportedCodecs = supportedAudioCodecs.value;
+    if (supportedCodecs.length > 0 && !supportedCodecs.includes(audioCodec.value) && audioCodec.value !== 'copy') {
+      // 如果当前编码不兼容，选择第一个支持的编码
+      audioCodec.value = supportedCodecs[0];
+    }
+  }
+});
+
+// 监听selectedAudioCodec变化，同步到settings
+watch(selectedAudioCodec, (newCodec) => {
+  if (newCodec && newCodec !== audioCodec.value) {
+    emit('update:modelValue', { ...props.modelValue, audioCodec: newCodec });
+  }
+});
+
+// 格式化音频编码显示
+const formatAudioCodec = (codec: string) => {
+  const codecMap: Record<string, string> = {
+    'aac': 'AAC',
+    'mp3': 'MP3',
+    'vorbis': 'Vorbis',
+    'flac': 'FLAC',
+    'opus': 'Opus',
+    'ac3': 'AC-3',
+    'eac3': 'E-AC-3',
+    'dts': 'DTS'
+  };
+  return codecMap[codec?.toLowerCase()] || codec?.toUpperCase() || '未知';
+};
 </script>

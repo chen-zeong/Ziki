@@ -1,12 +1,15 @@
 <template>
   <div class="space-y-6">
+    <!-- 原始视频信息显示 -->
+    <!-- <VideoInfoDisplay :metadata="currentVideoMetadata" /> -->
+    
     <!-- 视频格式设置和音频设置 -->
     <div class="flex gap-6">
       <div class="flex-1">
-        <VideoFormatSettings v-model="formatSettings" />
+        <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" />
       </div>
       <div class="flex-1">
-        <AudioSettings v-model="audioAndQualitySettings" />
+        <AudioSettings v-model="audioAndQualitySettings" :metadata="currentVideoMetadata" />
       </div>
     </div>
     
@@ -15,6 +18,7 @@
       <!-- 自定义时间段按钮 -->
       <TimeRangeSettings 
         v-model="timeRangeSettings" 
+        :metadata="currentVideoMetadata"
         @validation-change="handleTimeValidationChange"
       />
       
@@ -35,12 +39,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, shallowRef } from 'vue';
+import { ref, watch, shallowRef, computed, inject } from 'vue';
 import VideoFormatSettings from './VideoFormatSettings.vue';
 import AudioSettings from './AudioSettings.vue';
 import TimeRangeSettings from './TimeRangeSettings.vue';
 import HardwareAccelerationSettings from './HardwareAccelerationSettings.vue';
-import type { CompressionSettings } from '../../types';
+import VideoInfoDisplay from './VideoInfoDisplay.vue';
+import type { CompressionSettings, VideoFile } from '../../types';
+
+// 注入当前文件信息
+const currentFile = inject<{ value: VideoFile | null }>('currentFile');
+
+// 计算当前视频的元数据
+const currentVideoMetadata = computed(() => {
+  return currentFile?.value?.metadata;
+});
 
 interface Props {
   isProcessing?: boolean;
@@ -59,11 +72,11 @@ const props = withDefaults(defineProps<Props>(), {
 const resetAllSettings = () => {
   formatSettings.value = {
     format: 'mp4',
-    codec: 'libx264',
+    videoCodec: 'libx264',
     resolution: 'original'
   };
   audioAndQualitySettings.value = {
-    audioFormat: 'aac',
+    audioCodec: 'aac',
     sampleRate: '44100',
     qualityType: 'crf',
     crfValue: 23
@@ -93,12 +106,12 @@ const emit = defineEmits<Emits>();
 // 使用shallowRef避免深度响应式导致的循环更新
 const formatSettings = shallowRef<Partial<CompressionSettings>>({
   format: 'mp4',
-  codec: 'libx264',
+  videoCodec: 'libx264',
   resolution: 'original'
 });
 
 const audioAndQualitySettings = shallowRef<Partial<CompressionSettings>>({
-  audioFormat: 'aac',
+  audioCodec: 'aac',
   sampleRate: '44100',
   qualityType: 'crf',
   crfValue: 23

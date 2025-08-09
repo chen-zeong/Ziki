@@ -89,7 +89,12 @@
               />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">结束时间</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">结束时间</label>
+                <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
+                  <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ formatDuration(metadata.duration) }}</span>
+                </div>
+              </div>
               <input
                 v-model="timeRange.end"
                 type="time"
@@ -145,6 +150,10 @@ interface Props {
   modelValue: {
     enabled: boolean;
     timeRange: TimeRangeData;
+  };
+  metadata?: {
+    duration: number;
+    [key: string]: any;
   };
 }
 
@@ -276,6 +285,21 @@ const clearTimeRange = () => {
       end: '00:00:00'
     }
   };
+};
+
+// 格式化时长
+const formatDuration = (duration: number): string => {
+  if (duration === 0) return '未知';
+  
+  const hours = Math.floor(duration / 3600);
+  const minutes = Math.floor((duration % 3600) / 60);
+  const seconds = Math.floor(duration % 60);
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
 };
 
 // 监听验证状态变化

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, provide } from 'vue';
 import FileUploader from './components/FileUploader.vue';
 import VideoComparison from './components/VideoComparison.vue';
 import TaskList from './components/TaskList.vue';
 import OutputFolder from './components/OutputFolder.vue';
+import CodecDetector from './components/CodecDetector.vue';
 import { useFileHandler } from './composables/useFileHandler';
 import { useTheme } from './composables/useTheme';
 import type { CompressionSettings } from './types';
@@ -20,6 +21,9 @@ const {
 } = useFileHandler();
 
 const { isDark, toggleTheme } = useTheme();
+
+// 提供当前文件信息给子组件
+provide('currentFile', currentFile);
 
 const showOutputFolder = ref(false);
 const outputPath = ref('');
@@ -158,6 +162,11 @@ const onReset = () => {
             @update:output-path="handleOutputPathUpdate"
             @close="handleOutputFolderClose"
           />
+          
+          <!-- Codec Detector -->
+          <div class="mb-4">
+            <CodecDetector />
+          </div>
           
           <!-- Task List -->
           <div class="flex-1 overflow-hidden">
