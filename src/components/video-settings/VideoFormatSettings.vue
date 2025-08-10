@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">输出格式</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ metadata.format.toUpperCase() }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.format.toUpperCase() }}</span>
           </div>
         </div>
         <CustomSelect 
@@ -19,7 +19,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">视频编码器</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ formatVideoCodec(metadata.videoCodec) }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ formatVideoCodec(metadata.videoCodec) }}</span>
           </div>
         </div>
         <CustomSelect 

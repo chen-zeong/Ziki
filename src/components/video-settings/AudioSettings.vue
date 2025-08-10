@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">音频格式</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ formatAudioCodec(metadata.audioCodec) }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ formatAudioCodec(metadata.audioCodec) }}</span>
           </div>
         </div>
         <CustomSelect 
@@ -19,7 +19,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">采样率</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ metadata.sampleRate }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.sampleRate }}</span>
           </div>
         </div>
         <CustomSelect 

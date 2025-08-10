@@ -23,7 +23,10 @@
       />
       
       <!-- 硬件加速选择按钮 -->
-      <HardwareAccelerationSettings v-model="hardwareSettings" />
+      <HardwareAccelerationSettings 
+        v-model="hardwareSettings" 
+        :current-video-codec="formatSettings.videoCodec"
+      />
       
       <!-- 开始压缩按钮 -->
       <button 
@@ -160,7 +163,7 @@ const startCompression = () => {
       end: timeToSeconds(timeRangeSettings.value.timeRange.end)
     } : undefined,
     // 添加硬件加速信息
-    hardwareAcceleration: hardwareSettings.value.value as 'cpu' | 'intel' | 'nvidia',
+    hardwareAcceleration: hardwareSettings.value.value as 'cpu' | 'gpu',
     videoPath: props.videoPath
   } as CompressionSettings;
   

@@ -58,7 +58,7 @@ export interface CompressionSettings {
   bitrate?: string;
   sampleRate: 'original' | '22050' | '44100' | '48000' | '96000';
   timeRange?: TimeRange;
-  hardwareAcceleration?: 'cpu' | 'intel' | 'nvidia' | 'amd';
+  hardwareAcceleration?: 'cpu' | 'gpu';
 }
 
 export interface CompressionResult {

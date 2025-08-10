@@ -4,7 +4,6 @@ import FileUploader from './components/FileUploader.vue';
 import VideoComparison from './components/VideoComparison.vue';
 import TaskList from './components/TaskList.vue';
 import OutputFolder from './components/OutputFolder.vue';
-import CodecDetector from './components/CodecDetector.vue';
 import { useFileHandler } from './composables/useFileHandler';
 import { useTheme } from './composables/useTheme';
 import type { CompressionSettings } from './types';

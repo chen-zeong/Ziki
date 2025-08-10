@@ -89,17 +89,12 @@
               />
             </div>
             <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">结束时间</label>
-                <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-                  <span class="font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">{{ formatDuration(metadata.duration) }}</span>
-                </div>
-              </div>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">结束时间</label>
               <input
                 v-model="timeRange.end"
                 type="time"
                 step="1"
-                placeholder="留空表示到视频末尾"
+                :placeholder="metadata ? formatDuration(metadata.duration) : '留空表示到视频末尾'"
                 class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
               />
             </div>
@@ -301,6 +296,33 @@ const formatDuration = (duration: number): string => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 };
+
+// 监听启用状态变化
+watch(enableTimeRange, (newValue) => {
+  if (!newValue) {
+    // 禁用时重置时间范围
+    timeRange.value = {
+      start: '00:00:00',
+      end: '00:00:00'
+    };
+  } else if (newValue && props.metadata && timeRange.value.end === '00:00:00') {
+    // 启用时如果结束时间为空，设置为视频时长
+    timeRange.value.end = formatDuration(props.metadata.duration);
+  }
+  
+  // 发射更新事件
+  emit('update:modelValue', {
+    enabled: newValue,
+    timeRange: timeRange.value
+  });
+});
+
+// 监听metadata变化，自动设置结束时间默认值
+watch(() => props.metadata, (newMetadata) => {
+  if (newMetadata && enableTimeRange.value && timeRange.value.end === '00:00:00') {
+    timeRange.value.end = formatDuration(newMetadata.duration);
+  }
+});
 
 // 监听验证状态变化
 watch(timeValidation, (validation) => {
