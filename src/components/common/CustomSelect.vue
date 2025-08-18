@@ -2,14 +2,15 @@
   <div class="relative" ref="selectRef">
     <button
       type="button"
-      class="relative w-full cursor-pointer rounded-lg bg-white dark:bg-gray-800 py-2 pl-3 pr-8 text-left border border-gray-200 dark:border-gray-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all duration-200"
+      class="relative w-full h-10 cursor-pointer rounded-lg bg-white py-2 pl-3 pr-8 text-left border border-gray-200 dark:border-gray-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all duration-200"
+      :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
       style="pointer-events: auto !important; user-select: auto !important;"
       @click.stop="toggleDropdown"
       :class="{
         'ring-2 ring-amber-500 border-amber-500': isOpen
       }"
     >
-      <span class="block truncate text-gray-900 dark:text-gray-100 font-medium">
+      <span class="block truncate text-gray-900 dark:text-gray-100 text-sm">
         {{ selectedOption?.label || placeholder }}
       </span>
       <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -39,7 +40,8 @@
     >
       <div
         v-if="isOpen"
-        class="absolute z-[99999] mt-2 w-full rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 max-h-60 overflow-auto custom-scrollbar"
+        class="absolute z-[99999] mt-2 w-full rounded-lg bg-white border border-gray-200 dark:border-gray-600 max-h-60 overflow-auto custom-scrollbar"
+        :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
         style="pointer-events: auto !important; user-select: auto !important;"
       >
         <div class="py-1">
@@ -53,7 +55,7 @@
             style="pointer-events: auto !important; user-select: auto !important;"
             @click.stop="selectOption(option)"
           >
-            <span class="block truncate font-medium">
+            <span class="block truncate text-sm">
               {{ option.label }}
             </span>
             <span
@@ -77,6 +79,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useTheme } from '../../composables/useTheme';
 
 interface Option {
   value: string;
@@ -97,6 +100,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: string];
 }>();
 
+const { isDark } = useTheme();
 const isOpen = ref(false);
 const selectRef = ref<HTMLElement>();
 

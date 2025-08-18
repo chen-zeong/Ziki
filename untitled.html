@@ -1,370 +1,272 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class=""> <!-- Add "dark" class here to default to dark mode -->
+<html lang="zh-CN" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频压缩工具 (V7)</title>
+    <title>视频压缩工具 - 专业版</title>
+    <!-- 引入Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Inter字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
-    <script>
-        // Set theme on initial load
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 引入Phosphor Icons图标库 -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
+        /* 基础样式和字体 */
         body {
-            font-family: 'Noto Sans SC', sans-serif;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .comparison-slider {
-            --position: 50%;
-            position: relative;
-            overflow: hidden;
-            border-radius: 0.5rem;
+
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 8px; }
+        html.dark ::-webkit-scrollbar-thumb { background: #374151; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        
+        /* 对比滑块样式 */
+        .comparison-slider { position: relative; overflow: hidden; cursor: col-resize; }
+        .comparison-slider .img-after { position: absolute; top: 0; left: 0; width: 50%; height: 100%; object-fit: cover; object-position: left; overflow: hidden; }
+        .comparison-slider .slider-handle { position: absolute; top: 0; left: 50%; width: 3px; height: 100%; transform: translateX(-50%); pointer-events: none; background: #ffffff; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .comparison-slider .slider-handle-button { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s ease-in-out; background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(4px); }
+        .comparison-slider:hover .slider-handle-button { transform: translate(-50%, -50%) scale(1.05); }
+
+        /* 自定义表单控件箭头 */
+        .custom-select {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1em;
         }
-        .comparison-slider .after-image {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            clip-path: polygon(0 0, var(--position) 0, var(--position) 100%, 0 100%);
-        }
-        .comparison-slider .slider {
-            position: absolute;
-            top: 0;
-            left: var(--position);
-            transform: translateX(-50%);
-            width: 4px;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.9);
-            cursor: ew-resize;
-            z-index: 10;
-        }
-        .comparison-slider .slider-handle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 44px;
-            height: 44px;
-            background-color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            transition: transform 0.2s ease;
-        }
-        .comparison-slider .slider:hover .slider-handle {
-            transform: translate(-50%, -50%) scale(1.1);
-        }
-        /* Custom styles for quality range input */
-        input[type="range"].quality-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 12px;
-            border-radius: 9999px;
-            outline: none;
-            background: transparent; /* Make track transparent */
-        }
-        input[type="range"].quality-slider::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 12px;
-            cursor: pointer;
-            animate: 0.2s;
-            background: linear-gradient(to right, #f59e0b, #d97706); /* Amber gradient */
-            border-radius: 9999px;
-        }
-        html.dark input[type="range"].quality-slider::-webkit-slider-runnable-track {
-             background: linear-gradient(to right, #f59e0b, #fbbf24); /* Brighter Amber gradient for dark mode */
-        }
-        input[type="range"].quality-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 28px;
-            width: 28px;
-            border-radius: 50%;
-            background: #ffffff;
-            cursor: pointer;
-            margin-top: -8px; /* Vertically center thumb */
-            border: 2px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            transition: transform 0.2s ease-in-out;
-        }
-        input[type="range"].quality-slider:active::-webkit-slider-thumb {
-            transform: scale(1.2);
-        }
-        html.dark input[type="range"].quality-slider::-webkit-slider-thumb {
-             background: #1f2937; /* Gray 800 */
-             border: 2px solid #4b5563; /* Gray 600 */
+        html.dark .custom-select {
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
         }
     </style>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
 </head>
-<body class="bg-gray-50 dark:bg-black text-gray-800 dark:text-gray-200 transition-colors duration-300">
+<body class="bg-white dark:bg-[#111827] text-slate-900 dark:text-slate-200 transition-colors duration-300">
 
-    <div class="container mx-auto p-4 sm:p-8 max-w-7xl">
+    <div class="w-full h-screen p-2 flex items-center justify-center">
+        <!-- 主容器 -->
+        <div class="w-full max-w-8xl h-full flex flex-col lg:flex-row overflow-hidden rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            
+            <!-- 左侧主面板 -->
+            <main class="flex-1 p-6 flex flex-col gap-5 overflow-y-auto">
+                <header class="flex items-center justify-between">
+                    <h1 class="text-xl font-semibold text-slate-800 dark:text-slate-100">视频压缩</h1>
+                     <!-- 日夜模式切换按钮 -->
+                    <button id="theme-toggle" class="w-9 h-9 flex items-center justify-center rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                        <i id="theme-toggle-dark-icon" class="ph-bold ph-moon text-xl hidden"></i>
+                        <i id="theme-toggle-light-icon" class="ph-bold ph-sun text-xl hidden"></i>
+                    </button>
+                </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-
-            <!-- Left Column: Main Operations -->
-            <div class="lg:col-span-3">
-                <div class="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl p-6 sm:p-8">
-                    <!-- File Upload (Visible by default) -->
-                    <div id="drop-zone">
-                         <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">上传文件</h3>
-                        <div class="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-8 sm:p-12 text-center transition-colors duration-300 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-gray-800/50 cursor-pointer" onclick="document.getElementById('file-input').click()">
-                            <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3-3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                            </svg>
-                            <p class="mt-4 text-gray-600 dark:text-gray-300"><span class="font-semibold text-amber-600 dark:text-amber-400">点击上传</span> 或拖拽文件至此</p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">支持 MP4, MOV, JPG, PNG 等格式</p>
-                            <input type="file" id="file-input" class="hidden" multiple>
+                <!-- 预览窗口 -->
+                <div class="w-full aspect-video rounded-lg overflow-hidden relative group bg-slate-200 dark:bg-black">
+                    <div id="comparison-slider" class="comparison-slider h-full w-full">
+                        <img id="img-before" src="https://placehold.co/1280x720/e5e7eb/4b5563?text=压缩前" alt="压缩前" class="img-before w-full h-full object-cover">
+                        <div class="img-after">
+                             <img id="img-after" src="https://placehold.co/1280x720/1f2937/d1d5db?text=压缩后" alt="压缩后" class="w-full h-full object-cover">
+                        </div>
+                        <div class="slider-handle">
+                            <div class="slider-handle-button">
+                                <i class="ph-bold ph-arrows-left-right text-xl"></i>
+                            </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- 播放进度条 -->
+                <div class="w-full flex items-center gap-4">
+                    <span class="text-xs font-mono text-slate-500 dark:text-slate-400">01:32</span>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 group">
+                        <div class="bg-emerald-500 h-1.5 rounded-full relative" style="width: 45%">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 bg-white rounded-full ring-2 ring-emerald-500 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono text-slate-500 dark:text-slate-400">03:10</span>
+                </div>
 
-                    <!-- Quality Comparison & Settings (Hidden by default) -->
-                    <div id="comparison-container" class="hidden">
-                        <div class="flex justify-between items-center mb-4">
-                             <h3 id="preview-title" class="font-bold text-xl text-gray-800 dark:text-gray-100 truncate">处理与预览</h3>
-                             <button id="reset-button" class="text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors">
-                                &#43; 上传新文件
-                             </button>
+                <!-- 压缩设置面板 -->
+                <div class="flex-1 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-lg p-6 flex flex-col gap-6">
+                    <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">压缩设置</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+                        <!-- 单个设置项 -->
+                        <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">格式</label>
+                            <select class="custom-select w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200">
+                                <option>MP4</option><option>MOV</option><option>AVI</option><option>WEBM</option>
+                            </select>
                         </div>
-                        <div class="comparison-slider aspect-video bg-gray-200 dark:bg-gray-800 mb-6">
-                            <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Before" class="before-image w-full h-full object-cover">
-                            <div class="after-image">
-                                <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=20&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="After" class="w-full h-full object-cover">
-                            </div>
-                            <div class="slider">
-                                <div class="slider-handle">
-                                    <svg class="w-4 h-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-                                    <svg class="w-4 h-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-                                </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">视频编码</label>
+                            <select class="custom-select w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200">
+                                <option>H.264</option><option>H.265 (HEVC)</option><option>AV1</option><option>VP9</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">分辨率</label>
+                            <select class="custom-select w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200">
+                                <option>432x320 (原始)</option><option>1920x1080</option><option>1280x720</option><option>640x360</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">音频编码</label>
+                            <select class="custom-select w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200">
+                                <option>AAC</option><option>MP3</option><option>Opus</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">音频采样率</label>
+                            <select class="custom-select w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200">
+                                <option>44.1 kHz</option><option>48.0 kHz</option><option>22.05 kHz</option>
+                            </select>
+                        </div>
+                         <div class="flex flex-col gap-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">音频选项</label>
+                            <div class="flex items-center gap-4 rounded-md px-3 h-[40px] bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-700">
+                                <label for="mute-toggle" class="flex items-center cursor-pointer">
+                                    <div class="relative">
+                                        <input type="checkbox" id="mute-toggle" class="sr-only peer" checked>
+                                        <div class="block bg-slate-300 dark:bg-slate-600 w-9 h-5 rounded-full peer-checked:bg-emerald-500 transition"></div>
+                                        <div class="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition peer-checked:translate-x-full"></div>
+                                    </div>
+                                    <div class="ml-3 text-slate-700 dark:text-slate-300 font-medium text-sm">保留音频</div>
+                                </label>
                             </div>
                         </div>
-                         <h4 class="font-bold text-lg text-gray-800 dark:text-gray-100 mb-4">压缩参数</h4>
-                        <div class="space-y-6">
-                            <div>
-                                <label for="format" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">格式</label>
-                                <select id="format" class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm rounded-md shadow-sm">
-                                    <option>MP4</option>
-                                    <option>WEBM</option>
-                                    <option>MOV</option>
-                                    <option>GIF</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="resolution" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">分辨率</label>
-                                <select id="resolution" class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm rounded-md shadow-sm">
-                                    <option>原始分辨率</option>
-                                    <option>1920x1080 (1080p)</option>
-                                    <option>1280x720 (720p)</option>
-                                    <option>854x480 (480p)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="quality" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">画质</label>
-                                <input type="range" id="quality" min="0" max="100" value="75" class="quality-slider accent-amber-500">
-                            </div>
+                    </div>
+                    <!-- 画质 -->
+                    <div class="mt-2">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="font-medium text-sm text-slate-600 dark:text-slate-300">画质 (CRF)</label>
+                            <span id="quality-value" class="font-semibold text-sm text-slate-800 dark:text-slate-100">23</span>
                         </div>
-                        <button class="w-full bg-amber-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-gray-900 transition-all transform hover:scale-105 mt-8">
-                            开始压缩
+                        <input id="quality-slider" type="range" min="0" max="51" value="23" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                    </div>
+                </div>
+            </main>
+
+            <!-- 右侧面板 -->
+            <aside class="w-full lg:w-80 bg-white dark:bg-slate-900/50 border-l border-slate-200 dark:border-slate-800 flex flex-col">
+                <!-- 上传区域 -->
+                <div class="p-4 border-b border-slate-200 dark:border-slate-800">
+                    <label for="file-upload-2" class="cursor-pointer w-full h-28 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10 rounded-lg flex flex-col items-center justify-center text-center transition-all duration-300">
+                        <i class="ph-bold ph-upload-simple text-3xl text-slate-400 dark:text-slate-500"></i>
+                        <p class="font-semibold mt-2 text-sm text-slate-600 dark:text-slate-300">上传文件</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">或拖拽文件到此处</p>
+                        <input id="file-upload-2" type="file" class="hidden"/>
+                    </label>
+                </div>
+                <!-- 任务列表 -->
+                <div class="flex-1 p-4 space-y-3 overflow-y-auto">
+                    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 px-1">任务队列</h3>
+                    <!-- 任务项 1 -->
+                    <div class="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg flex items-center gap-3 transition-all">
+                        <img src="https://placehold.co/80x45/a1a1aa/ffffff?text=Video" alt="thumbnail" class="w-16 h-9 object-cover rounded flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">butterfly.mp4</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">1.65 MB</p>
+                        </div>
+                        <button class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition">
+                            <i class="ph-bold ph-trash text-md"></i>
+                        </button>
+                    </div>
+                    <!-- 任务项 2 -->
+                    <div class="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg flex items-center gap-3 transition-all">
+                         <img src="https://placehold.co/80x45/18181b/ffffff?text=Video" alt="thumbnail" class="w-16 h-9 object-cover rounded flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-sm text-slate-800 dark:text-slate-200 truncate">nature_scene.mov</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">12.8 MB</p>
+                        </div>
+                        <button class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition">
+                            <i class="ph-bold ph-trash text-md"></i>
                         </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Right Column: Task List -->
-            <div class="lg:col-span-2">
-                 <div class="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-xl p-6 sm:p-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-wide">任务列表</h3>
-                        <!-- Theme Toggle -->
-                        <button id="theme-toggle" class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-colors">
-                            <svg id="theme-toggle-dark-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                            <svg id="theme-toggle-light-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM6.464 16.364l-.707.707a1 1 0 001.414 1.414l.707-.707a1 1 0 00-1.414-1.414z"></path></svg>
-                        </button>
-                    </div>
-                    <ul id="task-list" class="space-y-4">
-                        <!-- Tasks will be added here by JS -->
-                    </ul>
+                <!-- 底部开始按钮 -->
+                <div class="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
+                     <button class="w-full bg-emerald-500 text-white font-bold px-6 py-3 rounded-lg shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-300 dark:focus:ring-emerald-800 transition-all duration-300 text-base flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-100">
+                        <i class="ph-bold ph-rocket-launch text-xl"></i>
+                        <span>开始压缩</span>
+                    </button>
                 </div>
-            </div>
-        </main>
+            </aside>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
-            const dropZone = document.getElementById('drop-zone');
-            const fileInput = document.getElementById('file-input');
-            const comparisonContainer = document.getElementById('comparison-container');
-            const taskList = document.getElementById('task-list');
-            const resetButton = document.getElementById('reset-button');
-            const sliderContainer = document.querySelector('.comparison-slider');
             const themeToggleBtn = document.getElementById('theme-toggle');
             const darkIcon = document.getElementById('theme-toggle-dark-icon');
             const lightIcon = document.getElementById('theme-toggle-light-icon');
-            const previewTitle = document.getElementById('preview-title');
-            
-            // --- Theme Toggle ---
-            function updateThemeIcons() {
-                if (document.documentElement.classList.contains('dark')) {
-                    lightIcon.classList.remove('hidden');
-                    darkIcon.classList.add('hidden');
-                } else {
-                    lightIcon.classList.add('hidden');
+            const htmlEl = document.documentElement;
+
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    htmlEl.classList.add('dark');
                     darkIcon.classList.remove('hidden');
+                    lightIcon.classList.add('hidden');
+                } else {
+                    htmlEl.classList.remove('dark');
+                    darkIcon.classList.add('hidden');
+                    lightIcon.classList.remove('hidden');
                 }
-            }
-            
-            updateThemeIcons(); // Set on initial load
+            };
+
+            const currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(currentTheme);
 
             themeToggleBtn.addEventListener('click', () => {
-                document.documentElement.classList.toggle('dark');
-                if (document.documentElement.classList.contains('dark')) {
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    localStorage.setItem('theme', 'light');
-                }
-                updateThemeIcons();
+                const isDark = htmlEl.classList.contains('dark');
+                const newTheme = isDark ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
             });
 
-
-            // --- State Management ---
-            function showUploader() {
-                dropZone.classList.remove('hidden');
-                comparisonContainer.classList.add('hidden');
-            }
-            
-            function showComparer(fileName) {
-                dropZone.classList.add('hidden');
-                comparisonContainer.classList.remove('hidden');
-                previewTitle.textContent = fileName;
-            }
-
-            // --- Event Listeners ---
-            if (dropZone) {
-                const dropZoneDiv = dropZone.querySelector('div');
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    dropZoneDiv.classList.add('border-amber-400', 'dark:border-amber-500', 'bg-amber-50', 'dark:bg-gray-800/50');
-                });
-
-                dropZone.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    dropZoneDiv.classList.remove('border-amber-400', 'dark:border-amber-500', 'bg-amber-50', 'dark:bg-gray-800/50');
-                });
-
-                dropZone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    dropZoneDiv.classList.remove('border-amber-400', 'dark:border-amber-500', 'bg-amber-50', 'dark:bg-gray-800/50');
-                    const files = e.dataTransfer.files;
-                    if (files.length) {
-                        handleFiles(files);
-                    }
-                });
-            }
-
-            if (fileInput) {
-                fileInput.addEventListener('change', (e) => {
-                    const files = e.target.files;
-                     if (files.length) {
-                        handleFiles(files);
-                    }
-                });
-            }
-            
-            if(resetButton) {
-                resetButton.addEventListener('click', showUploader);
-            }
-
-            // --- File Handling ---
-            function handleFiles(files) {
-                showComparer(files[0].name);
-                for (const file of files) {
-                    const originalSize = (file.size / 1024 / 1024).toFixed(2); // in MB
-                    const compressedSize = (originalSize * (Math.random() * 0.5 + 0.2)).toFixed(2); // 20-70% of original
-                    const thumbUrl = URL.createObjectURL(file);
-                    addTask(file.name, 'pending', `${originalSize} MB`, `${compressedSize} MB`, thumbUrl);
-                }
-            }
-            
-            // --- Task List Generation ---
-            function addTask(fileName, status, originalSize, compressedSize, thumbnailUrl) {
-                const statusMap = {
-                    completed: { icon: `<svg class="h-6 w-6 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>` },
-                    processing: { icon: `<div class="h-6 w-6 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>` },
-                    failed: { icon: `<svg class="h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>` },
-                    pending: { icon: `<svg class="h-6 w-6 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>` }
-                };
-
-                const li = document.createElement('li');
-                li.className = 'flex items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors';
-                const currentStatus = statusMap[status];
-
-                li.innerHTML = `
-                    <img src="${thumbnailUrl}" alt="thumbnail" class="w-16 h-16 object-cover rounded-md flex-shrink-0 bg-gray-200 dark:bg-gray-700">
-                    <div class="flex-grow ml-4">
-                        <p class="text-gray-800 dark:text-gray-100 font-medium truncate" title="${fileName}">${fileName}</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">${originalSize} &rarr; ${compressedSize}</p>
-                    </div>
-                    <div class="ml-4 flex-shrink-0">
-                        ${currentStatus.icon}
-                    </div>
-                `;
-                taskList.prepend(li);
-            }
-
-            function generateRandomTasks() {
-                const sampleFiles = [
-                    { name: '海边假日_final_v2.mp4', thumb: 'https://placehold.co/100x100/0ea5e9/ffffff?text=Video' },
-                    { name: '产品演示视频.mov', thumb: 'https://placehold.co/100x100/22c55e/ffffff?text=Demo' },
-                    { name: '公司年会照片(1).jpg', thumb: 'https://placehold.co/100x100/ef4444/ffffff?text=Event' },
-                    { name: '设计稿-横版.png', thumb: 'https://placehold.co/100x100/a855f7/ffffff?text=Design' }
-                ];
-                const sampleStatus = ['completed', 'processing', 'failed', 'pending'];
-                
-                for(let i = 0; i < 4; i++) {
-                    const randomFile = sampleFiles[i];
-                    const randomStatus = sampleStatus[i];
-                    const originalSize = (Math.random() * 80 + 5).toFixed(1);
-                    const compressedSize = (originalSize * (Math.random() * 0.4 + 0.1)).toFixed(1);
-                    addTask(randomFile.name, randomStatus, `${originalSize} MB`, `${compressedSize} MB`, randomFile.thumb);
-                }
-            }
-
-
-            // --- Image Comparison Slider Logic ---
-            if (sliderContainer) {
-                const slider = sliderContainer.querySelector('.slider');
+            const slider = document.getElementById('comparison-slider');
+            if (slider) {
+                const imgAfterContainer = slider.querySelector('.img-after');
+                const handle = slider.querySelector('.slider-handle');
                 let isDragging = false;
-                const startDrag = () => isDragging = true;
-                const stopDrag = () => isDragging = false;
-                slider.addEventListener('mousedown', startDrag);
-                slider.addEventListener('touchstart', startDrag, { passive: true });
-                window.addEventListener('mouseup', stopDrag);
-                window.addEventListener('touchend', stopDrag);
-                const onMove = (e) => {
+                
+                const moveHandler = (e) => {
                     if (!isDragging) return;
-                    const clientX = e.clientX || e.touches[0].clientX;
-                    const rect = sliderContainer.getBoundingClientRect();
+                    const rect = slider.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                     let x = clientX - rect.left;
-                    x = Math.max(0, Math.min(x, rect.width));
+                    if (x < 0) x = 0;
+                    if (x > rect.width) x = rect.width;
                     const percentage = (x / rect.width) * 100;
-                    sliderContainer.style.setProperty('--position', `${percentage}%`);
+                    imgAfterContainer.style.width = `${percentage}%`;
+                    handle.style.left = `${percentage}%`;
                 };
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('touchmove', onMove, { passive: true });
+
+                const startDragging = (e) => { isDragging = true; e.preventDefault(); };
+                const stopDragging = () => { isDragging = false; };
+
+                slider.addEventListener('mousedown', startDragging);
+                slider.addEventListener('touchstart', startDragging, { passive: false });
+                document.addEventListener('mouseup', stopDragging);
+                document.addEventListener('touchend', stopDragging);
+                document.addEventListener('mousemove', moveHandler);
+                document.addEventListener('touchmove', moveHandler, { passive: false });
+            }
+
+            const qualitySlider = document.getElementById('quality-slider');
+            const qualityValue = document.getElementById('quality-value');
+            if (qualitySlider && qualityValue) {
+                qualitySlider.addEventListener('input', (e) => {
+                    qualityValue.textContent = e.target.value;
+                });
             }
         });
     </script>
+
 </body>
 </html>

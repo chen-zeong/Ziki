@@ -1,42 +1,48 @@
 <template>
   <div class="space-y-6">
-    <!-- 原始视频信息显示 -->
-    <!-- <VideoInfoDisplay :metadata="currentVideoMetadata" /> -->
     
-    <!-- 视频格式设置和音频设置 -->
+    <!-- 两列布局 -->
     <div class="flex gap-6">
-      <div class="flex-1">
-        <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" />
+      <!-- 左列：视频设置 -->
+      <div class="flex-1" :class="{ 'opacity-50 pointer-events-none': isAudioOnly }">
+        <!-- 视频格式和画质设置 -->
+        <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" />
       </div>
-      <div class="flex-1">
-        <AudioSettings v-model="audioAndQualitySettings" :metadata="currentVideoMetadata" />
+      
+      <!-- 右列：音频设置和控制 -->
+      <div class="flex-1 space-y-6">
+        <!-- 音频设置 -->
+        <AudioSettings v-model="audioSettings" :metadata="currentVideoMetadata" />
+        
+        <!-- 时间段和硬件加速设置 -->
+         <div class="flex gap-1">
+           <div class="flex-1">
+             <TimeRangeSettings 
+               v-model="timeRangeSettings" 
+               :metadata="currentVideoMetadata"
+               @validation-change="handleTimeValidationChange"
+             />
+           </div>
+           
+           <div class="flex justify-end">
+             <HardwareAccelerationSettings 
+               v-model="hardwareSettings" 
+               :current-video-codec="formatSettings.videoCodec"
+             />
+           </div>
+         </div>
+        
+        <!-- 开始压缩按钮 -->
+        <button 
+          class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold px-6 py-4 rounded-xl shadow-lg shadow-green-500/20 dark:shadow-green-800/20 hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-300 dark:focus:ring-green-800 transition-all duration-300 text-lg flex items-center justify-center gap-3 transform hover:scale-[1.03]"
+          :class="isProcessing || !isTimeValid ? 'bg-gray-400 text-gray-200 cursor-not-allowed shadow-none hover:bg-gray-400 hover:scale-100' : ''"
+          :disabled="isProcessing || !isTimeValid"
+          @click="startCompression"
+        >
+          <i class="ph-bold ph-rocket-launch text-2xl"></i>
+          <span>{{ isProcessing ? $t('videoSettings.compressing') : $t('videoSettings.compress') }}</span>
+        </button>
       </div>
-    </div>
-    
-    <!-- 按钮行：自定义时间段 + 硬件加速 + 开始压缩 -->
-    <div class="flex gap-3 mt-6">
-      <!-- 自定义时间段按钮 -->
-      <TimeRangeSettings 
-        v-model="timeRangeSettings" 
-        :metadata="currentVideoMetadata"
-        @validation-change="handleTimeValidationChange"
-      />
-      
-      <!-- 硬件加速选择按钮 -->
-      <HardwareAccelerationSettings 
-        v-model="hardwareSettings" 
-        :current-video-codec="formatSettings.videoCodec"
-      />
-      
-      <!-- 开始压缩按钮 -->
-      <button 
-        class="flex-1 font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
-        :class="isProcessing || !isTimeValid ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500'"
-        :disabled="isProcessing || !isTimeValid"
-        @click="startCompression"
-      >
-        {{ isProcessing ? '压缩中...' : '开始压缩' }}
-      </button>
     </div>
   </div>
 </template>
@@ -78,9 +84,11 @@ const resetAllSettings = () => {
     videoCodec: 'libx264',
     resolution: 'original'
   };
-  audioAndQualitySettings.value = {
+  audioSettings.value = {
     audioCodec: 'aac',
-    sampleRate: '44100',
+    sampleRate: '44100'
+  };
+  qualitySettings.value = {
     qualityType: 'crf',
     crfValue: 23
   };
@@ -113,9 +121,12 @@ const formatSettings = shallowRef<Partial<CompressionSettings>>({
   resolution: 'original'
 });
 
-const audioAndQualitySettings = shallowRef<Partial<CompressionSettings>>({
+const audioSettings = shallowRef<Partial<CompressionSettings>>({
   audioCodec: 'aac',
-  sampleRate: '44100',
+  sampleRate: '44100'
+});
+
+const qualitySettings = shallowRef<Partial<CompressionSettings>>({
   qualityType: 'crf',
   crfValue: 23
 });
@@ -140,6 +151,17 @@ const handleTimeValidationChange = (isValid: boolean) => {
   isTimeValid.value = isValid;
 };
 
+// 处理画质设置更新，避免循环依赖
+const handleQualitySettingsUpdate = (newQualitySettings: Partial<CompressionSettings>) => {
+  // 使用Object.assign来更新，避免直接赋值
+  Object.assign(qualitySettings.value, newQualitySettings);
+};
+
+// 监听仅保留音频状态
+const isAudioOnly = computed(() => {
+  return audioSettings.value.audioOnly || false;
+});
+
 // 时间格式转换：HH:MM:SS 转换为秒数
 const timeToSeconds = (timeStr: string): number | null => {
   if (!timeStr || timeStr === '00:00:00') return null
@@ -156,7 +178,8 @@ const startCompression = () => {
   // 合并所有设置
   const compressionSettings: CompressionSettings = {
     ...formatSettings.value,
-    ...audioAndQualitySettings.value,
+    ...audioSettings.value,
+    ...qualitySettings.value,
     // 添加时间段信息
     timeRange: timeRangeSettings.value.enabled ? {
       start: timeToSeconds(timeRangeSettings.value.timeRange.start),

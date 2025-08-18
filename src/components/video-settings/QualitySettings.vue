@@ -1,9 +1,9 @@
 <template>
-  <div class="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg overflow-visible max-h-full">
+  <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-visible max-h-full">
     <div class="space-y-4">
       <div>
         <div class="flex justify-between items-center mb-2">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">画质</label>
+          <label class="font-medium text-sm text-slate-600 dark:text-slate-300">画质</label>
           <!-- Tab 切换 -->
           <div class="relative flex bg-gray-100 dark:bg-gray-600 rounded-md p-1 h-8">
             <!-- 滑动背景 -->
@@ -38,9 +38,9 @@
         <!-- Tab 内容 -->
         <div v-if="qualityMode === 'crf'" class="transition-all duration-200">
           <div class="flex items-center space-x-2">
-            <div class="flex-1">
+            <div class="w-2/3">
               <CustomNumberInput
-                v-model="settings.crfValue"
+                v-model="crfValue"
                 :min="0"
                 :max="51"
                 placeholder="CRF值 (0-51)"
@@ -53,7 +53,10 @@
               {{ crfQualityText }}
             </span>
           </div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <div v-if="crfValidationError" class="text-xs text-red-500 dark:text-red-400 mt-1">
+            {{ crfValidationError }}
+          </div>
+          <div v-else class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             推荐值：18-28，数值越小质量越高
           </div>
         </div>
@@ -71,9 +74,15 @@
             <span class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
               kbps
             </span>
+            <span 
+              class="px-3 py-1 rounded-lg text-sm font-medium whitespace-nowrap"
+              :class="bitrateQualityClass"
+            >
+              {{ bitrateQualityText }}
+            </span>
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            常用值：1080p 建议 5000-8000 kbps
+            {{ resolutionBitrateHint }}
           </div>
         </div>
       </div>
@@ -88,6 +97,7 @@ import type { CompressionSettings } from '../../types';
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
+  resolution?: string;
 }
 
 interface Emits {
@@ -106,26 +116,123 @@ const settings = ref<Partial<CompressionSettings>>({
 const qualityMode = ref('crf');
 const bitrateValue = ref(5000);
 
+// 标记是否正在更新，避免循环
+const isUpdating = ref(false);
+
+const emitUpdate = () => {
+  if (isUpdating.value) return;
+  
+  const updatedSettings = {
+    ...settings.value,
+    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined
+  };
+  emit('update:modelValue', updatedSettings);
+};
+
+// 为CRF值创建computed属性
+const crfValue = computed({
+  get: () => settings.value.crfValue ?? 23,
+  set: (value: number) => {
+    if (isUpdating.value) return;
+    settings.value = { ...settings.value, crfValue: value };
+    emitUpdate();
+  }
+});
+
 const crfColorClass = computed(() => {
-  const crf = settings.value.crfValue || 23;
+  const crf = settings.value.crfValue;
+  if (crf === undefined || crf === null) {
+    return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300';
+  }
+  if (crf < 0 || crf > 51) {
+    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+  }
   if (crf >= 18 && crf <= 28) {
     return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+  }
+  if (crf < 18) {
+    return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+  }
+  if (crf > 40) {
+    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+  }
+  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+});
+
+const crfQualityText = computed(() => {
+  const crf = settings.value.crfValue;
+  if (crf === undefined || crf === null) return '默认质量';
+  if (crf < 0 || crf > 51) return '无效值';
+  if (crf < 18) return '大体积';
+  if (crf >= 18 && crf < 28) return '高质量';
+  if (crf >= 28 && crf <= 40) return '中等质量';
+  if (crf > 40) return '极低质量';
+  return '可接受';
+});
+
+const crfValidationError = computed(() => {
+  const crf = settings.value.crfValue;
+  if (crf === undefined || crf === null) return '';
+  if (crf < 0 || crf > 51) {
+    return 'CRF值必须在0-51范围内';
+  }
+  return '';
+});
+
+// 根据分辨率获取推荐码率范围
+const getRecommendedBitrateRange = (resolution: string) => {
+  const resolutionMap: Record<string, { min: number; max: number; label: string }> = {
+    '3840x2160': { min: 15000, max: 25000, label: '4K' },
+    '2560x1440': { min: 8000, max: 16000, label: '1440p' },
+    '1920x1080': { min: 5000, max: 8000, label: '1080p' },
+    '1280x720': { min: 2500, max: 5000, label: '720p' },
+    '854x480': { min: 1000, max: 2500, label: '480p' },
+    '640x360': { min: 500, max: 1000, label: '360p' }
+  };
+  
+  return resolutionMap[resolution] || { min: 2000, max: 6000, label: '标准' };
+};
+
+// 码率质量提示文本
+const bitrateQualityText = computed(() => {
+  const currentBitrate = bitrateValue.value;
+  const resolution = props.resolution || '1920x1080';
+  const range = getRecommendedBitrateRange(resolution);
+  
+  if (currentBitrate < range.min * 0.7) {
+    return '低质量';
+  } else if (currentBitrate >= range.min && currentBitrate <= range.max) {
+    return '高质量';
+  } else if (currentBitrate > range.max) {
+    return '超高质量';
+  } else {
+    return '中等质量';
+  }
+});
+
+// 码率质量提示样式
+const bitrateQualityClass = computed(() => {
+  const currentBitrate = bitrateValue.value;
+  const resolution = props.resolution || '1920x1080';
+  const range = getRecommendedBitrateRange(resolution);
+  
+  if (currentBitrate < range.min * 0.7) {
+    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+  } else if (currentBitrate >= range.min && currentBitrate <= range.max) {
+    return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+  } else if (currentBitrate > range.max) {
+    return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
   } else {
     return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
   }
 });
 
-const crfQualityText = computed(() => {
-  const crf = settings.value.crfValue || 23;
-  if (crf <= 17) return '极高质量';
-  if (crf <= 23) return '高质量';
-  if (crf <= 28) return '中等质量';
-  if (crf <= 35) return '低质量';
-  return '极低质量';
+// 分辨率码率提示
+const resolutionBitrateHint = computed(() => {
+  const resolution = props.resolution || '1920x1080';
+  const range = getRecommendedBitrateRange(resolution);
+  return `${range.label} 推荐：${range.min}-${range.max} kbps`;
 });
-
-// 标记是否正在更新，避免循环
-const isUpdating = ref(false);
 
 // 监听质量模式变化
 watch(qualityMode, (newMode) => {
@@ -145,16 +252,6 @@ watch(bitrateValue, () => {
   if (isUpdating.value) return;
   emitUpdate();
 });
-
-const emitUpdate = () => {
-  if (isUpdating.value) return;
-  
-  const updatedSettings = {
-    ...settings.value,
-    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined
-  };
-  emit('update:modelValue', updatedSettings);
-};
 
 // 监听父组件传入的值变化
 watch(() => props.modelValue, (newValue) => {

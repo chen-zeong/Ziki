@@ -4,13 +4,14 @@
     <button
       type="button"
       class="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-      :class="hasTimeRange ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'"
+      :class="hasTimeRange ? 'bg-amber-500 text-white hover:bg-amber-600' : 'text-gray-700 dark:text-gray-300'"
+      :style="hasTimeRange ? {} : { backgroundColor: '#e5e7eb !important' }"
       @click="showTimeRangeModal = !showTimeRangeModal"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
       </svg>
-      <span class="text-sm">时间段</span>
+      <span class="text-sm">{{ $t('videoSettings.timeRange') }}</span>
       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
       </svg>
@@ -25,11 +26,11 @@
       leave-from-class="opacity-100 scale-100 translate-y-0"
       leave-to-class="opacity-0 scale-95 translate-y-2"
     >
-      <div v-if="showTimeRangeModal" class="absolute bottom-full left-0 mb-2 w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-50">
+      <div v-if="showTimeRangeModal" class="absolute bottom-full right-0 mb-2 w-72 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-50">
         <div class="p-4">
           <!-- 标题和启用开关 -->
           <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">自定义时间段</h3>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $t('videoSettings.customTimeRange') }}</h3>
             <button
               type="button"
               class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
@@ -49,29 +50,38 @@
               <button
                 type="button"
                 class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
-                :class="selectedQuickOption === 'random30s' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                :class="[
+                  selectedQuickOption === 'random30s' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+                  isRandomButtonDisabled('random30s') ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
                 @click="selectQuickOption('random30s')"
-                :disabled="!enableTimeRange"
+                :disabled="!enableTimeRange || isRandomButtonDisabled('random30s')"
               >
-                随机30秒
+                {{ $t('videoSettings.random30s') }}
               </button>
               <button
                 type="button"
                 class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
-                :class="selectedQuickOption === 'random1m' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                :class="[
+                  selectedQuickOption === 'random1m' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+                  isRandomButtonDisabled('random1m') ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
                 @click="selectQuickOption('random1m')"
-                :disabled="!enableTimeRange"
+                :disabled="!enableTimeRange || isRandomButtonDisabled('random1m')"
               >
-                随机1分钟
+                {{ $t('videoSettings.random1min') }}
               </button>
               <button
                 type="button"
                 class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
-                :class="selectedQuickOption === 'random5m' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                :class="[
+                  selectedQuickOption === 'random5m' ? 'bg-amber-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+                  isRandomButtonDisabled('random5m') ? 'opacity-50 cursor-not-allowed' : ''
+                ]"
                 @click="selectQuickOption('random5m')"
-                :disabled="!enableTimeRange"
+                :disabled="!enableTimeRange || isRandomButtonDisabled('random5m')"
               >
-                随机5分钟
+                {{ $t('videoSettings.random5min') }}
               </button>
             </div>
           </div>
@@ -79,27 +89,26 @@
           <!-- 时间设置 -->
           <div class="space-y-3" :class="{ 'opacity-50 pointer-events-none': !enableTimeRange }">
             <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">开始时间</label>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $t('videoSettings.startTime') }}</label>
               <input
                 v-model="timeRange.start"
                 type="time"
                 step="1"
                 placeholder="00:00:00"
-                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
               />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">结束时间</label>
+              <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $t('videoSettings.endTime') }}</label>
               <input
                 v-model="timeRange.end"
                 type="time"
                 step="1"
-                :placeholder="metadata ? formatDuration(metadata.duration) : '留空表示到视频末尾'"
-                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                :placeholder="metadata ? formatDuration(metadata.duration) : $t('videoSettings.endTimePlaceholder')"
+                class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
               />
-            </div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              提示：结束时间设为 00:00:00 或留空表示处理到视频末尾
             </div>
             
             <!-- 验证错误提示 -->
@@ -115,7 +124,7 @@
               class="flex-1 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               @click="clearTimeRange"
             >
-              清除
+              {{ $t('common.clear') }}
             </button>
             <button
               type="button"
@@ -124,7 +133,7 @@
               :disabled="!timeValidation.isValid"
               @click="timeValidation.isValid && (showTimeRangeModal = false)"
             >
-              确定
+              {{ $t('common.confirm') }}
             </button>
           </div>
         </div>
@@ -135,6 +144,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useTheme } from '../../composables/useTheme';
 
 interface TimeRangeData {
   start: string;
@@ -160,6 +170,7 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
+const { isDark } = useTheme();
 const showTimeRangeModal = ref(false);
 const selectedQuickOption = ref<string | null>(null);
 
@@ -214,8 +225,29 @@ const secondsToTime = (totalSeconds: number): string => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+// 判断随机时间按钮是否应该禁用
+const isRandomButtonDisabled = (option: string): boolean => {
+  if (!props.metadata?.duration) return false;
+  
+  const videoDuration = props.metadata.duration;
+  
+  switch (option) {
+    case 'random30s':
+      return videoDuration < 30;
+    case 'random1m':
+      return videoDuration < 60;
+    case 'random5m':
+      return videoDuration < 300;
+    default:
+      return false;
+  }
+};
+
 // 快速选择时间段
 const selectQuickOption = (option: string) => {
+  // 如果按钮被禁用，不执行任何操作
+  if (isRandomButtonDisabled(option)) return;
+  
   // 如果点击的是已选中的选项，则取消选择
   if (selectedQuickOption.value === option) {
     selectedQuickOption.value = null
@@ -263,7 +295,7 @@ const timeValidation = computed(() => {
     const endSeconds = timeToSeconds(endTime)
     
     if (startSeconds !== null && endSeconds !== null && endSeconds <= startSeconds) {
-      return { isValid: false, message: '结束时间必须大于开始时间' }
+      return { isValid: false, message: 'End time must be greater than start time' }
     }
   }
   
@@ -284,7 +316,7 @@ const clearTimeRange = () => {
 
 // 格式化时长
 const formatDuration = (duration: number): string => {
-  if (duration === 0) return '未知';
+  if (duration === 0) return 'Unknown';
   
   const hours = Math.floor(duration / 3600);
   const minutes = Math.floor((duration % 3600) / 60);
@@ -305,9 +337,9 @@ watch(enableTimeRange, (newValue) => {
       start: '00:00:00',
       end: '00:00:00'
     };
-  } else if (newValue && props.metadata && timeRange.value.end === '00:00:00') {
-    // 启用时如果结束时间为空，设置为视频时长
-    timeRange.value.end = formatDuration(props.metadata.duration);
+  } else if (newValue && props.metadata) {
+    // 启用时设置结束时间为视频时长
+    timeRange.value.end = secondsToTime(Math.floor(props.metadata.duration));
   }
   
   // 发射更新事件
@@ -319,8 +351,9 @@ watch(enableTimeRange, (newValue) => {
 
 // 监听metadata变化，自动设置结束时间默认值
 watch(() => props.metadata, (newMetadata) => {
-  if (newMetadata && enableTimeRange.value && timeRange.value.end === '00:00:00') {
-    timeRange.value.end = formatDuration(newMetadata.duration);
+  if (newMetadata && enableTimeRange.value) {
+    // 当有新的metadata时，更新结束时间为视频实际时长
+    timeRange.value.end = secondsToTime(Math.floor(newMetadata.duration));
   }
 });
 

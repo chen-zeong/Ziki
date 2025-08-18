@@ -10,7 +10,8 @@
       :placeholder="placeholder"
       :disabled="disabled"
       type="number"
-      class="w-full h-10 px-3 pr-8 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+      class="w-full h-10 px-3 pr-8 bg-white border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+      :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
     />
     <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col">
       <button
@@ -38,6 +39,9 @@
 </template>
 
 <script setup lang="ts">
+import { useTheme } from '../../composables/useTheme';
+
+const { isDark } = useTheme();
 
 interface Props {
   modelValue?: number

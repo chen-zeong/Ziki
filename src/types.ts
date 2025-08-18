@@ -27,11 +27,13 @@ export interface VideoFile {
 export interface CompressionTask {
   id: string;
   file: VideoFile;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed';
   progress: number;
   originalSize: number;
   compressedSize?: number;
+  compressedMetadata?: VideoMetadata; // 压缩后的视频元数据
   settings: CompressionSettings;
+  outputDirectory?: string; // 输出文件夹路径
   createdAt: Date;
   completedAt?: Date;
   error?: string;
@@ -59,6 +61,8 @@ export interface CompressionSettings {
   sampleRate: 'original' | '22050' | '44100' | '48000' | '96000';
   timeRange?: TimeRange;
   hardwareAcceleration?: 'cpu' | 'gpu';
+  muted?: boolean; // 静音选项
+  audioOnly?: boolean; // 仅保留音频选项
 }
 
 export interface CompressionResult {
@@ -67,6 +71,7 @@ export interface CompressionResult {
   error?: string;
   originalSize: number;
   compressedSize?: number;
+  compressedMetadata?: VideoMetadata; // 压缩后的视频元数据
 }
 
 export interface ComparisonData {

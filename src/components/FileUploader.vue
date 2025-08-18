@@ -1,6 +1,6 @@
 <template>
   <div id="drop-zone" class="transition-all duration-300">
-    <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">上传文件</h3>
+    <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">{{ $t('common.upload') }}</h3>
     <div 
       class="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-8 sm:p-12 text-center transition-colors duration-300 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-gray-800/50 cursor-pointer"
       :class="{
@@ -15,9 +15,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3-3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
       </svg>
       <p class="mt-4 text-gray-600 dark:text-gray-300">
-        <span class="font-semibold text-amber-600 dark:text-amber-400">点击上传</span> 或拖拽文件至此
+        <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $t('fileUpload.selectFiles') }}</span> {{ $t('fileUpload.subtitle') }}
       </p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">支持 MP4, MOV, JPG, PNG 等格式</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">{{ $t('fileUpload.supportedFormats') }}</p>
       <input 
         ref="fileInputRef"
         type="file" 

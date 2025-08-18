@@ -5,7 +5,7 @@
   "identifier": "com.tauri-app.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:7350",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "视频压缩工具",
+        "titleBarStyle": "Overlay",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

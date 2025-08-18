@@ -1,9 +1,9 @@
 <template>
   <div class="frame-selector bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
     <div class="flex items-center justify-between mb-3">
-      <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">帧选择器</h4>
+      <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $t('videoComparison.frameSelector') }}</h4>
       <div class="text-xs text-gray-500 dark:text-gray-400">
-        {{ selectedFrame !== null ? `第 ${selectedFrame + 1} 帧` : '未选择' }}
+        {{ selectedFrame !== null ? $t('videoComparison.frameNumber', { number: selectedFrame + 1 }) : $t('videoComparison.noFrameSelected') }}
       </div>
     </div>
     
@@ -29,7 +29,7 @@
             <img 
               v-else-if="frameThumbnails.has(frameIndex - 1)"
               :src="frameThumbnails.get(frameIndex - 1)"
-              :alt="`帧 ${frameIndex}`"
+              :alt="$t('videoComparison.frameAlt', { number: frameIndex })"
               class="w-full h-full object-cover rounded"
             >
             <div v-else class="text-xs text-gray-400">
@@ -97,7 +97,7 @@ const generateThumbnail = async (frameIndex: number) => {
     
     frameThumbnails.value.set(frameIndex, thumbnail as string);
   } catch (error) {
-    console.error(`生成帧 ${frameIndex} 缩略图失败:`, error);
+    console.error(`Generate frame ${frameIndex} thumbnail failed:`, error);
   } finally {
     loadingFrames.value.delete(frameIndex);
   }

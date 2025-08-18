@@ -99,6 +99,55 @@ pub fn get_file_size(filePath: String) -> Result<u64, String> {
 }
 
 #[tauri::command]
+pub fn get_platform() -> Result<String, String> {
+    #[cfg(target_os = "macos")]
+    return Ok("macos".to_string());
+    
+    #[cfg(target_os = "windows")]
+    return Ok("windows".to_string());
+    
+    #[cfg(target_os = "linux")]
+    return Ok("linux".to_string());
+    
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    return Ok("unknown".to_string());
+}
+
+#[tauri::command]
+pub async fn open_output_folder(folder_path: String) -> Result<(), String> {
+    let path = std::path::Path::new(&folder_path);
+    if !path.exists() {
+        return Err(format!("Folder does not exist: {}", folder_path));
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&folder_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&folder_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&folder_path)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_video_metadata(videoPath: String) -> Result<VideoMetadata, String> {
     let ffprobe_binary = get_ffprobe_binary();
     
@@ -270,10 +319,42 @@ fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
         .find(|stream| stream["codec_type"].as_str() == Some("audio"));
     
     // 获取格式信息
-    let container_format = format["format_name"].as_str()
+    let format_name = format["format_name"].as_str()
         .unwrap_or("unknown")
-        .split(',').next().unwrap_or("unknown")
-        .to_uppercase();
+        .split(',').next().unwrap_or("unknown");
+    
+    // 根据文件扩展名和格式名称确定正确的容器格式
+    let file_extension = format["filename"].as_str()
+        .and_then(|path| std::path::Path::new(path).extension())
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("");
+    
+    let container_format = match file_extension.to_lowercase().as_str() {
+        "mp4" => "MP4".to_string(),
+        "mov" => "MOV".to_string(), 
+        "mkv" => "MKV".to_string(),
+        "avi" => "AVI".to_string(),
+        "webm" => "WEBM".to_string(),
+        "flv" => "FLV".to_string(),
+        "wmv" => "WMV".to_string(),
+        "m4v" => "M4V".to_string(),
+        "ts" => "TS".to_string(),
+        "m2ts" => "M2TS".to_string(),
+        "3gp" => "3GP".to_string(),
+        _ => {
+            // 如果扩展名不匹配，则根据格式名称推断
+            match format_name.to_lowercase().as_str() {
+                "mov" | "mp4" => "MP4".to_string(), // 默认优先使用MP4
+                "matroska" | "mkv" => "MKV".to_string(),
+                "avi" => "AVI".to_string(),
+                "webm" => "WEBM".to_string(),
+                "flv" => "FLV".to_string(),
+                "asf" | "wmv" => "WMV".to_string(),
+                "mpegts" => "TS".to_string(),
+                _ => format_name.to_uppercase()
+            }
+        }
+    };
     
     // 获取视频编码
     let video_codec = video_stream["codec_name"].as_str()

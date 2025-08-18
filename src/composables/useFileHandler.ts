@@ -164,10 +164,13 @@ export function useFileHandler() {
         task.progress = 100;
         task.originalSize = result.originalSize; // Update with actual file size from backend
         task.compressedSize = result.compressedSize || 0;
+        task.compressedMetadata = result.compressedMetadata; // 添加压缩后的元数据
         task.completedAt = new Date();
         // Set both compressed path and URL
         task.file.compressedPath = result.outputPath;
         task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
+        // Save output directory for the "open folder" button
+        task.outputDirectory = outputDir;
         
         // Update currentFile if it matches this task
         if (currentFile.value && currentFile.value.id === task.file.id) {

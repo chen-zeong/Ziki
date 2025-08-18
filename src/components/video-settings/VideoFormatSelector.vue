@@ -3,14 +3,14 @@
     <!-- 视频格式选择 -->
     <div class="format-section">
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        输出格式
+        {{ $t('videoSettings.format') }}
       </label>
       <select 
         v-model="selectedFormat" 
         @change="onFormatChange"
         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
       >
-        <optgroup label="推荐格式">
+        <optgroup :label="$t('videoSettings.recommendedFormats')">
           <option 
             v-for="option in recommendedFormatOptions" 
             :key="option.value" 
@@ -19,7 +19,7 @@
             {{ option.label }}
           </option>
         </optgroup>
-        <optgroup label="其他格式">
+        <optgroup :label="$t('videoSettings.otherFormats')">
           <option 
             v-for="option in otherFormatOptions" 
             :key="option.value" 
@@ -34,7 +34,7 @@
     <!-- 视频编码选择 -->
     <div class="codec-section">
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        视频编码
+        {{ $t('videoSettings.videoCodec') }}
       </label>
       <div class="grid grid-cols-1 gap-2">
         <div 
@@ -63,7 +63,7 @@
                   </span>
                   <span v-if="option.hardwareSupport" 
                         class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    硬件加速
+                    {{ $t('videoSettings.hardwareAcceleration') }}
                   </span>
                 </div>
               </div>
@@ -77,7 +77,7 @@
     <!-- 音频编码选择 -->
     <div class="codec-section">
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        音频编码
+        {{ $t('videoSettings.audioCodec') }}
       </label>
       <div class="grid grid-cols-1 gap-2">
         <div 
@@ -128,10 +128,10 @@
         </div>
         <div class="ml-3">
           <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
-            编码组合不兼容
+            {{ $t('videoSettings.incompatibleCodecs') }}
           </h3>
           <p class="mt-1 text-sm text-red-700 dark:text-red-300">
-            当前选择的视频编码和音频编码与输出格式不兼容，请重新选择。
+            {{ $t('videoSettings.incompatibleCodecsMessage') }}
           </p>
         </div>
       </div>
@@ -154,6 +154,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useVideoFormats } from '../../composables/useVideoFormats';
 
 // 使用视频格式配置
@@ -199,12 +200,13 @@ const getQualityBadgeClass = (quality: string) => {
 
 // 质量等级文本
 const getQualityText = (quality: string) => {
+  const { t } = useI18n();
   const texts = {
-    'poor': '较低',
-    'fair': '一般',
-    'good': '良好',
-    'excellent': '优秀',
-    'lossless': '无损'
+    'poor': t('videoSettings.qualityPoor'),
+    'fair': t('videoSettings.qualityFair'),
+    'good': t('videoSettings.qualityGood'),
+    'excellent': t('videoSettings.qualityExcellent'),
+    'lossless': t('videoSettings.qualityLossless')
   };
   return texts[quality as keyof typeof texts] || quality;
 };

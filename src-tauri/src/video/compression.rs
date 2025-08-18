@@ -1,6 +1,47 @@
 use std::process::Command;
 use tauri::Manager;
-use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary};
+use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata};
+
+// 将前端编码器名称映射为FFmpeg编码器名称
+fn map_codec_to_ffmpeg(codec: &str) -> &str {
+    match codec {
+        "H.264" => "libx264",
+        "H.265" | "HEVC" => "libx265",
+        "AV1" => "libaom-av1",
+        "VP8" => "libvpx",
+        "VP9" => "libvpx-vp9",
+        "Xvid" => "libxvid",
+        "ProRes" => "prores",
+        "WMV9" => "wmv2",
+        "VC-1" => "vc1",
+        "MPEG-2" => "mpeg2video",
+        "MPEG-4" => "mpeg4",
+        "H.263" => "h263",
+        "VP6" => "vp6",
+        "Theora" => "libtheora",
+        "DNxHD" => "dnxhd",
+        // 如果已经是FFmpeg编码器名称，直接返回
+        _ => codec,
+    }
+}
+
+// 将前端音频编码器名称映射为FFmpeg编码器名称
+fn map_audio_codec_to_ffmpeg(codec: &str) -> &str {
+    match codec {
+        "AAC" => "aac",
+        "MP3" => "libmp3lame",
+        "FLAC" => "flac",
+        "Vorbis" => "libvorbis",
+        "Opus" => "libopus",
+        "AC-3" => "ac3",
+        "DTS" => "dts",
+        "WMA" => "wmav2",
+        "AMR" => "libopencore_amrnb",
+        "PCM" => "pcm_s16le",
+        // 如果已经是FFmpeg编码器名称，直接返回
+        _ => codec,
+    }
+}
 
 #[tauri::command]
 pub async fn compress_video(
@@ -58,8 +99,9 @@ pub async fn compress_video(
         }
     }
     
-    // Set video codec
-    cmd.arg("-c:v").arg(&settings.codec);
+    // Set video codec (映射为FFmpeg编码器名称)
+    let ffmpeg_codec = map_codec_to_ffmpeg(&settings.codec);
+    cmd.arg("-c:v").arg(ffmpeg_codec);
     
     // Set quality (CRF or bitrate)
     match settings.quality_type.as_str() {
@@ -92,7 +134,8 @@ pub async fn compress_video(
     
     // Set audio codec and sample rate
     if settings.audio_format != "copy" {
-        cmd.arg("-c:a").arg(&settings.audio_format);
+        let ffmpeg_audio_codec = map_audio_codec_to_ffmpeg(&settings.audio_format);
+        cmd.arg("-c:a").arg(ffmpeg_audio_codec);
         if settings.sample_rate != "original" {
             cmd.arg("-ar").arg(&settings.sample_rate);
         }
@@ -115,6 +158,15 @@ pub async fn compress_video(
         let compressed_size = std::fs::metadata(&outputPath)
             .map(|m| m.len())
             .ok();
+        
+        // 获取压缩后文件的元数据
+        let compressed_metadata = match get_video_metadata(outputPath.clone()) {
+            Ok(metadata) => Some(metadata),
+            Err(e) => {
+                println!("Warning: Failed to get compressed video metadata: {}", e);
+                None
+            }
+        };
             
         Ok(CompressionResult {
             success: true,
@@ -122,6 +174,7 @@ pub async fn compress_video(
             error: None,
             original_size,
             compressed_size,
+            compressed_metadata,
         })
     } else {
         let error_msg = String::from_utf8_lossy(&output.stderr);
@@ -131,6 +184,7 @@ pub async fn compress_video(
             error: Some(error_msg.to_string()),
             original_size,
             compressed_size: None,
+            compressed_metadata: None,
         })
     }
 }

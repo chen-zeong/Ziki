@@ -51,4 +51,6 @@ pub struct CompressionResult {
     pub original_size: u64,
     #[serde(rename = "compressedSize")]
     pub compressed_size: Option<u64>,
+    #[serde(rename = "compressedMetadata")]
+    pub compressed_metadata: Option<VideoMetadata>,
 }
