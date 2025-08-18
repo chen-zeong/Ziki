@@ -1,5 +1,5 @@
 <template>
-  <div class="border border-gray-200 dark:border-gray-800 rounded-xl p-4" :style="{ backgroundColor: isDark ? '#2b2b2b' : 'white' }">
+  <div>
     <div class="mb-4 flex items-center justify-between">
       <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-wide">{{ $t('taskList.title') }}</h3>
       
@@ -26,7 +26,7 @@
       <li 
         v-for="task in filteredTasks" 
         :key="task.id"
-        class="rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors overflow-hidden"
+        class="rounded-lg bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors overflow-hidden shadow-sm"
       >
         <!-- 主要任务信息 -->
         <div class="flex items-center p-2">

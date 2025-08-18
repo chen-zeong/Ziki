@@ -95,37 +95,38 @@ const onReset = () => {
 </script>
 
 <template>
-  <div class="bg-gray-50 text-gray-800 dark:text-gray-200 transition-colors duration-300 h-screen overflow-hidden" :style="{ backgroundColor: isDark ? '#181917' : '' }">
+  <div class="bg-white text-gray-800 dark:text-gray-200 transition-colors duration-300 h-screen overflow-hidden" :style="{ backgroundColor: isDark ? '#181917' : 'white' }">
     <div data-tauri-drag-region class="container mx-auto p-4 sm:p-8 max-w-7xl h-full flex flex-col">
-      <main class="grid grid-cols-1 lg:grid-cols-5 gap-8 flex-1 overflow-hidden" style="pointer-events: auto;">
+      <main class="flex flex-1 overflow-hidden" style="pointer-events: auto;">
         <!-- Left Column: Main Operations -->
-        <div class="lg:col-span-3 overflow-hidden" style="pointer-events: auto;">
-          <div class="bg-white border border-gray-200 dark:border-gray-800 rounded-xl px-6 sm:px-8 pt-4 sm:pt-6 pb-6 sm:pb-8 h-full overflow-auto" :style="{ backgroundColor: isDark ? '#2b2b2b' : '' }">
-            <!-- File Upload (Visible by default) -->
-            <FileUploader 
-              v-if="isUploaderVisible"
-              @files-selected="onFilesSelected"
-            />
+        <div class="flex-1 overflow-hidden px-3 sm:px-4 pt-2 sm:pt-3 pb-3 sm:pb-4 bg-white dark:bg-transparent" style="pointer-events: auto;">
+          <!-- File Upload (Visible by default) -->
+          <FileUploader 
+            v-if="isUploaderVisible"
+            @files-selected="onFilesSelected"
+          />
 
-            <!-- Quality Comparison & Settings (Hidden by default) -->
-            <VideoComparison 
-              v-else
-              :title="currentFile?.name"
-              :before-image="beforeImage"
-              :after-image="afterImage"
-              :is-processing="isProcessing"
-              :video-path="currentFile?.path"
-              :compressed-video-path="currentFile?.compressedUrl"
-              :compressed-video-file-path="currentFile?.compressedPath"
-              @reset="onReset"
-              @compress="onCompress"
-              @update-images="onUpdateImages"
-            />
-          </div>
+          <!-- Quality Comparison & Settings (Hidden by default) -->
+          <VideoComparison 
+            v-else
+            :title="currentFile?.name"
+            :before-image="beforeImage"
+            :after-image="afterImage"
+            :is-processing="isProcessing"
+            :video-path="currentFile?.path"
+            :compressed-video-path="currentFile?.compressedUrl"
+            :compressed-video-file-path="currentFile?.compressedPath"
+            @reset="onReset"
+            @compress="onCompress"
+            @update-images="onUpdateImages"
+          />
         </div>
 
+        <!-- Vertical Divider -->
+        <div class="w-px bg-gray-200 dark:bg-gray-700 flex-shrink-0"></div>
+
         <!-- Right Column: Controls & Task List -->
-        <div class="lg:col-span-2 overflow-hidden flex flex-col" style="pointer-events: auto;">
+        <div class="w-96 overflow-hidden px-3 sm:px-4 pt-2 sm:pt-3 pb-3 sm:pb-4 bg-gray-100 dark:bg-gray-800" style="pointer-events: auto;">
           <!-- Controls Bar -->
           <div class="flex justify-end items-center space-x-2 mb-4">
             <!-- Output Folder Icon -->
@@ -163,11 +164,6 @@ const onReset = () => {
             @update:output-path="handleOutputPathUpdate"
             @close="handleOutputFolderClose"
           />
-          
-          <!-- Codec Detector -->
-          <div class="mb-4">
-            <CodecDetector />
-          </div>
           
           <!-- Task List -->
           <div class="flex-1 overflow-hidden">

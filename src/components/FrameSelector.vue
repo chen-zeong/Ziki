@@ -81,7 +81,26 @@ const selectFrame = async (frameIndex: number) => {
   }
 };
 
-// 生成缩略图
+// 视频时长缓存
+const videoDurationCache = ref<Map<string, number>>(new Map());
+
+// 获取视频时长（带缓存）
+const getVideoDuration = async (videoPath: string): Promise<number> => {
+  if (videoDurationCache.value.has(videoPath)) {
+    return videoDurationCache.value.get(videoPath)!;
+  }
+  
+  try {
+    const duration = await invoke('get_video_duration', { videoPath }) as number;
+    videoDurationCache.value.set(videoPath, duration);
+    return duration;
+  } catch (error) {
+    console.error('获取视频时长失败:', error);
+    throw error;
+  }
+};
+
+// 生成缩略图（优化版本）
 const generateThumbnail = async (frameIndex: number) => {
   if (!props.videoPath || loadingFrames.value.has(frameIndex)) {
     return;
@@ -90,9 +109,14 @@ const generateThumbnail = async (frameIndex: number) => {
   loadingFrames.value.add(frameIndex);
   
   try {
-    const thumbnail = await invoke('generate_single_frame', {
+    // 获取视频时长
+    const duration = await getVideoDuration(props.videoPath);
+    
+    // 使用优化的函数生成缩略图
+    const thumbnail = await invoke('generate_single_frame_with_duration', {
       videoPath: props.videoPath,
-      frameIndex: frameIndex
+      frameIndex: frameIndex,
+      duration: duration
     });
     
     frameThumbnails.value.set(frameIndex, thumbnail as string);
@@ -103,13 +127,19 @@ const generateThumbnail = async (frameIndex: number) => {
   }
 };
 
+// 清理缓存函数
+const clearCache = () => {
+  videoDurationCache.value.clear();
+  frameThumbnails.value.clear();
+  loadingFrames.value.clear();
+};
+
 // 初始化缩略图
 const initializeThumbnails = async () => {
   if (!props.videoPath) return;
   
   // 清理之前的数据
-  frameThumbnails.value.clear();
-  loadingFrames.value.clear();
+  clearCache();
   
   // 生成前几帧的缩略图
   for (let i = 0; i < Math.min(5, frameCount.value); i++) {
@@ -122,8 +152,7 @@ watch(() => props.videoPath, (newPath) => {
   if (newPath) {
     initializeThumbnails();
   } else {
-    frameThumbnails.value.clear();
-    loadingFrames.value.clear();
+    clearCache();
     selectedFrame.value = null;
   }
 }, { immediate: true });

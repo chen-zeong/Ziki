@@ -242,17 +242,40 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 };
 
-// 选择帧并按需加载
+// 视频时长缓存
+const videoDurationCache = ref<Map<string, number>>(new Map());
+
+// 获取视频时长（带缓存）
+const getVideoDuration = async (videoPath: string): Promise<number> => {
+  if (videoDurationCache.value.has(videoPath)) {
+    console.log(`[Vue Debug] 视频时长从缓存获取: ${videoPath}`);
+    return videoDurationCache.value.get(videoPath)!;
+  }
+  
+  try {
+    console.log(`[Vue Debug] 开始获取视频时长: ${videoPath}`);
+    const durationCallStart = performance.now();
+    const duration = await invoke('get_video_duration', { videoPath }) as number;
+    console.log(`[Vue Debug] 获取视频时长完成: ${videoPath}，耗时: ${(performance.now() - durationCallStart).toFixed(2)}ms，时长: ${duration}s`);
+    videoDurationCache.value.set(videoPath, duration);
+    return duration;
+  } catch (error) {
+    console.error('获取视频时长失败:', error);
+    throw error;
+  }
+};
+
+// 选择帧并按需加载（优化版本）
 const selectFrame = async (index: number) => {
   const requestId = Date.now(); // 生成请求ID
-  console.log(`[Frame Debug] 开始选择帧 ${index}, 请求ID: ${requestId}`);
+  console.log(`[Vue Debug] 开始选择帧 ${index}, 请求ID: ${requestId}`);
   const startTime = performance.now();
   selectedFrameIndex.value = index;
   
   // 如果帧已经在缓存中，直接更新图片并返回
   if (frameCache.value.has(index)) {
     const cached = frameCache.value.get(index)!;
-    console.log(`[Frame Debug] 帧 ${index} 从缓存加载, 耗时: ${(performance.now() - startTime).toFixed(2)}ms`);
+    console.log(`[Vue Debug] 帧 ${index} 从缓存加载, 耗时: ${(performance.now() - startTime).toFixed(2)}ms`);
     // 只有当前选择的帧才更新界面
     if (selectedFrameIndex.value === index) {
       // 更新本地图片状态
@@ -275,13 +298,13 @@ const selectFrame = async (index: number) => {
   
   // 如果正在加载，避免重复请求
   if (loadingFrames.value.has(index)) {
-    console.log(`[Frame Debug] 帧 ${index} 正在加载中，跳过重复请求`);
+    console.log(`[Vue Debug] 帧 ${index} 正在加载中，跳过重复请求`);
     return;
   }
   
   // 标记为正在加载
   loadingFrames.value.add(index);
-  console.log(`[Frame Debug] 开始异步加载帧 ${index}`);
+  console.log(`[Vue Debug] 开始异步加载帧 ${index}`);
   
   try {
     // 初始化缓存条目
@@ -290,45 +313,88 @@ const selectFrame = async (index: number) => {
     let originalFrame: string | undefined;
     let compressedFrame: string | undefined;
     
+    // 并行加载原始帧和压缩帧以提高性能
+    const loadPromises: Promise<void>[] = [];
+    
     // 加载原始帧
     if (props.videoPath) {
-      try {
-        const originalStartTime = performance.now();
-        originalFrame = await invoke('generate_single_frame', {
-          videoPath: props.videoPath,
-          frameIndex: index
-        });
-        console.log(`[Frame Debug] 原始帧 ${index} 生成完成, 耗时: ${(performance.now() - originalStartTime).toFixed(2)}ms`);
-        
-        const cached = frameCache.value.get(index) || {};
-        cached.original = originalFrame;
-        frameCache.value.set(index, cached);
-      } catch (error) {
-        console.error(`加载原始帧 ${index} 失败:`, error);
-      }
+      const loadOriginalFrame = async () => {
+        try {
+          const originalStartTime = performance.now();
+          
+          // 获取原始视频时长
+          const durationStart = performance.now();
+          const originalDuration = await getVideoDuration(props.videoPath!);
+          console.log(`[Vue Debug] 获取原始视频时长完成，帧 ${index}，耗时: ${(performance.now() - durationStart).toFixed(2)}ms，时长: ${originalDuration}s`);
+          
+          // 使用优化的函数生成帧
+          console.log(`[Vue Debug] 开始调用Rust生成原始帧 ${index}，视频: ${props.videoPath}`);
+          const rustCallStart = performance.now();
+          originalFrame = await invoke('generate_single_frame_with_duration', {
+            videoPath: props.videoPath!,
+            frameIndex: index,
+            duration: originalDuration
+          });
+          console.log(`[Vue Debug] Rust调用完成，原始帧 ${index}，耗时: ${(performance.now() - rustCallStart).toFixed(2)}ms`);
+          console.log(`[Vue Debug] 原始帧 ${index} 生成完成, 总耗时: ${(performance.now() - originalStartTime).toFixed(2)}ms`);
+          
+          const cached = frameCache.value.get(index) || {};
+          cached.original = originalFrame;
+          frameCache.value.set(index, cached);
+        } catch (error) {
+          console.error(`加载原始帧 ${index} 失败:`, error);
+        }
+      };
+      loadPromises.push(loadOriginalFrame());
     }
     
     // 加载压缩帧
-     if (props.compressedVideoFilePath) {
-       try {
-         const compressedStartTime = performance.now();
-         compressedFrame = await invoke('generate_single_frame', {
-           videoPath: props.compressedVideoFilePath,
-           frameIndex: index
-         });
-        console.log(`[Frame Debug] 压缩帧 ${index} 生成完成, 耗时: ${(performance.now() - compressedStartTime).toFixed(2)}ms`);
-        
-        const cached = frameCache.value.get(index) || {};
-        cached.compressed = compressedFrame;
-        frameCache.value.set(index, cached);
-      } catch (error) {
-        console.error(`加载压缩帧 ${index} 失败:`, error);
-      }
+    if (props.compressedVideoFilePath) {
+      const loadCompressedFrame = async () => {
+        try {
+          const compressedStartTime = performance.now();
+          
+          // 获取压缩视频时长
+          const durationStart = performance.now();
+          const compressedDuration = await getVideoDuration(props.compressedVideoFilePath!);
+          console.log(`[Vue Debug] 获取压缩视频时长完成，帧 ${index}，耗时: ${(performance.now() - durationStart).toFixed(2)}ms，时长: ${compressedDuration}s`);
+          
+          // 使用优化的函数生成帧
+          console.log(`[Vue Debug] 开始调用Rust生成压缩帧 ${index}，视频: ${props.compressedVideoFilePath}`);
+          const rustCallStart = performance.now();
+          compressedFrame = await invoke('generate_single_frame_with_duration', {
+            videoPath: props.compressedVideoFilePath!,
+            frameIndex: index,
+            duration: compressedDuration
+          });
+          console.log(`[Vue Debug] Rust调用完成，压缩帧 ${index}，耗时: ${(performance.now() - rustCallStart).toFixed(2)}ms`);
+          console.log(`[Vue Debug] 压缩帧 ${index} 生成完成, 总耗时: ${(performance.now() - compressedStartTime).toFixed(2)}ms`);
+          
+          const cached = frameCache.value.get(index) || {};
+          cached.compressed = compressedFrame;
+          frameCache.value.set(index, cached);
+        } catch (error) {
+          console.error(`加载压缩帧 ${index} 失败:`, error);
+        }
+      };
+      loadPromises.push(loadCompressedFrame());
+    }
+    
+    // 等待所有帧加载完成
+    const parallelStart = performance.now();
+    await Promise.all(loadPromises);
+    console.log(`[Vue Debug] 并行加载完成，帧 ${index}，耗时: ${(performance.now() - parallelStart).toFixed(2)}ms`);
+    
+    // 重新获取缓存中的帧数据（因为可能在并行加载过程中被更新）
+    const finalCached = frameCache.value.get(index);
+    if (finalCached) {
+      originalFrame = finalCached.original;
+      compressedFrame = finalCached.compressed;
     }
     
     // 只有当前选择的帧才更新界面
     if (selectedFrameIndex.value === index) {
-      console.log(`[Frame Debug] 更新界面显示帧 ${index}, 总耗时: ${(performance.now() - startTime).toFixed(2)}ms`);
+      console.log(`[Vue Debug] 更新界面显示帧 ${index}, 总耗时: ${(performance.now() - startTime).toFixed(2)}ms`);
       // 更新主预览区域的图片 - beforeImage是压缩前，afterImage是压缩后
       const updateData = {
         beforeImage: originalFrame, // 压缩前
@@ -336,6 +402,7 @@ const selectFrame = async (index: number) => {
       };
       
       // 直接更新本地的图片状态 - 压缩前在左边，压缩后在右边
+      const uiUpdateStart = performance.now();
       if (originalFrame) {
         localBeforeImage.value = originalFrame; // 左侧显示压缩前
       }
@@ -346,8 +413,9 @@ const selectFrame = async (index: number) => {
       }
       
       emit('updateImages', updateData);
+      console.log(`[Vue Debug] UI更新完成，帧 ${index}，耗时: ${(performance.now() - uiUpdateStart).toFixed(2)}ms`);
     } else {
-      console.log(`[Frame Debug] 帧 ${index} 加载完成但不是当前选择的帧 (当前: ${selectedFrameIndex.value})`);
+      console.log(`[Vue Debug] 帧 ${index} 加载完成但不是当前选择的帧 (当前: ${selectedFrameIndex.value})`);
     }
   } finally {
     // 移除加载标记
@@ -359,8 +427,11 @@ const selectFrame = async (index: number) => {
 const resetFrameData = () => {
   frameCache.value.clear();
   loadingFrames.value.clear();
+  videoDurationCache.value.clear();
   selectedFrameIndex.value = null;
 };
+
+
 
 // 监听videoPath变化，清理缓存并自动选择第一帧
 watch(() => props.videoPath, (newPath) => {
