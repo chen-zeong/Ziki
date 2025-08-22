@@ -1,111 +1,91 @@
 <template>
-  <div class="relative hardware-dropdown">
-    <button
-      type="button"
-      class="flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-      :class="hardwareAcceleration.value !== 'cpu' ? 'bg-amber-500 text-white hover:bg-amber-600' : 'text-gray-700 dark:text-gray-300'"
-      :style="hardwareAcceleration.value !== 'cpu' ? {} : { backgroundColor: '#e5e7eb !important' }"
-      @click="showHardwareModal = !showHardwareModal"
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-      </svg>
-      <span class="text-sm">{{ hardwareAcceleration.name }}</span>
-
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-      </svg>
-    </button>
-    
-    <!-- 硬件加速下拉菜单 -->
-    <Transition
-      enter-active-class="transition-all duration-200 ease-out"
-      enter-from-class="opacity-0 scale-95 translate-y-2"
-      enter-to-class="opacity-100 scale-100 translate-y-0"
-      leave-active-class="transition-all duration-150 ease-in"
-      leave-from-class="opacity-100 scale-100 translate-y-0"
-      leave-to-class="opacity-0 scale-95 translate-y-2"
-    >
-      <div v-if="showHardwareModal" class="absolute bottom-full right-0 mb-2 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-50">
-        <!-- 硬件加速选项 -->
-        <div class="p-3 space-y-2">
-          <div 
-            v-for="option in hardwareOptions" 
-            :key="option.value"
-            class="flex items-center p-3 rounded-lg transition-all"
-            :class="[
-              option.available ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-              hardwareAcceleration.value === option.value ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-500' : option.available ? 'hover:bg-gray-50 dark:hover:bg-gray-700' : ''
-            ]"
-            @click="option.available && selectHardware(option); showHardwareModal = false"
-          >
-            <div class="flex-1">
-              <div class="flex items-center gap-2">
-                <svg class="w-4 h-4" :class="hardwareAcceleration.value === option.value ? 'text-amber-500' : option.available ? 'text-gray-400' : 'text-gray-300'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="option.icon"></path>
-                </svg>
-                <span class="font-medium" :class="option.available ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'">{{ option.name }}</span>
-                <span v-if="option.reason" class="text-xs px-2 py-0.5 rounded" :class="option.available ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'">{{ option.reason }}</span>
-                <!-- 查看支持格式按钮 -->
-                <button 
-                  v-if="option.value === 'gpu' && !option.available && supportedCodecs.length > 0"
-                  @click.stop="showSupportedFormats = !showSupportedFormats"
-                  class="text-xs px-3 py-1.5 bg-blue-800 text-white hover:bg-blue-600 active:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 dark:active:bg-blue-800 rounded-md shadow-sm transition-all duration-200 font-medium cursor-pointer"
-                >
-                  {{ showSupportedFormats ? '隐藏支持格式' : '查看支持格式' }}
-                </button>
-              </div>
-              <p class="text-xs mt-1 ml-6" :class="option.available ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'">{{ option.description }}</p>
-            </div>
-            <div v-if="hardwareAcceleration.value === option.value" class="ml-3">
-              <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-              </svg>
-            </div>
+  <div class="hardware-acceleration-settings">
+    <div class="space-y-4 bg-gray-50 dark:bg-[#222428] p-4 rounded-lg">
+      
+        <!-- 显卡加速开关 -->
+         <div class="flex items-center justify-between">
+           <div class="flex items-center gap-3">
+             <h3 class="text-sm font-medium text-gray-700 dark:text-dark-text">显卡加速</h3>
+             <div v-if="isHardwareAvailable" class="px-2 py-1 bg-green-100 dark:bg-dark-success/20 text-green-700 dark:text-dark-success text-xs rounded-full font-medium">
+               ⚡ 可用
+             </div>
+             <div v-else class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium">
+               ✗ 不可用
+             </div>
+           </div>
+          
+          <!-- 可用时显示开关 -->
+          <div v-if="isHardwareAvailable" class="flex items-center gap-2">
+            <span class="text-xs text-gray-500 dark:text-dark-secondary">{{ hardwareAcceleration.value === 'gpu' ? '已启用' : '已关闭' }}</span>
+            <button
+              type="button"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+              :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-gray-200 dark:bg-dark-border'"
+              :style="{
+                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#67a378' : '',
+                '--tw-ring-color': '#67a378'
+              }"
+              @click="toggleHardwareAcceleration"
+            >
+              <span
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                :class="hardwareAcceleration.value === 'gpu' ? 'translate-x-6' : 'translate-x-1'"
+              ></span>
+            </button>
           </div>
           
-          <!-- 支持的硬件编码格式列表 -->
-          <div v-if="showSupportedFormats && supportedCodecs.length > 0" class="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50/80 dark:bg-gray-800/50 rounded-lg mt-2">
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <div class="text-xs font-medium text-gray-500 dark:text-gray-400">支持的硬件编码格式 ({{ supportedCodecs.length }}个)</div>
-                <div 
-                  class="relative group cursor-help inline-block"
-                  title="只有当选中的视频编码器在以下硬件编码格式支持列表中，才能启用硬件加速"
-                >
-                  <svg class="w-4 h-4 text-gray-400 hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <!-- 不可用时显示查看支持列表按钮 -->
+          <div v-else class="relative flex items-center gap-2 h-6">
+            <button
+              @click="showSupportedFormats = !showSupportedFormats"
+              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+              style="color: #9150e1; background-color: rgba(145, 80, 225, 0.1);"
+              @mouseover="($event.target as HTMLElement).style.color = '#7c3aed'"
+              @mouseleave="($event.target as HTMLElement).style.color = '#9150e1'"
+            >
+              查看支持列表
+            </button>
+            
+            <!-- 向上弹出的支持格式列表 -->
+             <div v-if="showSupportedFormats" class="absolute bottom-full right-0 mb-3 w-80 p-5 bg-white dark:bg-dark-panel border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl backdrop-blur-md z-50 animate-in slide-in-from-bottom-2 duration-300">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
+                  <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <!-- 悬浮提示 -->
-                  <div class="absolute bottom-full right-0 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-                    <div class="relative">
-                      只有当选中的视频编码器在以下硬件编码格式支持列表中，才能启用硬件加速
-                      <div class="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                    </div>
-                  </div>
-                </div>
+                  <span>支持的硬件编码格式</span>
+                </h4>
+                <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            </div>
-            <div class="flex flex-wrap gap-1">
-              <span 
-                v-for="codec in supportedCodecs" 
-                :key="codec.name" 
-                class="inline-flex items-center px-2 py-1 bg-green-50/60 text-green-600/80 border border-green-100/60 dark:bg-green-900/10 dark:text-green-400/80 dark:border-green-800/20 text-xs rounded"
-                :title="codec.description"
-              >
-                {{ codec.name.replace('_videotoolbox', '').toUpperCase() }}
-              </span>
+              <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
+                <svg class="w-6 h-6 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                当前系统不支持任何硬件编码格式
+              </div>
+              <div v-else class="space-y-2 max-h-48 overflow-y-auto">
+                 <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
+                   <svg class="w-3 h-3 text-dark-success flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                   </svg>
+                   <span>{{ codec.name || codec.codec_type || codec }}</span>
+                 </div>
+               </div>
             </div>
           </div>
- 
         </div>
-      </div>
-    </Transition>
+    </div>
+    
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
 interface HardwareOption {
@@ -140,20 +120,10 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const showHardwareModal = ref(false);
-const showSupportedFormats = ref(false)
-
-// 监听硬件加速设置变化，重置展开状态
+// 监听硬件加速设置变化
 watch(() => props.modelValue, () => {
-  showSupportedFormats.value = false
+  // 硬件加速设置变化时的处理逻辑
 }, { deep: true });
-
-// 监听悬浮窗关闭，重置支持格式显示状态
-watch(showHardwareModal, (newValue) => {
-  if (!newValue) {
-    showSupportedFormats.value = false
-  }
-});
 const codecs = ref<Codec[]>([]);
 const isDetecting = ref(false);
 const platform = ref<'macos' | 'windows' | 'linux'>('macos');
@@ -256,6 +226,22 @@ const hardwareOptions = computed<HardwareOption[]>(() => {
   ];
 });
 
+// 硬件加速是否可用
+const isHardwareAvailable = computed(() => {
+  return props.currentVideoCodec ? checkHardwareSupport(props.currentVideoCodec) : false;
+});
+
+// 不可用原因
+const unavailableReason = computed(() => {
+  if (!props.currentVideoCodec) {
+    return '请先选择视频编码格式';
+  }
+  if (!isHardwareAvailable.value) {
+    return '当前编码格式不支持硬件加速';
+  }
+  return '';
+});
+
 // 选择硬件加速
 const selectHardware = (option: HardwareOption) => {
   hardwareAcceleration.value = {
@@ -264,22 +250,17 @@ const selectHardware = (option: HardwareOption) => {
   };
 };
 
-// 点击外部关闭硬件加速下拉菜单
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (!target.closest('.hardware-dropdown')) {
-    showHardwareModal.value = false;
+const showSupportedFormats = ref(false);
+
+const toggleHardwareAcceleration = () => {
+  if (hardwareAcceleration.value.value === 'gpu') {
+    hardwareAcceleration.value = { value: 'cpu', name: 'CPU编码' };
+  } else {
+    hardwareAcceleration.value = { value: 'gpu', name: '显卡加速' };
   }
 };
 
-// 监听点击事件
-watch(showHardwareModal, (isOpen) => {
-  if (isOpen) {
-    document.addEventListener('click', handleClickOutside);
-  } else {
-    document.removeEventListener('click', handleClickOutside);
-  }
-});
+
 
 
 
@@ -307,8 +288,5 @@ onMounted(async () => {
   await detectCodecs();
 });
 
-// 组件卸载时移除事件监听
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
+
 </script>

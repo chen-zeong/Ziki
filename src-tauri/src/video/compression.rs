@@ -1,6 +1,9 @@
-use std::process::Command;
-use tauri::Manager;
-use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata};
+use std::process::Stdio;
+use tokio::process::Command;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tauri::{Manager, Emitter};
+use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata, parse_duration_from_ffmpeg_output};
+use serde_json::json;
 
 // 将前端编码器名称映射为FFmpeg编码器名称
 fn map_codec_to_ffmpeg(codec: &str) -> &str {
@@ -43,6 +46,32 @@ fn map_audio_codec_to_ffmpeg(codec: &str) -> &str {
     }
 }
 
+// 解析FFmpeg进度信息
+fn parse_ffmpeg_progress(line: &str, total_duration: f64) -> Option<f64> {
+    // FFmpeg -progress 输出格式: 每个字段单独一行
+    // out_time=00:15:58.610500
+    // 查找以 out_time= 开头的行
+    if line.starts_with("out_time=") {
+        if let Some(time_str) = line.strip_prefix("out_time=") {
+            // 解析时间格式 HH:MM:SS.ss
+            let parts: Vec<&str> = time_str.split(':').collect();
+            if parts.len() == 3 {
+                if let (Ok(hours), Ok(minutes), Ok(seconds)) = (
+                    parts[0].parse::<f64>(),
+                    parts[1].parse::<f64>(),
+                    parts[2].parse::<f64>()
+                ) {
+                    let current_time = hours * 3600.0 + minutes * 60.0 + seconds;
+                    if total_duration > 0.0 {
+                        return Some((current_time / total_duration * 100.0).min(100.0));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 #[tauri::command]
 pub async fn compress_video(
     inputPath: String,
@@ -72,6 +101,21 @@ pub async fn compress_video(
     let original_size = std::fs::metadata(&inputPath)
         .map_err(|e| format!("Failed to get file size: {}", e))?
         .len();
+    
+    // 首先获取视频时长用于进度计算
+    let duration_cmd = Command::new(&ffmpeg_path)
+        .arg("-i").arg(&inputPath)
+        .arg("-f").arg("null")
+        .arg("-")
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get video duration: {}", e))?;
+    
+    let stderr = String::from_utf8_lossy(&duration_cmd.stderr);
+    let total_duration = parse_duration_from_ffmpeg_output(&stderr)
+        .unwrap_or(0.0);
+    
+    println!("Video duration: {} seconds", total_duration);
     
     let mut cmd = Command::new(&ffmpeg_path);
     
@@ -132,29 +176,58 @@ pub async fn compress_video(
         cmd.arg("-vf").arg(scale_filter);
     }
     
-    // Set audio codec and sample rate
-    if settings.audio_format != "copy" {
-        let ffmpeg_audio_codec = map_audio_codec_to_ffmpeg(&settings.audio_format);
-        cmd.arg("-c:a").arg(ffmpeg_audio_codec);
-        if settings.sample_rate != "original" {
-            cmd.arg("-ar").arg(&settings.sample_rate);
-        }
-    } else {
-        cmd.arg("-c:a").arg("copy");
-    }
+    // Set audio codec to copy (no audio processing)
+    cmd.arg("-c:a").arg("copy");
     
     cmd.arg("-y").arg(&outputPath);
     
+    // 添加进度输出参数 - 输出到stdout
+    cmd.arg("-progress").arg("pipe:1");
+    
     println!("Executing FFmpeg command: {:?}", cmd);
     
-    let output = cmd.output()
-        .map_err(|e| format!("Failed to execute FFmpeg: {}", e))?;
+    // 使用管道方式执行命令以实时监控进度
+    let mut child = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn FFmpeg process: {}", e))?;
+    
+    // 获取stdout用于进度监控
+    let stdout = child.stdout.take().unwrap();
+    let reader = BufReader::new(stdout);
+    
+    // 在后台线程中监控进度
+    let app_handle_clone = app_handle.clone();
+    let input_path_clone = inputPath.clone();
+    
+    let progress_handle = tokio::spawn(async move {
+        let mut lines = reader.lines();
+        while let Some(line) = lines.next_line().await.unwrap_or(None) {
+            println!("FFmpeg stdout line: {}", line);
+            // 解析进度信息
+            if let Some(progress) = parse_ffmpeg_progress(&line, total_duration) {
+                println!("Parsed progress: {}%", progress);
+                // 发送进度事件到前端
+                let _ = app_handle_clone.emit("compression-progress", json!({
+                    "inputPath": input_path_clone,
+                    "progress": progress
+                }));
+            }
+        }
+    });
+    
+    // 等待进程完成
+    let status = child.wait()
+        .await
+        .map_err(|e| format!("Failed to wait for FFmpeg process: {}", e))?;
+    
+    // 等待进度监控线程完成
+    let _ = progress_handle.await;
+    
+    println!("FFmpeg exit status: {}", status);
 
-    println!("FFmpeg exit status: {}", output.status);
-    println!("FFmpeg stdout: {}", String::from_utf8_lossy(&output.stdout));
-    println!("FFmpeg stderr: {}", String::from_utf8_lossy(&output.stderr));
-
-    if output.status.success() {
+    if status.success() {
         let compressed_size = std::fs::metadata(&outputPath)
             .map(|m| m.len())
             .ok();
@@ -177,11 +250,10 @@ pub async fn compress_video(
             compressed_metadata,
         })
     } else {
-        let error_msg = String::from_utf8_lossy(&output.stderr);
         Ok(CompressionResult {
             success: false,
             output_path: None,
-            error: Some(error_msg.to_string()),
+            error: Some(format!("FFmpeg process failed with exit code: {}", status)),
             original_size,
             compressed_size: None,
             compressed_metadata: None,

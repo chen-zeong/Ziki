@@ -1,12 +1,14 @@
 <template>
   <div class="relative">
     <button 
-      class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none transition-colors"
+      class="h-6 px-2 rounded-md text-xs text-gray-600 dark:text-dark-secondary bg-gray-200 dark:bg-dark-border hover:bg-gray-300 dark:hover:bg-dark-panel focus:outline-none transition-colors flex items-center space-x-1"
       @click="toggleDropdown"
       :title="$t('language.switch')"
+      data-tauri-drag-region="false"
     >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+      <span>{{ currentLanguageName }}</span>
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
       </svg>
     </button>
     
@@ -21,24 +23,24 @@
     >
       <div 
         v-if="showDropdown" 
-        class="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+        class="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-dark-panel rounded-lg shadow-lg border border-gray-200 dark:border-dark-border z-50"
         @click.stop
       >
         <div class="py-1">
           <button
             v-for="lang in languages"
             :key="lang.code"
-            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center justify-between"
             :class="{
-              'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20': currentLocale === lang.code,
-              'text-gray-700 dark:text-gray-300': currentLocale !== lang.code
+              'text-amber-600 dark:text-dark-accent bg-amber-50 dark:bg-dark-accent/20': currentLocale === lang.code,
+              'text-gray-700 dark:text-dark-text': currentLocale !== lang.code
             }"
             @click="switchLang(lang.code)"
           >
             <span>{{ lang.name }}</span>
             <svg 
               v-if="currentLocale === lang.code" 
-              class="w-4 h-4 text-amber-600 dark:text-amber-400" 
+              class="w-4 h-4 text-amber-600 dark:text-dark-accent" 
               fill="currentColor" 
               viewBox="0 0 20 20"
             >
@@ -66,6 +68,11 @@ const languages = [
 ];
 
 const currentLocale = computed(() => getCurrentLocale());
+
+const currentLanguageName = computed(() => {
+  const lang = languages.find(l => l.code === currentLocale.value);
+  return lang ? lang.name : 'English';
+});
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;

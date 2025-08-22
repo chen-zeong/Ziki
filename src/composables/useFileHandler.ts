@@ -1,7 +1,49 @@
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
+
+// 任务缓存接口
+interface TaskCache {
+  id: string;
+  videoPath: string;
+  settings: CompressionSettings;
+  outputPath: string;
+  createdAt: number;
+}
+
+// 缓存管理
+const CACHE_KEY = 'video_compression_tasks';
+const MAX_CACHE_SIZE = 99;
+
+const saveTasksToCache = (tasks: CompressionTask[]) => {
+  try {
+    const cacheData: TaskCache[] = tasks.map(task => ({
+      id: task.id,
+      videoPath: task.file.path,
+      settings: task.settings,
+      outputPath: task.outputDirectory || '',
+      createdAt: task.createdAt.getTime()
+    }));
+    
+    // 限制缓存大小
+    const limitedCache = cacheData.slice(0, MAX_CACHE_SIZE);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(limitedCache));
+  } catch (error) {
+    console.warn('Failed to save tasks to cache:', error);
+  }
+};
+
+const loadTasksFromCache = (): TaskCache[] => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (error) {
+    console.warn('Failed to load tasks from cache:', error);
+    return [];
+  }
+};
 
 export function useFileHandler() {
   const selectedFiles = ref<VideoFile[]>([]);
@@ -11,6 +53,48 @@ export function useFileHandler() {
   const isProcessing = ref(false);
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
+
+  // 监听任务变化，自动保存到缓存
+  watch(tasks, (newTasks) => {
+    saveTasksToCache(newTasks);
+  }, { deep: true });
+
+  // 切换到指定任务
+  const switchToTask = (taskId: string) => {
+    const task = tasks.value.find(t => t.id === taskId);
+    if (task) {
+      currentFile.value = task.file;
+      isUploaderVisible.value = false;
+      console.log('Switched to task:', taskId);
+    }
+  };
+
+  // 删除任务
+  const deleteTask = (taskId: string) => {
+    const taskIndex = tasks.value.findIndex(t => t.id === taskId);
+    if (taskIndex !== -1) {
+      const deletedTask = tasks.value[taskIndex];
+      tasks.value.splice(taskIndex, 1);
+      
+      // 如果删除的是当前任务，切换到第一个可用任务
+      if (currentFile.value?.id === taskId) {
+        if (tasks.value.length > 0) {
+          currentFile.value = tasks.value[0].file;
+        } else {
+          currentFile.value = null;
+          isUploaderVisible.value = true;
+        }
+      }
+      
+      // 同时从selectedFiles中删除
+      const fileIndex = selectedFiles.value.findIndex(f => f.id === taskId);
+      if (fileIndex !== -1) {
+        selectedFiles.value.splice(fileIndex, 1);
+      }
+      
+      console.log('Deleted task:', taskId);
+    }
+  };
 
   const handleFiles = async (fileList: FileList) => {
     if (!fileList || fileList.length === 0) return;
@@ -85,9 +169,7 @@ export function useFileHandler() {
             videoCodec: 'libx264',
             resolution: 'original',
             qualityType: 'crf',
-            crfValue: 23,
-            audioCodec: 'aac',
-            sampleRate: 'original'
+            crfValue: 23
           },
           createdAt: new Date()
         };
@@ -116,6 +198,7 @@ export function useFileHandler() {
     task.status = 'processing';
     task.settings = settings;
     task.progress = 0;
+    task.startedAt = new Date(); // 记录开始时间
     
     try {
       // Use provided output directory or get default desktop path
@@ -141,45 +224,61 @@ export function useFileHandler() {
         quality_type: settings.qualityType,
         crf_value: settings.crfValue,
         bitrate: settings.bitrate,
-        audio_format: settings.audioCodec,
-        sample_rate: settings.sampleRate,
         time_range: settings.timeRange ? {
           start: settings.timeRange.start,
           end: settings.timeRange.end
         } : null
       };
       
-      // Update progress
-      task.progress = 20;
-      
-      // Call backend compression
-      const result = await invoke<CompressionResult>('compress_video', {
-        inputPath: task.file.path,
-        outputPath: outputPath,
-        settings: backendSettings
+      // 设置进度监听器
+      const unlisten = await listen('compression-progress', (event: any) => {
+        const { inputPath, progress } = event.payload;
+        if (inputPath === task.file.path) {
+          task.progress = Math.round(progress);
+          console.log(`Compression progress for ${task.file.name}: ${task.progress}%`);
+        }
       });
       
-      if (result.success) {
-        task.status = 'completed';
-        task.progress = 100;
-        task.originalSize = result.originalSize; // Update with actual file size from backend
-        task.compressedSize = result.compressedSize || 0;
-        task.compressedMetadata = result.compressedMetadata; // 添加压缩后的元数据
-        task.completedAt = new Date();
-        // Set both compressed path and URL
-        task.file.compressedPath = result.outputPath;
-        task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
-        // Save output directory for the "open folder" button
-        task.outputDirectory = outputDir;
-        
-        // Update currentFile if it matches this task
-        if (currentFile.value && currentFile.value.id === task.file.id) {
-          currentFile.value = { ...task.file };
-        }
-      } else {
-        task.status = 'failed';
-        task.error = result.error || 'Compression failed';
-      }
+      try {
+         // 初始化进度
+         task.progress = 0;
+         
+         // Call backend compression
+         const result = await invoke<CompressionResult>('compress_video', {
+           inputPath: task.file.path,
+           outputPath: outputPath,
+           settings: backendSettings
+         });
+         
+         // 清理事件监听器
+         unlisten();
+         
+         if (result.success) {
+           task.status = 'completed';
+           task.progress = 100;
+           task.originalSize = result.originalSize; // Update with actual file size from backend
+           task.compressedSize = result.compressedSize || 0;
+           task.compressedMetadata = result.compressedMetadata; // 添加压缩后的元数据
+           task.completedAt = new Date();
+           // Set both compressed path and URL
+           task.file.compressedPath = result.outputPath;
+           task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
+           // Save output directory for the "open folder" button
+           task.outputDirectory = outputDir;
+           
+           // Update currentFile if it matches this task
+           if (currentFile.value && currentFile.value.id === task.file.id) {
+             currentFile.value = { ...task.file };
+           }
+         } else {
+           task.status = 'failed';
+           task.error = result.error || 'Compression failed';
+         }
+       } catch (compressionError) {
+         // 确保在错误情况下也清理事件监听器
+         unlisten();
+         throw compressionError;
+       }
     } catch (error) {
       console.error('Compression error:', error);
       task.status = 'failed';
@@ -213,6 +312,8 @@ export function useFileHandler() {
     resetUploader,
     startCompression,
     formatFileSize,
-    getCompressionRatio
+    getCompressionRatio,
+    switchToTask,
+    deleteTask
   };
 }

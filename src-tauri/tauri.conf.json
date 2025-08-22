@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "视频压缩工具",
+
         "titleBarStyle": "Overlay",
         "width": 1200,
         "height": 800,

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class=""> <!-- 'dark' class will be toggled here -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动画进度条</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 为了防止 FOUC (无样式内容闪烁)，这段脚本需要放在 <head> 中
+        // 它会立即根据 localStorage 或系统偏好设置主题
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+    </script>
+    <style>
+        /* 自定义动画，用于实现扫光/闪光效果 */
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) skewX(-30deg);
+            }
+            100% {
+                transform: translateX(500%) skewX(-30deg); 
+            }
+        }
+        .shimmering::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0) 100%);
+            animation: shimmer 2.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center min-h-screen font-sans">
+
+    <!-- 主题切换按钮 -->
+    <button id="theme-toggle" class="absolute top-5 right-5 p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+        <svg id="theme-toggle-dark-icon" class="hidden h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+        <svg id="theme-toggle-light-icon" class="hidden h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05A1 1 0 003.636 6.464l.707.707a1 1 0 001.414-1.414l-.707-.707zM3 11a1 1 0 100-2H2a1 1 0 100 2h1zM6.464 16.364l-.707.707a1 1 0 001.414 1.414l.707-.707a1 1 0 00-1.414-1.414z"></path></svg>
+    </button>
+
+    <div class="w-full max-w-lg px-4 flex flex-col items-center">
+        <!-- 主进度条容器 (修改后) -->
+        <div id="progress-container" class="relative w-full bg-gray-300 dark:bg-gray-700 rounded-xl h-10 shadow-inner overflow-hidden">
+            <div id="progress-bar" 
+                 class="h-full rounded-xl transition-all duration-500 ease-out flex items-center justify-center
+                        relative overflow-hidden shimmering"
+                 style="width: 0%; background-color: #9050e0;">
+            </div>
+            <div id="progress-text" 
+                 class="absolute inset-0 flex items-center justify-center text-sm font-bold text-white tracking-wider">
+                压缩中... 0%
+            </div>
+        </div>
+
+        <!-- 进度按钮 -->
+        <div class="relative w-3/4 h-10 shadow-inner overflow-hidden mt-4 rounded-xl" style="background-color: #558ee1;">
+            <!-- 半透明蒙版层 (修改后) -->
+            <div id="progress-button-mask" 
+                 class="absolute top-0 left-0 h-full rounded-xl bg-white/40 dark:bg-black/25 transition-all duration-500 ease-out" 
+                 style="width: 0%;">
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center text-sm font-bold text-white tracking-wider">
+                压缩中...
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="text-center mt-6">
+            <button id="restart-button" class="text-white px-6 py-2 rounded-full hover:opacity-90 transition-opacity duration-300 shadow-lg" style="background-color: #558ee1;">
+                重新开始
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 进度条逻辑 ---
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const progressButtonMask = document.getElementById('progress-button-mask');
+        const restartButton = document.getElementById('restart-button');
+
+        let progress = 0;
+        let intervalId = null;
+
+        function startProgress() {
+            progress = 0;
+            progressBar.style.width = '0%';
+            progressButtonMask.style.width = '0%';
+            progressText.textContent = '压缩中... 0%';
+
+            if (intervalId) clearInterval(intervalId);
+            
+            progressBar.classList.add('shimmering');
+
+            intervalId = setInterval(() => {
+                progress += 1;
+                progressBar.style.width = progress + '%';
+                progressText.textContent = `压缩中... ${progress}%`;
+                progressButtonMask.style.width = progress + '%';
+
+                if (progress >= 100) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                    progressText.textContent = '压缩完成！';
+                    progressBar.classList.remove('shimmering');
+                }
+            }, 60);
+        }
+
+        restartButton.addEventListener('click', startProgress);
+        window.onload = startProgress;
+
+        // --- 主题切换逻辑 ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // 根据当前主题显示正确的图标
+        if (document.documentElement.classList.contains('dark')) {
+            lightIcon.classList.remove('hidden');
+        } else {
+            darkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            // 切换 class
+            document.documentElement.classList.toggle('dark');
+            
+            // 切换图标
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            // 更新 localStorage
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    </script>
+
+</body>
+</html>

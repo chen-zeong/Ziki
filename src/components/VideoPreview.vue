@@ -1,20 +1,11 @@
 <template>
-  <div class="comparison-container overflow-hidden h-full">
-    <div class="flex justify-between items-center mb-2">
-      <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 truncate">
-        {{ title || '视频预览' }}
-      </h3>
-      <button 
-        class="text-sm font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
-        @click="$emit('reset')"
-      >
-        + 上传新文件
-      </button>
-    </div>
+  <div class="w-full h-full flex flex-col">
+
+
     
     <div 
       ref="sliderRef"
-      class="comparison-slider aspect-video bg-gray-200 dark:bg-gray-800 mb-6 relative overflow-hidden"
+      class="comparison-slider w-full h-full bg-gray-200 dark:bg-dark-panel relative overflow-hidden"
       :style="{ '--position': `${sliderPosition}%` }"
     >
       <!-- 压缩前（左侧） -->
@@ -34,17 +25,19 @@
        </div>
        
        <!-- 文字标签 - 放在最上层避免被遮挡 -->
-       <div class="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm z-20">
+       <div class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20 ">
          压缩前
        </div>
-       <div class="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm z-20">
+       <div class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20">
          压缩后
        </div>
        
+
+
        <!-- 放大镜图标 -->
        <button 
          @click="toggleFullscreen"
-         class="absolute bottom-4 right-4 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all duration-200"
+         class="absolute bottom-4 right-4 backdrop-blur-md bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all duration-200"
          title="全屏查看"
          style="z-index: 50; pointer-events: auto;"
        >
@@ -70,7 +63,7 @@
       <div 
         v-if="isFullscreen" 
         class="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        style="background-color: #f9fafb;"
+        style="background-color: #f5f5f5;"
         @click="closeFullscreen"
       >
         <!-- 模态框内容容器 -->
@@ -81,8 +74,8 @@
           <!-- 关闭按钮 -->
           <button 
             @click="closeFullscreen" 
-            class="absolute top-2 right-2 z-50 w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-300 hover:scale-125 border-2 border-white border-opacity-30"
-            style="box-shadow: 0 0 0 3px rgba(255,255,255,0.2); background-color: #ffffff; background-image: none; border: none; outline: none;"
+            class="absolute top-1 right-1 z-50 w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-300 hover:scale-125"
+            style="box-shadow: 0 0 0 2px rgba(160,160,160,0.2); background-color: #ffffff; background-image: none; border: none; outline: none;"
             title="关闭全屏 (ESC)"
           >
             <svg class="w-5 h-5 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
@@ -90,7 +83,7 @@
             </svg>
           </button>
           
-          <div class="relative w-full h-full p-6 flex items-center justify-center">
+          <div class="relative w-full h-full p-3 flex items-center justify-center">
             <!-- 全屏预览内容 -->
             <div 
               ref="fullscreenSliderRef"
@@ -114,6 +107,32 @@
                 >
               </div>
               
+
+
+              
+              <!-- 全屏模式下的帧选择器 -->
+               <div v-if="props.videoPath" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style="pointer-events: auto;">
+                 <div class="frame-selector flex justify-center">
+                   <div class="flex items-center gap-2 backdrop-blur-md bg-white/20 px-3 py-2 rounded-full border border-white/30">
+                     <div 
+                       v-for="index in 10" 
+                       :key="index"
+                       class="w-6 h-1.5 rounded-full cursor-pointer transition-all duration-200"
+                       :class="{
+                         'bg-gray-300 hover:bg-gray-200': selectedFrameIndex !== index - 1
+                       }"
+                       :style="{
+                         backgroundColor: selectedFrameIndex === index - 1 ? '#faa539' : ''
+                       }"
+                       @click="selectFrame(index - 1)"
+                       :title="`第 ${index} 帧`"
+                       style="pointer-events: auto;"
+                     >
+                     </div>
+                   </div>
+                 </div>
+               </div>
+              
               <!-- 全屏模式下的滑块 -->
               <div class="fullscreen-slider-line" @mousedown="startFullscreenDragging">
                 <div class="fullscreen-slider-handle">
@@ -131,26 +150,6 @@
       </div>
     </Transition>
     
-    <!-- 帧选择器 -->
-    <div v-if="props.videoPath" class="mb-0">
-      <!-- 扁平线条帧选择器 -->
-      <div class="frame-selector flex justify-center">
-        <div class="flex items-center gap-2">
-          <div 
-            v-for="index in 10" 
-            :key="index"
-            class="w-8 h-1.5 rounded-full cursor-pointer transition-all duration-200"
-            :class="{
-              'bg-amber-500': selectedFrameIndex === index - 1,
-              'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500': selectedFrameIndex !== index - 1
-            }"
-            @click="selectFrame(index - 1)"
-            :title="`第 ${index} 帧`"
-          >
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -533,6 +532,47 @@ defineExpose({
 .comparison-slider img {
   max-width: 100%;
   max-height: 100%;
+}
+
+/* 非全屏模式下的滑块样式 */
+.comparison-slider .slider {
+  position: absolute;
+  top: 0;
+  left: var(--position);
+  transform: translateX(-50%);
+  width: 4px;
+  height: 100%;
+  background: white;
+  cursor: ew-resize;
+  z-index: 15;
+  border-radius: 2px;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+.comparison-slider .slider-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid rgba(255,255,255,0.25);
+}
+
+.comparison-slider .slider:hover .slider-handle {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35), 0 0 0 5px rgba(255,255,255,0.25);
+}
+
+.comparison-slider .slider-handle svg {
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.25));
 }
 
 /* 全屏模式下的滑块样式 */

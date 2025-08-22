@@ -2,15 +2,14 @@
   <div class="relative" ref="selectRef">
     <button
       type="button"
-      class="relative w-full h-10 cursor-pointer rounded-lg bg-white py-2 pl-3 pr-8 text-left border border-gray-200 dark:border-gray-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all duration-200"
-      :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
+      class="relative w-full h-10 cursor-pointer rounded-lg py-2 pl-3 pr-8 text-left border border-gray-200 dark:border-dark-border focus:border-dark-accent focus:outline-none focus:ring-1 focus:ring-dark-accent transition-all duration-200 bg-white dark:bg-black"
+      :class="{
+        'ring-2 ring-dark-accent border-dark-accent': isOpen
+      }"
       style="pointer-events: auto !important; user-select: auto !important;"
       @click.stop="toggleDropdown"
-      :class="{
-        'ring-2 ring-amber-500 border-amber-500': isOpen
-      }"
     >
-      <span class="block truncate text-gray-900 dark:text-gray-100 text-sm">
+      <span class="block truncate text-gray-900 dark:text-dark-text text-sm">
         {{ selectedOption?.label || placeholder }}
       </span>
       <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -40,17 +39,23 @@
     >
       <div
         v-if="isOpen"
-        class="absolute z-[99999] mt-2 w-full rounded-lg bg-white border border-gray-200 dark:border-gray-600 max-h-60 overflow-auto custom-scrollbar"
-        :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
+        class="absolute z-[99999] w-full rounded-lg border border-gray-200 dark:border-dark-border overflow-auto custom-scrollbar bg-white dark:bg-black"
+        :class="{
+          'mt-2': dropdownDirection === 'down',
+          'mb-2 bottom-full': dropdownDirection === 'up'
+        }"
+        :style="{ 
+          maxHeight: Math.min(options.length, 4) * 40 + 16 + 'px'
+        }"
         style="pointer-events: auto !important; user-select: auto !important;"
       >
         <div class="py-1">
           <div
             v-for="option in options"
             :key="option.value"
-            class="relative cursor-pointer select-none py-2.5 mx-2 px-3 text-gray-900 dark:text-gray-100 hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors duration-150 rounded-lg my-1"
+            class="relative cursor-pointer select-none py-2.5 mx-2 px-3 text-gray-900 dark:text-dark-text hover:bg-amber-50 dark:hover:bg-dark-border transition-colors duration-150 rounded-lg my-1"
             :class="{
-              'bg-amber-100 dark:bg-gray-700 text-amber-900 dark:text-amber-200': option.value === modelValue
+              'bg-amber-100 dark:bg-dark-accent/20 text-amber-900 dark:text-dark-accent': option.value === modelValue
             }"
             style="pointer-events: auto !important; user-select: auto !important;"
             @click.stop="selectOption(option)"
@@ -60,7 +65,7 @@
             </span>
             <span
               v-if="option.value === modelValue"
-              class="absolute inset-y-0 right-0 flex items-center pr-4 text-amber-600 dark:text-amber-400"
+              class="absolute inset-y-0 right-0 flex items-center pr-4 text-amber-600 dark:text-dark-accent"
             >
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path
@@ -79,7 +84,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useTheme } from '../../composables/useTheme';
 
 interface Option {
   value: string;
@@ -90,17 +94,17 @@ interface Props {
   modelValue: string;
   options: Option[];
   placeholder?: string;
+  dropdownDirection?: 'down' | 'up';
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '请选择...'
+  placeholder: '请选择...',
+  dropdownDirection: 'down'
 });
 
 const emit = defineEmits<{
   'update:modelValue': [value: string];
 }>();
-
-const { isDark } = useTheme();
 const isOpen = ref(false);
 const selectRef = ref<HTMLElement>();
 

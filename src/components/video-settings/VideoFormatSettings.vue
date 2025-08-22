@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
+  <div class="bg-gray-50 dark:bg-[#222428] p-3 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
     <div class="space-y-4">
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="font-medium text-sm text-slate-600 dark:text-slate-300">{{ $t('videoSettings.format') }}</label>
-          <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.format.toUpperCase() }}</span>
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.format') }}</label>
+          <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
+            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.format.toUpperCase() }}</span>
           </div>
         </div>
         <CustomSelect 
@@ -17,27 +17,29 @@
       
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="font-medium text-sm text-slate-600 dark:text-slate-300">{{ $t('videoSettings.videoCodec') }}</label>
-          <div v-if="metadata" class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ formatVideoCodec(metadata.videoCodec) }}</span>
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.videoCodec') }}</label>
+          <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
+            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ formatVideoCodec(metadata.videoCodec) }}</span>
           </div>
         </div>
         <CustomSelect 
           v-model="videoCodec"
           :options="videoCodecOptions"
           placeholder="选择编码器"
+          dropdown-direction="up"
         />
       </div>
       
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="font-medium text-sm text-slate-600 dark:text-slate-300">{{ $t('videoSettings.resolution') }}</label>
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.resolution') }}</label>
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600 dark:text-gray-400">自定义</span>
+            <span class="text-sm text-gray-600 dark:text-dark-secondary">自定义</span>
             <button
               type="button"
               class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-              :class="isCustomResolution ? 'bg-amber-500' : 'bg-gray-200 dark:bg-gray-600'"
+              :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
+              :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
               @click="toggleCustomResolution"
             >
               <span
@@ -57,8 +59,9 @@
             />
             <button
               type="button"
-              class="flex-shrink-0 p-2 text-gray-500 hover:text-orange-500 transition-colors duration-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-              :class="{ 'text-orange-500 hover:bg-orange-50': isAspectRatioLocked }"
+              class="flex-shrink-0 p-2 text-gray-500 hover:text-orange-500 transition-colors duration-200 rounded-md hover:bg-gray-100 dark:hover:bg-dark-border"
+              :class="{ 'hover:bg-blue-50': isAspectRatioLocked }"
+              :style="{ color: isAspectRatioLocked ? '#5492dc' : '' }"
               @click="toggleAspectRatioLock"
               title="等比例缩放"
             >
@@ -79,16 +82,20 @@
             v-model="resolution"
             :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
             placeholder="选择分辨率"
+            dropdown-direction="up"
           />
         </div>
       </div>
       
       <!-- 画质设置 -->
-      <QualitySettings 
-        v-model="qualitySettings" 
-        :resolution="isCustomResolution ? `${customResolution.width}x${customResolution.height}` : resolution"
-        @update:modelValue="emit('update:quality-settings', $event)"
-      />
+      <div v-if="!hideQuality">
+        <QualitySettings 
+          :model-value="qualitySettings || {}"
+          :resolution="resolution"
+          @update:model-value="$emit('update:quality-settings', $event)"
+        />
+      </div>
+
     </div>
   </div>
 </template>
@@ -105,6 +112,7 @@ interface Props {
   modelValue: Partial<CompressionSettings>;
   metadata?: VideoMetadata;
   qualitySettings?: Partial<CompressionSettings>;
+  hideQuality?: boolean;
 }
 
 interface Emits {
@@ -154,17 +162,8 @@ const resolution = computed({
 
 const customResolution = ref({ width: 1920, height: 1080 });
 const isCustomResolution = ref(false);
-const isAspectRatioLocked = ref(false);
+const isAspectRatioLocked = ref(true);
 
-// 质量设置现在通过props传递给QualitySettings组件
-const qualitySettings = computed({
-  get() {
-    return props.qualitySettings || {};
-  },
-  set(value) {
-    emit('update:quality-settings', value);
-  }
-});
 const originalAspectRatio = ref(16/9); // 默认16:9比例
 
 // 为宽度和高度创建computed属性

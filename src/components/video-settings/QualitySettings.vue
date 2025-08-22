@@ -1,25 +1,37 @@
 <template>
-  <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-visible max-h-full">
+  <div class="bg-gray-50 dark:bg-[#222428] p-3 rounded-lg overflow-visible max-h-full">
     <div class="space-y-4">
+      <!-- 编码预设 -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">编码预设</label>
+        </div>
+        <CustomSelect 
+          v-model="encodingPreset"
+          :options="presetOptions"
+          placeholder="选择编码预设"
+        />
+      </div>
       <div>
         <div class="flex justify-between items-center mb-2">
-          <label class="font-medium text-sm text-slate-600 dark:text-slate-300">画质</label>
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">画质</label>
           <!-- Tab 切换 -->
-          <div class="relative flex bg-gray-100 dark:bg-gray-600 rounded-md p-1 h-8">
+          <div class="relative flex bg-gray-100 dark:bg-dark-border rounded-md p-1 h-8">
             <!-- 滑动背景 -->
             <div 
-              class="absolute top-1 bottom-1 bg-amber-500 rounded-md transition-all duration-300 ease-out shadow-md"
+              class="absolute top-1 bottom-1 dark:bg-gray-300 rounded-md transition-all duration-300 ease-out shadow-md"
               :style="{
                 width: 'calc(50% - 4px)',
                 left: qualityMode === 'crf' ? '4px' : 'calc(50% + 2px)',
-                transform: qualityMode === 'crf' ? 'translateX(0)' : 'translateX(-2px)'
+                transform: qualityMode === 'crf' ? 'translateX(0)' : 'translateX(-2px)',
+                backgroundColor: 'var(--slider-bg-color, #b1b1b1)'
               }"
             ></div>
             
             <button
               type="button"
               class="flex-1 px-4 py-1 text-xs font-medium transition-all duration-300 ease-out rounded-md relative z-10 whitespace-nowrap"
-              :class="qualityMode === 'crf' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'"
+              :class="qualityMode === 'crf' ? 'text-white dark:text-gray-800' : 'text-gray-600 dark:text-dark-secondary hover:text-gray-800 dark:hover:text-dark-text'"
               @click="qualityMode = 'crf'"
             >
               CRF
@@ -27,7 +39,7 @@
             <button
               type="button"
               class="flex-1 px-4 py-1 text-xs font-medium transition-all duration-300 ease-out rounded-md relative z-10 whitespace-nowrap"
-              :class="qualityMode === 'bitrate' ? 'text-white' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'"
+              :class="qualityMode === 'bitrate' ? 'text-white dark:text-gray-800' : 'text-gray-600 dark:text-dark-secondary hover:text-gray-800 dark:hover:text-dark-text'"
               @click="qualityMode = 'bitrate'"
             >
               码率
@@ -93,6 +105,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
+import CustomSelect from '../common/CustomSelect.vue';
 import type { CompressionSettings } from '../../types';
 
 interface Props {
@@ -115,6 +128,20 @@ const settings = ref<Partial<CompressionSettings>>({
 
 const qualityMode = ref('crf');
 const bitrateValue = ref(5000);
+const encodingPreset = ref('medium');
+
+// 编码预设选项
+const presetOptions = [
+  { value: 'ultrafast', label: '极快 (文件较大)' },
+  { value: 'superfast', label: '超快' },
+  { value: 'veryfast', label: '很快' },
+  { value: 'faster', label: '较快' },
+  { value: 'fast', label: '快速' },
+  { value: 'medium', label: '中等 (推荐)' },
+  { value: 'slow', label: '慢速 (高质量)' },
+  { value: 'slower', label: '较慢' },
+  { value: 'veryslow', label: '很慢 (最高质量)' }
+];
 
 // 标记是否正在更新，避免循环
 const isUpdating = ref(false);
@@ -241,25 +268,42 @@ watch(qualityMode, (newMode) => {
   emitUpdate();
 });
 
-// 监听设置变化
-watch(settings, () => {
-  if (isUpdating.value) return;
-  emitUpdate();
-}, { deep: true });
-
 // 监听码率变化
 watch(bitrateValue, () => {
   if (isUpdating.value) return;
   emitUpdate();
 });
 
+// 监听编码预设变化
+watch(encodingPreset, (newPreset) => {
+  if (isUpdating.value) return;
+  // 编码预设不是CompressionSettings的一部分，单独处理
+  emitUpdate();
+});
+
 // 监听父组件传入的值变化
 watch(() => props.modelValue, (newValue) => {
   isUpdating.value = true;
-  settings.value = { ...settings.value, ...newValue };
-  if (newValue.qualityType) {
-    qualityMode.value = newValue.qualityType;
+  
+  // 只更新实际变化的值，避免触发不必要的响应式更新
+  if (newValue.qualityType !== settings.value.qualityType) {
+    qualityMode.value = newValue.qualityType || 'crf';
+    settings.value.qualityType = newValue.qualityType;
   }
+  
+  if (newValue.crfValue !== settings.value.crfValue) {
+    settings.value.crfValue = newValue.crfValue;
+  }
+  
+  // 编码预设不在CompressionSettings中，保持独立状态
+  
+  if (newValue.bitrate && newValue.bitrate !== settings.value.bitrate) {
+    const bitrateNum = parseInt(newValue.bitrate.replace('k', ''));
+    if (!isNaN(bitrateNum)) {
+      bitrateValue.value = bitrateNum;
+    }
+  }
+  
   isUpdating.value = false;
 }, { deep: true });
 </script>

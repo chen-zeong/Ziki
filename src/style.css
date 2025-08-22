@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS变量定义 */
+:root {
+  --slider-bg-color: #558ee1;
+}
+
+.dark {
+  --slider-bg-color: #e5e7eb;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;

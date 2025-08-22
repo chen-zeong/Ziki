@@ -3,12 +3,12 @@
   <div class="output-folder-container">
     <transition 
       name="slide-down"
-      enter-active-class="transition-all duration-400 ease-out"
-      enter-from-class="opacity-0 max-h-0 transform -translate-y-4"
-      enter-to-class="opacity-100 max-h-32 transform translate-y-0"
-      leave-active-class="transition-all duration-300 ease-in"
-      leave-from-class="opacity-100 max-h-32 transform translate-y-0"
-      leave-to-class="opacity-0 max-h-0 transform -translate-y-4"
+      enter-active-class="transition-all duration-200 ease-out"
+      enter-from-class="opacity-0 max-h-0"
+      enter-to-class="opacity-100 max-h-32"
+      leave-active-class="transition-all duration-200 ease-in"
+      leave-from-class="opacity-100 max-h-32"
+      leave-to-class="opacity-0 max-h-0"
     >
       <div 
         v-if="showOutputFolder"
@@ -17,8 +17,8 @@
         <div>
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center space-x-2">
-              <div class="p-2 bg-gradient-to-br from-orange-400 to-amber-500 rounded-lg shadow-sm">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="p-2 rounded-lg shadow-sm bg-gray-800 dark:bg-gray-200">
+                <svg class="w-4 h-4 text-white dark:text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
                 </svg>
               </div>
@@ -26,7 +26,7 @@
                 <label class="text-sm font-bold text-gray-800 dark:text-gray-100">
                   输出文件夹
                 </label>
-                <p class="text-xs text-orange-600 dark:text-orange-400 mt-0.5 font-medium">
+                <p class="text-xs mt-0.5 font-medium text-gray-600 dark:text-gray-400">
                   设置保存视频的路径
                 </p>
               </div>
@@ -38,14 +38,13 @@
               <input 
                 v-model="outputPath"
                 type="text" 
-                class="w-full px-4 py-3 pr-12 border-2 border-orange-200 dark:border-orange-600/50 rounded-xl bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-100 text-sm font-medium focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-all duration-300 shadow-sm backdrop-blur-sm placeholder-orange-400/60"
-                placeholder="选择输出路径..."
-                readonly
-                :title="outputPath"
-              >
-              <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                 class="w-full px-4 py-3 pr-12 border-2 rounded-xl bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-100 text-sm font-medium transition-all duration-300 shadow-sm backdrop-blur-sm border-gray-300 dark:border-gray-600 focus:border-gray-500 dark:focus:border-gray-400"
+                 placeholder="选择输出路径..."
+                 readonly
+               />
+               <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
                  <button 
-                   class="p-2 text-orange-500 hover:text-white hover:bg-gradient-to-r hover:from-orange-400 hover:to-amber-500 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg group"
+                   class="p-2 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                    @click="selectOutputFolder"
                    title="选择文件夹"
                  >

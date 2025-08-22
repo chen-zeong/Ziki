@@ -33,7 +33,7 @@ export default {
 
   // Video Settings
   videoSettings: {
-    format: 'Format',
+    format: 'Video Format',
     videoCodec: 'Video Codec',
     audioCodec: 'Audio Codec',
     audioSampleRate: 'Audio Sample Rate',
@@ -151,5 +151,17 @@ export default {
     compressionCompleted: 'Compression completed',
     fileSaved: 'File saved',
     settingsSaved: 'Settings saved'
+  },
+
+  // Toolbar
+  toolbar: {
+    addFiles: 'Add Files'
+  },
+
+  // Status
+  status: {
+    noOutputPath: 'No output path set',
+    ready: 'Ready',
+    tasks: 'Tasks'
   }
 };

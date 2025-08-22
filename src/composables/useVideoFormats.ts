@@ -8,7 +8,6 @@ const config = videoFormatsConfig as VideoFormatsConfig;
 // 当前选择的格式 - 全局状态
 const selectedFormat: Ref<string> = ref('mp4');
 const selectedVideoCodec: Ref<string> = ref('H.264');
-const selectedAudioCodec: Ref<string> = ref('AAC');
 
 export function useVideoFormats() {
 
@@ -32,21 +31,14 @@ export function useVideoFormats() {
     return format ? format.videoCodecs : [];
   });
 
-  // 获取当前格式支持的音频编码
-  const supportedAudioCodecs = computed(() => {
-    const format = config.videoFormats[selectedFormat.value];
-    return format ? format.audioCodecs : [];
-  });
+
 
   // 获取视频编码详细信息
   const videoCodecInfo = computed(() => {
     return config.videoCodecs[selectedVideoCodec.value];
   });
 
-  // 获取音频编码详细信息
-  const audioCodecInfo = computed(() => {
-    return config.audioCodecs[selectedAudioCodec.value];
-  });
+
 
   // 获取当前格式信息
   const currentFormatInfo = computed(() => {
@@ -59,9 +51,8 @@ export function useVideoFormats() {
     if (!format) return false;
     
     const videoSupported = format.videoCodecs.includes(selectedVideoCodec.value);
-    const audioSupported = format.audioCodecs.includes(selectedAudioCodec.value);
     
-    return videoSupported && audioSupported;
+    return videoSupported;
   });
 
   // 设置格式并自动选择兼容的编码
@@ -74,11 +65,6 @@ export function useVideoFormats() {
       if (!format.videoCodecs.includes(selectedVideoCodec.value)) {
         selectedVideoCodec.value = format.videoCodecs[0] || 'H.264';
       }
-      
-      // 如果当前音频编码不兼容，选择第一个支持的编码
-      if (!format.audioCodecs.includes(selectedAudioCodec.value)) {
-        selectedAudioCodec.value = format.audioCodecs[0] || 'AAC';
-      }
     }
   };
 
@@ -90,13 +76,7 @@ export function useVideoFormats() {
     }
   };
 
-  // 设置音频编码
-  const setAudioCodec = (codec: string) => {
-    const format = config.videoFormats[selectedFormat.value];
-    if (format && format.audioCodecs.includes(codec)) {
-      selectedAudioCodec.value = codec;
-    }
-  };
+
 
   // 获取格式的扩展名
   const getFormatExtension = (formatKey: string): string => {
@@ -104,12 +84,8 @@ export function useVideoFormats() {
   };
 
   // 获取编码质量等级
-  const getCodecQuality = (codecName: string, type: 'video' | 'audio'): string => {
-    if (type === 'video') {
-      return config.videoCodecs[codecName]?.quality || 'unknown';
-    } else {
-      return config.audioCodecs[codecName]?.quality || 'unknown';
-    }
+  const getCodecQuality = (codecName: string, type: 'video'): string => {
+    return config.videoCodecs[codecName]?.quality || 'unknown';
   };
 
   // 检查是否支持硬件加速
@@ -122,13 +98,11 @@ export function useVideoFormats() {
     const format = config.videoFormats[formatKey];
     if (!format) return null;
 
-    // 优先选择H.264和AAC（最兼容的组合）
+    // 优先选择H.264（最兼容的组合）
     const videoCodec = format.videoCodecs.includes('H.264') ? 'H.264' : format.videoCodecs[0];
-    const audioCodec = format.audioCodecs.includes('AAC') ? 'AAC' : format.audioCodecs[0];
 
     return {
-      videoCodec,
-      audioCodec
+      videoCodec
     };
   };
 
@@ -156,43 +130,26 @@ export function useVideoFormats() {
     });
   });
 
-  // 获取音频编码选项
-  const audioCodecOptions = computed(() => {
-    return supportedAudioCodecs.value.map(codec => {
-      const codecInfo = config.audioCodecs[codec];
-      return {
-        value: codec,
-        label: codecInfo?.name || codec,
-        description: codecInfo?.description || '',
-        quality: codecInfo?.quality || 'unknown',
-        recommendedBitrate: codecInfo?.recommendedBitrate || ''
-      };
-    });
-  });
+
 
   return {
     // 状态
     selectedFormat,
     selectedVideoCodec,
-    selectedAudioCodec,
     
     // 计算属性
     allFormats,
     recommendedFormats,
     supportedVideoCodecs,
-    supportedAudioCodecs,
     videoCodecInfo,
-    audioCodecInfo,
     currentFormatInfo,
     isCurrentCombinationValid,
     formatOptions,
     videoCodecOptions,
-    audioCodecOptions,
     
     // 方法
     setFormat,
     setVideoCodec,
-    setAudioCodec,
     getFormatExtension,
     getCodecQuality,
     hasHardwareSupport,

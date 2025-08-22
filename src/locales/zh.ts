@@ -33,7 +33,7 @@ export default {
 
   // 视频设置
   videoSettings: {
-    format: '格式',
+    format: '视频格式',
     videoCodec: '视频编码',
     audioCodec: '音频编码',
     audioSampleRate: '音频采样率',
@@ -148,5 +148,17 @@ export default {
     compressionCompleted: '压缩完成',
     fileSaved: '文件已保存',
     settingsSaved: '设置已保存'
+  },
+
+  // 工具栏
+  toolbar: {
+    addFiles: '添加文件'
+  },
+
+  // 状态
+  status: {
+    noOutputPath: '未设置输出路径',
+    ready: '就绪',
+    tasks: '任务'
   }
 };

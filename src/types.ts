@@ -27,7 +27,7 @@ export interface VideoFile {
 export interface CompressionTask {
   id: string;
   file: VideoFile;
-  status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'queued' | 'processing' | 'paused' | 'completed' | 'failed';
   progress: number;
   originalSize: number;
   compressedSize?: number;
@@ -35,6 +35,7 @@ export interface CompressionTask {
   settings: CompressionSettings;
   outputDirectory?: string; // 输出文件夹路径
   createdAt: Date;
+  startedAt?: Date; // 开始压缩的时间
   completedAt?: Date;
   error?: string;
 }
@@ -52,17 +53,13 @@ export interface TimeRange {
 export interface CompressionSettings {
   format: string; // 视频容器格式，如 'mp4', 'mkv', 'webm' 等
   videoCodec: string; // 视频编码，如 'H.264', 'H.265', 'VP9' 等
-  audioCodec: string; // 音频编码，如 'AAC', 'MP3', 'FLAC' 等
   resolution: 'original' | '1920x1080' | '1280x720' | '854x480' | 'custom';
   customResolution?: CustomResolution;
   qualityType: 'crf' | 'bitrate';
   crfValue?: number;
   bitrate?: string;
-  sampleRate: 'original' | '22050' | '44100' | '48000' | '96000';
   timeRange?: TimeRange;
   hardwareAcceleration?: 'cpu' | 'gpu';
-  muted?: boolean; // 静音选项
-  audioOnly?: boolean; // 仅保留音频选项
 }
 
 export interface CompressionResult {

@@ -15,8 +15,6 @@ pub struct CompressionSettings {
     pub quality_type: String, // "crf" or "bitrate"
     pub crf_value: Option<u8>,
     pub bitrate: Option<String>,
-    pub audio_format: String,
-    pub sample_rate: String,
     pub time_range: Option<TimeRange>,
 }
 
