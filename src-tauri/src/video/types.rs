@@ -17,6 +17,8 @@ pub struct CompressionSettings {
     pub bitrate: Option<String>,
     pub time_range: Option<TimeRange>,
     pub encoding_preset: Option<String>, // FFmpeg编码预设
+    #[serde(rename = "hardwareAcceleration")]
+    pub hardware_acceleration: Option<String>, // "cpu" or "gpu"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +40,8 @@ pub struct VideoMetadata {
     pub sample_rate: String,
     pub duration: f64,
     pub fps: f64,
+    #[serde(rename = "colorDepth")]
+    pub color_depth: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

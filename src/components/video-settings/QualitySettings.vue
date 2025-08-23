@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-gray-50 dark:bg-[#222428] p-3 rounded-lg overflow-visible max-h-full">
+  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full">
     <div class="space-y-4">
       <!-- 编码预设 -->
       <div>

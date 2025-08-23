@@ -3,31 +3,32 @@
     <!-- 左侧工具栏按钮 -->
     <div class="flex items-center space-x-3 pl-4">
       <button 
-         class="flex items-center space-x-2 px-3 py-1 rounded-md text-sm text-white transition-colors"
-         style="background-color: #578ae6;"
+         class="flex items-center justify-center px-3 rounded-md text-white transition-colors aspect-square"
+         style="background-color: #578ae6; height: 32px; width: 32px;"
          @click="handleAddFiles"
+         :title="t('toolbar.addFiles')"
        >
-        <BadgePlus class="w-4 h-4" />
-        <span>{{ t('toolbar.addFiles') }}</span>
+        <Plus class="w-4 h-4" />
       </button>
       
       <!-- 批量暂停/开始按钮 -->
       <button 
-        class="flex items-center justify-center w-6 h-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+        class="flex items-center space-x-2 px-3 rounded-md text-xs text-white transition-colors"
         :style="{
           background: hasProcessingTasks 
             ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)' 
             : 'linear-gradient(135deg, #558ee1 0%, #4a7bc8 100%)',
-          color: 'white'
+          color: 'white',
+          height: '32px'
         }"
         :disabled="!hasControllableTasks"
-        :title="hasProcessingTasks ? t('taskList.pauseAllTasks') : t('taskList.startAllTasks')"
         @click="toggleBatchProcessing"
       >
         <!-- 暂停图标 -->
         <Pause v-if="hasProcessingTasks" class="w-3 h-3" />
         <!-- 播放图标 -->
-        <Play v-else class="w-3 h-3 ml-0.5" />
+        <Play v-else class="w-3 h-3" />
+        <span>{{ hasProcessingTasks ? '批量暂停' : '批量开始' }}</span>
       </button>
     </div>
     
@@ -61,7 +62,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { BadgePlus, Play, Pause } from 'lucide-vue-next';
+import { Plus, Play, Pause } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';

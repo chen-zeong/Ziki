@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-gray-50 dark:bg-[#222428] p-3 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
+  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
     <div class="space-y-4">
       <div>
         <div class="flex items-center justify-between mb-2">
@@ -30,6 +30,7 @@
         />
       </div>
       
+      <!-- 分辨率选择 -->
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.resolution') }}</label>
@@ -81,7 +82,7 @@
             v-if="!isCustomResolution"
             v-model="resolution"
             :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
-            placeholder="选择分辨率"
+            :placeholder="metadata?.resolution ? `${metadata.resolution} (原始)` : '选择分辨率'"
             dropdown-direction="up"
           />
         </div>
@@ -101,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import CustomSelect from '../common/CustomSelect.vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
 import QualitySettings from './QualitySettings.vue';
@@ -153,9 +154,13 @@ const videoCodec = computed({
 
 const resolution = computed({
   get() {
+    // 如果有metadata且没有设置分辨率，默认使用原始分辨率
+    if (!props.modelValue.resolution && props.metadata?.resolution) {
+      return props.metadata.resolution;
+    }
     return props.modelValue.resolution || '1920x1080';
   },
-  set(value) {
+  set(value: 'original' | '1920x1080' | '1280x720' | '854x480' | 'custom') {
     emit('update:modelValue', { ...props.modelValue, resolution: value });
   }
 });
@@ -197,7 +202,7 @@ const formatOptions = computed(() => [
 // 视频编码选项（根据当前选择的格式动态更新）
 const videoCodecOptions = computed(() => {
   if (format.value === 'original') {
-    // 如果选择保持原格式，显示所有编码选项
+    // 如果选择保持原格式，显示所有编码选项（移除原始编码选项）
     return [
       { value: 'H.264', label: 'H.264' },
       { value: 'H.265', label: 'H.265 (HEVC)' },
@@ -247,10 +252,11 @@ const calculateScaledResolutions = (originalResolution: string) => {
 const resolutionOptions = computed(() => {
   const options = [];
   
-  // 如果有metadata，显示实际的原始分辨率
+  // 如果有metadata，首先添加原始分辨率选项
   if (props.metadata) {
+    // 添加原始分辨率选项
     options.push({
-      value: 'original',
+      value: props.metadata.resolution,
       label: `${props.metadata.resolution} (原始)`,
       description: '保持原始分辨率'
     });
@@ -259,8 +265,6 @@ const resolutionOptions = computed(() => {
     const scaledResolutions = calculateScaledResolutions(props.metadata.resolution);
     options.push(...scaledResolutions);
   } else {
-    options.push({ value: 'original', label: '原始分辨率' });
-    
     // 没有metadata时，添加常规分辨率选项
     options.push(
       { value: '1920x1080', label: '1920x1080 (1080p)' },
@@ -370,12 +374,66 @@ const formatVideoCodec = (codec: string): string => {
   return codecMap[codec?.toUpperCase()] || codec || '未知';
 };
 
+// 根据色彩深度自动选择编码格式
+const getRecommendedCodec = () => {
+  if (props.metadata?.colorDepth) {
+    const colorDepth = props.metadata.colorDepth;
+    // 如果是10bit或更高，推荐使用H.265
+    if (colorDepth.includes('10') || colorDepth.includes('12') || colorDepth.includes('16')) {
+      return 'H.265';
+    }
+  }
+  // 默认使用H.264
+  return 'H.264';
+};
+
 // 监听格式变化，自动调整编码选项
 watch(format, (newFormat) => {
   if (newFormat !== 'original') {
     setFormat(newFormat);
-    // 固定使用H.264编码，确保在settings中设置
-    emit('update:modelValue', { ...props.modelValue, videoCodec: 'H.264' });
+    // 根据色彩深度自动选择编码格式
+    const recommendedCodec = getRecommendedCodec();
+    emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
   }
+});
+
+// 监听metadata变化，自动调整编码选项
+watch(() => props.metadata, (newMetadata) => {
+  if (newMetadata) {
+    const recommendedCodec = getRecommendedCodec();
+    // 只有当前编码不是推荐编码时才更新
+    if (videoCodec.value !== recommendedCodec) {
+      emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
+    }
+  }
+}, { immediate: true });
+
+// 全局metadata更新事件监听
+const handleMetadataUpdate = (event: CustomEvent) => {
+  const { metadata } = event.detail;
+  if (metadata) {
+    console.log('VideoFormatSettings: 收到metadata更新事件', metadata);
+    // 自动设置推荐的编码格式
+    const recommendedCodec = metadata.colorDepth && 
+      (metadata.colorDepth.includes('10') || metadata.colorDepth.includes('12') || metadata.colorDepth.includes('16'))
+      ? 'H.265' : 'H.264';
+    
+    // 自动设置分辨率为原始分辨率
+    if (metadata.resolution && !props.modelValue.resolution) {
+      emit('update:modelValue', { 
+        ...props.modelValue, 
+        videoCodec: recommendedCodec,
+        resolution: 'original'
+      });
+    }
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('video-metadata-updated', handleMetadataUpdate as EventListener);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('video-metadata-updated', handleMetadataUpdate as EventListener);
 });
 </script>

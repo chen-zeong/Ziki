@@ -95,6 +95,7 @@ export default {
     frameRate: '帧率',
     audioCodec: '音频编码',
     audioSampleRate: '音频采样率',
+    colorDepth: '色彩深度',
     statusPending: '等待中',
     statusQueued: '排队中',
     statusProcessing: '压缩中',

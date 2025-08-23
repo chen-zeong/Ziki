@@ -36,6 +36,9 @@
           <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center">
             <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.audioSampleRate') }}</span>
           </div>
+          <div v-if="task.file.metadata?.colorDepth" class="h-8 flex items-center">
+            <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.colorDepth') }}</span>
+          </div>
         </div>
         
         <!-- 压缩前数值列 -->
@@ -67,6 +70,9 @@
           <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center justify-end">
             <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.sampleRate || 'Unknown' }}</span>
           </div>
+          <div v-if="task.file.metadata?.colorDepth" class="h-8 flex items-center justify-end">
+            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.colorDepth || 'Unknown' }}</span>
+          </div>
         </div>
         
         <!-- 压缩后数值列 -->
@@ -97,6 +103,9 @@
           </div>
           <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center justify-end">
             <span :class="getValueComparisonClass(task.file.metadata.sampleRate || 'Unknown', getActualSampleRate(task))" class="px-2 py-1 rounded">{{ getActualSampleRate(task) }}</span>
+          </div>
+          <div v-if="task.file.metadata?.colorDepth" class="h-8 flex items-center justify-end">
+            <span :class="getValueComparisonClass(task.file.metadata.colorDepth || 'Unknown', getActualColorDepth(task))" class="px-2 py-1 rounded">{{ getActualColorDepth(task) }}</span>
           </div>
         </div>
       </div>
@@ -168,6 +177,14 @@ const getActualSampleRate = (task: CompressionTask): string => {
     return task.compressedMetadata.sampleRate;
   }
   return task.file.metadata?.sampleRate || 'Unknown';
+};
+
+// 获取压缩后的实际色彩深度
+const getActualColorDepth = (task: CompressionTask): string => {
+  if (task.compressedMetadata?.colorDepth) {
+    return task.compressedMetadata.colorDepth;
+  }
+  return task.file.metadata?.colorDepth || 'Unknown';
 };
 
 // 格式化时长显示

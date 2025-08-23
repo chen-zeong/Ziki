@@ -411,6 +411,23 @@ fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
         })
         .unwrap_or(0.0);
     
+    // 获取色彩深度
+    let color_depth = video_stream["bits_per_raw_sample"].as_str()
+        .or_else(|| video_stream["bits_per_sample"].as_str())
+        .or_else(|| {
+            // 尝试从像素格式推断色彩深度
+            video_stream["pix_fmt"].as_str().and_then(|pix_fmt| {
+                match pix_fmt {
+                    "yuv420p" | "yuv422p" | "yuv444p" | "rgb24" | "bgr24" => Some("8"),
+                    "yuv420p10le" | "yuv422p10le" | "yuv444p10le" | "rgb48le" | "bgr48le" => Some("10"),
+                    "yuv420p12le" | "yuv422p12le" | "yuv444p12le" => Some("12"),
+                    "yuv420p16le" | "yuv422p16le" | "yuv444p16le" | "rgb48" | "bgr48" => Some("16"),
+                    _ => None
+                }
+            })
+        })
+        .map(|depth| format!("{} bit", depth));
+    
     Ok(VideoMetadata {
         format: container_format,
         video_codec,
@@ -420,5 +437,6 @@ fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
         sample_rate,
         duration,
         fps,
+        color_depth,
     })
 }

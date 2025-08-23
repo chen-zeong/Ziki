@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, provide, nextTick, watch } from 'vue';
+import { ref, computed, provide, nextTick, watch, onMounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 import FileUploader from './components/FileUploader.vue';
 import VideoComparison from './components/VideoComparison.vue';
 import TaskList from './components/TaskList.vue';
@@ -57,8 +58,8 @@ const toggleTimeRangePopup = () => {
 };
 
 const handleTimeValidationChange = (isValid: boolean) => {
-  // 处理时间验证变化
-  console.log('Time validation changed:', isValid);
+  // 处理时间验证变化，移除日志避免递归更新
+  // console.log('Time validation changed:', isValid);
 };
 
 
@@ -241,6 +242,21 @@ const selectTask = (taskId: string) => {
   switchToTask(taskId);
 };
 
+// 初始化输出路径
+const initializeOutputPath = async () => {
+  try {
+    const path = await invoke<string>('get_desktop_path');
+    outputPath.value = path;
+  } catch (error) {
+    console.error('Failed to initialize output path:', error);
+  }
+};
+
+// 组件挂载时初始化
+onMounted(async () => {
+  await initializeOutputPath();
+});
+
 // 监听任务变化，确保不超过99个
 watch(tasks, (newTasks) => {
   if (newTasks.length > 99) {
@@ -259,7 +275,7 @@ watch(tasks, (newTasks) => {
 
 <template>
   <!-- 整个应用窗口容器 -->
-  <div class="w-full h-screen bg-gray-200 dark:bg-dark-bg flex flex-col overflow-hidden border border-gray-300 dark:border-dark-border transition-colors duration-300">
+  <div class="w-full h-screen bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden border border-gray-300 dark:border-dark-border transition-colors duration-300">
     <!-- 顶部标题栏 -->
     <div class="h-9 flex-shrink-0 bg-[#f5f5f5] dark:bg-[#2d2d2d] flex items-center justify-end px-4 border-b border-gray-200 dark:border-gray-700" data-tauri-drag-region>
       <!-- 右侧：语言切换和主题切换 -->
@@ -312,7 +328,7 @@ watch(tasks, (newTasks) => {
       <!-- 3.2 右侧面板: 预览和设置 -->
       <div class="w-2/3 flex flex-col overflow-hidden" :class="isUploaderVisible ? 'space-y-6' : 'space-y-3'">
         <!-- File Upload (Visible by default) -->
-        <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-gray-900/50 rounded-md flex items-center justify-center">
+        <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-[#1e1e1e] rounded-md flex items-center justify-center">
           <FileUploader @files-selected="onFilesSelected" />
         </div>
 
@@ -384,11 +400,10 @@ watch(tasks, (newTasks) => {
         <!-- 自定义时间段开关 -->
         <div class="relative">
           <button
-            class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-            :class="showTimeRangePopup ? 'text-gray-800 dark:text-gray-200' : 'text-gray-700 dark:text-dark-secondary hover:text-gray-900 dark:hover:text-gray-100'"
+            class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-700 dark:text-dark-secondary hover:text-gray-900 dark:hover:text-gray-100"
             @click="toggleTimeRangePopup"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="timeRangeSettings.enabled ? 'text-[#518dd6] dark:text-[#518dd6]' : 'text-gray-700 dark:text-dark-secondary'">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <span>自定义时间段</span>

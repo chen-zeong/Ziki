@@ -10,6 +10,7 @@ export interface VideoMetadata {
   sampleRate: string; // 音频采样率，如 '48000 Hz'
   duration: number; // 视频时长（秒）
   fps: number; // 帧率
+  colorDepth?: string; // 色彩深度，如 '8-bit', '10-bit' 等
 }
 
 export interface VideoFile {

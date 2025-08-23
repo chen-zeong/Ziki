@@ -25,7 +25,7 @@
   </div>
   
   <!-- 设置区域 -->
-  <div class="h-2/5 flex flex-col bg-white dark:bg-gray-900/50 rounded-md overflow-hidden mb-6">
+  <div class="h-2/5 flex flex-col bg-white dark:bg-[#1e1e1e] rounded-md overflow-hidden mb-6">
     <VideoSettingsPanel
       ref="videoSettingsPanelRef"
       :video-path="videoPath"

@@ -1,6 +1,6 @@
 <template>
   <div class="hardware-acceleration-settings">
-    <div class="space-y-4 bg-gray-50 dark:bg-[#222428] p-4 rounded-lg">
+    <div class="space-y-4 bg-gray-50 dark:bg-[#1e1e1e] p-4 rounded-lg">
       
         <!-- 显卡加速开关 -->
          <div class="flex items-center justify-between">
@@ -243,6 +243,44 @@ const selectHardware = (option: HardwareOption) => {
     value: option.value,
     name: option.name
   };
+  
+  // 为显卡加速添加实际功能
+  if (option.value === 'gpu') {
+    handleGpuAcceleration();
+  } else {
+    handleCpuEncoding();
+  }
+};
+
+// 处理显卡加速功能
+const handleGpuAcceleration = () => {
+  if (platform.value === 'macos') {
+    console.log('macOS 显卡加速已启用');
+    console.log('使用 VideoToolbox 硬件编码器');
+    console.log('当前编码格式:', props.currentVideoCodec);
+    console.log('支持的硬件编码器:', supportedCodecs.value.map(c => c.name).join(', '));
+    
+    // 检查具体的编码器支持
+    const codecName = props.currentVideoCodec?.toLowerCase() || '';
+    if (codecName.includes('h264') || codecName.includes('h.264')) {
+      console.log('将使用 h264_videotoolbox 编码器');
+    } else if (codecName.includes('hevc') || codecName.includes('h265') || codecName.includes('h.265')) {
+      console.log('将使用 hevc_videotoolbox 编码器');
+    } else if (codecName.includes('prores')) {
+      console.log('将使用 prores_videotoolbox 编码器');
+    }
+  } else if (platform.value === 'windows') {
+    console.log('Windows 显卡加速功能暂未实现');
+    // Windows 系统暂时留空，后续可以添加 NVENC、QuickSync 等支持
+  } else {
+    console.log('当前平台不支持显卡加速');
+  }
+};
+
+// 处理CPU编码
+const handleCpuEncoding = () => {
+  console.log('使用 CPU 编码模式');
+  console.log('当前编码格式:', props.currentVideoCodec);
 };
 
 const showSupportedFormats = ref(false);
@@ -250,8 +288,10 @@ const showSupportedFormats = ref(false);
 const toggleHardwareAcceleration = () => {
   if (hardwareAcceleration.value.value === 'gpu') {
     hardwareAcceleration.value = { value: 'cpu', name: 'CPU编码' };
+    handleCpuEncoding();
   } else {
     hardwareAcceleration.value = { value: 'gpu', name: '显卡加速' };
+    handleGpuAcceleration();
   }
 };
 

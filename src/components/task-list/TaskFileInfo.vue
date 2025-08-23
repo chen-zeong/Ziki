@@ -36,6 +36,9 @@
           <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center">
             <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.audioSampleRate') }}</span>
           </div>
+          <div v-if="task.file.metadata?.colorDepth" class="h-8 flex items-center">
+            <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.colorDepth') }}</span>
+          </div>
         </div>
         
         <!-- 参数数值列 -->
@@ -66,6 +69,9 @@
           </div>
           <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center justify-end">
             <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.sampleRate || 'Unknown' }}</span>
+          </div>
+          <div v-if="task.file.metadata?.colorDepth" class="h-8 flex items-center justify-end">
+            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.colorDepth || 'Unknown' }}</span>
           </div>
         </div>
       </div>

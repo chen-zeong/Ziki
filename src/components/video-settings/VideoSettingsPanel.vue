@@ -27,7 +27,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, shallowRef, computed, inject } from 'vue';
+import { ref, watch, shallowRef, computed, inject, onMounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 
 import VideoFormatSettings from './VideoFormatSettings.vue';
 import HardwareAccelerationSettings from './HardwareAccelerationSettings.vue';
@@ -75,10 +76,18 @@ const resetAllSettings = () => {
     crfValue: 23
   };
 
-  hardwareSettings.value = {
-    value: 'cpu',
-    name: 'CPU编码'
-  };
+  // macOS下默认开启硬件加速，其他平台默认CPU编码
+  if (platform.value === 'macos') {
+    hardwareSettings.value = {
+      value: 'gpu',
+      name: '显卡加速'
+    };
+  } else {
+    hardwareSettings.value = {
+      value: 'cpu',
+      name: 'CPU编码'
+    };
+  }
 };
 
 // 监听 videoPath 变化，并在变化时重置设置
@@ -109,6 +118,19 @@ const hardwareSettings = shallowRef({
   name: 'CPU编码'
 });
 
+// 平台信息
+const platform = ref<'macos' | 'windows' | 'linux'>('macos');
+
+// 检测平台
+const detectPlatform = async () => {
+  try {
+    const result = await invoke<string>('get_platform');
+    platform.value = result as 'macos' | 'windows' | 'linux';
+  } catch (error) {
+    console.error('Failed to detect platform:', error);
+  }
+};
+
 const isTimeValid = ref(true);
 
 // 处理画质设置更新，避免循环依赖
@@ -132,6 +154,10 @@ const timeToSeconds = (timeStr: string): number | null => {
 
 // 开始压缩
 const startCompression = () => {
+  // 添加调试日志
+  console.log('Hardware settings:', hardwareSettings.value);
+  console.log('Hardware acceleration value:', hardwareSettings.value.value);
+  
   // 合并所有设置
   const compressionSettings: CompressionSettings = {
     ...formatSettings.value,
@@ -143,8 +169,15 @@ const startCompression = () => {
     videoPath: props.videoPath
   } as CompressionSettings;
   
+  console.log('Final compression settings:', compressionSettings);
+  
   emit('compress', compressionSettings);
 };
+
+// 组件挂载时初始化
+onMounted(async () => {
+  await detectPlatform();
+});
 
 // 暴露方法供父组件调用
 defineExpose({

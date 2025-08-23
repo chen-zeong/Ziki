@@ -15,8 +15,8 @@
         </div>
         <button
           type="button"
-          class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-          :class="enableTimeRange ? 'bg-gray-800 dark:bg-gray-200' : 'bg-gray-200 dark:bg-gray-600'"
+          class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          :class="enableTimeRange ? 'bg-[#518dd6] dark:bg-[#518dd6]' : 'bg-gray-200 dark:bg-gray-600'"
           @click="enableTimeRange = !enableTimeRange"
         >
           <span
@@ -76,16 +76,16 @@
               type="time"
               step="1"
               placeholder="00:00:00"
-              class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-              :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
+              class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+              @input="validateTimeInput('start', $event)"
             />
             <input
               v-model="timeRange.end"
               type="time"
               step="1"
               :placeholder="metadata ? formatDuration(metadata.duration) : $t('videoSettings.endTimePlaceholder')"
-              class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-              :style="{ backgroundColor: isDark ? '#222221' : 'white' }"
+              class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+              @input="validateTimeInput('end', $event)"
             />
           </div>
           
@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useTheme } from '../../composables/useTheme';
 
 interface TimeRangeData {
@@ -165,8 +165,13 @@ const hasTimeRange = computed(() => {
   );
 });
 
+// 标记是否正在内部更新，避免递归
+let isInternalUpdate = false;
+
 // 监听设置变化并发射事件
 watch(settings, (newSettings) => {
+  if (isInternalUpdate) return;
+  
   emit('update:modelValue', {
     enabled: newSettings.enabled,
     timeRange: {
@@ -178,6 +183,7 @@ watch(settings, (newSettings) => {
 
 // 监听props变化
 watch(() => props.modelValue, (newValue) => {
+  isInternalUpdate = true;
   settings.value = {
     enabled: newValue.enabled,
     timeRange: {
@@ -188,6 +194,11 @@ watch(() => props.modelValue, (newValue) => {
   
   // 根据时间设置推断快速选项状态
   updateQuickOptionFromTimeRange();
+  
+  // 重置标记
+  nextTick(() => {
+    isInternalUpdate = false;
+  });
 }, { deep: true });
 
 // 根据时间范围推断快速选项
@@ -298,6 +309,27 @@ const selectQuickOption = (option: string) => {
   };
 };
 
+// 验证时间输入
+const validateTimeInput = (type: 'start' | 'end', event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const timeValue = input.value;
+  
+  if (!timeValue || !props.metadata) return;
+  
+  const timeSeconds = timeToSeconds(timeValue);
+  const videoDurationSeconds = Math.floor(props.metadata.duration);
+  
+  if (timeSeconds !== null && timeSeconds > videoDurationSeconds) {
+    // 如果输入的时间超过视频时长，设置为视频时长
+    const maxTime = secondsToTime(videoDurationSeconds);
+    if (type === 'start') {
+      timeRange.value.start = maxTime;
+    } else {
+      timeRange.value.end = maxTime;
+    }
+  }
+};
+
 // 时间验证
 const timeValidation = computed(() => {
   if (!settings.value.enabled) return { isValid: true, message: '' };
@@ -305,13 +337,30 @@ const timeValidation = computed(() => {
   const startTime = settings.value.timeRange.start;
   const endTime = settings.value.timeRange.end;
   
-  // 如果结束时间不是00:00:00且不为空，需要验证
+  if (!props.metadata) return { isValid: true, message: '' };
+  
+  const videoDurationSeconds = Math.floor(props.metadata.duration);
+  
+  // 验证开始时间不能超过视频时长
+  const startSeconds = timeToSeconds(startTime || '00:00:00');
+  if (startSeconds !== null && startSeconds >= videoDurationSeconds) {
+    return { isValid: false, message: '开始时间不能超过视频时长' };
+  }
+  
+  // 验证结束时间
   if (endTime && endTime !== '00:00:00') {
-    const startSeconds = timeToSeconds(startTime || '00:00:00');
     const endSeconds = timeToSeconds(endTime);
     
-    if (startSeconds !== null && endSeconds !== null && endSeconds <= startSeconds) {
-      return { isValid: false, message: 'End time must be greater than start time' };
+    if (endSeconds !== null) {
+      // 结束时间不能超过视频时长
+      if (endSeconds > videoDurationSeconds) {
+        return { isValid: false, message: '结束时间不能超过视频时长' };
+      }
+      
+      // 结束时间必须大于开始时间
+      if (startSeconds !== null && endSeconds <= startSeconds) {
+        return { isValid: false, message: '结束时间必须大于开始时间' };
+      }
     }
   }
   
@@ -347,32 +396,35 @@ const formatDuration = (duration: number): string => {
 
 // 监听启用状态变化
 watch(enableTimeRange, (newValue) => {
+  if (isInternalUpdate) return;
+  
   if (!newValue) {
     // 禁用时重置时间范围
     timeRange.value = {
       start: '00:00:00',
       end: '00:00:00'
     };
-  } else if (newValue && props.metadata) {
-    // 启用时，验证并校正当前的时间范围
-    const videoDurationSeconds = Math.floor(props.metadata.duration);
-    
-    const currentStartSeconds = timeToSeconds(timeRange.value.start);
-    if (currentStartSeconds && currentStartSeconds >= videoDurationSeconds) {
-      timeRange.value.start = '00:00:00';
-    }
+  } else if (newValue) {
+    // 启用时，设置默认值
+    if (props.metadata) {
+      const videoDurationSeconds = Math.floor(props.metadata.duration);
+      
+      // 如果开始时间为空或超过视频时长，设置为00:00:00
+      const currentStartSeconds = timeToSeconds(timeRange.value.start);
+      if (!currentStartSeconds || currentStartSeconds >= videoDurationSeconds) {
+        timeRange.value.start = '00:00:00';
+      }
 
-    const currentEndSeconds = timeToSeconds(timeRange.value.end);
-    if (!currentEndSeconds || currentEndSeconds === 0 || currentEndSeconds > videoDurationSeconds) {
-      timeRange.value.end = secondsToTime(videoDurationSeconds);
+      // 如果结束时间为空、为0或超过视频时长，设置为视频时长
+      const currentEndSeconds = timeToSeconds(timeRange.value.end);
+      if (!currentEndSeconds || currentEndSeconds === 0 || currentEndSeconds > videoDurationSeconds) {
+        timeRange.value.end = secondsToTime(videoDurationSeconds);
+      }
+    } else {
+      // 如果没有metadata，尝试从辅助函数设置
+      setEndTimeFromMetadata();
     }
   }
-  
-  // 发射更新事件
-  emit('update:modelValue', {
-    enabled: newValue,
-    timeRange: timeRange.value
-  });
 });
 
 // 监听metadata变化，自动设置结束时间默认值
@@ -399,4 +451,37 @@ watch(() => props.metadata, (newMetadata) => {
 watch(timeValidation, (validation) => {
   emit('validationChange', validation.isValid);
 }, { immediate: true });
+
+// 全局metadata更新事件监听
+const handleMetadataUpdate = (event: CustomEvent) => {
+  const { metadata } = event.detail;
+  if (metadata && metadata.duration) {
+    console.log('TimeRangeSettings: 收到metadata更新事件', metadata);
+    // 如果当前启用了时间段且结束时间为空或为00:00:00，自动设置为视频时长
+    if (enableTimeRange.value && (!timeRange.value.end || timeRange.value.end === '00:00:00')) {
+      const videoDurationSeconds = Math.floor(metadata.duration);
+      timeRange.value.end = secondsToTime(videoDurationSeconds);
+      console.log('TimeRangeSettings: 自动设置结束时间为', timeRange.value.end);
+    }
+  }
+};
+
+// 设置结束时间的辅助函数
+const setEndTimeFromMetadata = () => {
+  if (props.metadata && props.metadata.duration) {
+    const videoDurationSeconds = Math.floor(props.metadata.duration);
+    if (!timeRange.value.end || timeRange.value.end === '00:00:00') {
+      timeRange.value.end = secondsToTime(videoDurationSeconds);
+      console.log('TimeRangeSettings: 从props.metadata设置结束时间为', timeRange.value.end);
+    }
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('video-metadata-updated', handleMetadataUpdate as EventListener);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('video-metadata-updated', handleMetadataUpdate as EventListener);
+});
 </script>

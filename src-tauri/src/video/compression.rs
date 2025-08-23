@@ -207,8 +207,57 @@ pub async fn compress_video(
         }
     }
     
-    // Set video codec (映射为FFmpeg编码器名称)
-    let ffmpeg_codec = map_codec_to_ffmpeg(&settings.codec);
+    // 添加调试日志
+    println!("Hardware acceleration setting: {:?}", settings.hardware_acceleration);
+    println!("Video codec: {}", settings.codec);
+    
+    // Set video codec (映射为FFmpeg编码器名称，考虑硬件加速)
+    let ffmpeg_codec = if settings.hardware_acceleration == Some("gpu".to_string()) {
+        println!("Using GPU acceleration");
+        // 检查当前平台并使用相应的硬件加速编码器
+        if cfg!(target_os = "macos") {
+            println!("Platform: macOS, using VideoToolbox");
+            // macOS 使用 VideoToolbox
+            match settings.codec.as_str() {
+                "H.264" | "libx264" => {
+                    println!("Selected h264_videotoolbox encoder");
+                    "h264_videotoolbox"
+                },
+                "H.265" | "HEVC" | "libx265" => {
+                    println!("Selected hevc_videotoolbox encoder");
+                    "hevc_videotoolbox"
+                },
+                "ProRes" | "prores" => {
+                    println!("Selected prores_videotoolbox encoder");
+                    "prores_videotoolbox"
+                },
+                _ => {
+                    println!("Codec {} not supported for hardware acceleration, falling back to software", settings.codec);
+                    map_codec_to_ffmpeg(&settings.codec) // 回退到软件编码
+                }
+            }
+        } else if cfg!(target_os = "windows") {
+            println!("Platform: Windows, using NVENC");
+            // Windows 可以使用 NVENC 或 QuickSync (未来扩展)
+            match settings.codec.as_str() {
+                "H.264" | "libx264" => "h264_nvenc", // 或 h264_qsv
+                "H.265" | "HEVC" | "libx265" => "hevc_nvenc", // 或 hevc_qsv
+                _ => {
+                    println!("Codec {} not supported for hardware acceleration on Windows, falling back to software", settings.codec);
+                    map_codec_to_ffmpeg(&settings.codec) // 回退到软件编码
+                }
+            }
+        } else {
+            println!("Platform not supported for hardware acceleration, falling back to software");
+            // 其他平台回退到软件编码
+            map_codec_to_ffmpeg(&settings.codec)
+        }
+    } else {
+        println!("Using CPU encoding");
+        map_codec_to_ffmpeg(&settings.codec)
+    };
+    
+    println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(ffmpeg_codec);
     
     // Set encoding preset

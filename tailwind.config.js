@@ -13,8 +13,8 @@ export default {
       colors: {
         // 夜间模式配色方案
         dark: {
-          primary: '#1E1E1E',    // 主背景
-          panel: '#2D2D2D',      // 面板背景
+          primary: '#1e1e1e',    // 主背景
+          panel: '#1e1e1e',      // 面板背景
           text: '#F5F5F5',       // 主文本
           secondary: '#A0A0A0',   // 次要文本
           accent: '#9B59B6',      // 强调色/进行中

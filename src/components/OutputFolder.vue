@@ -12,7 +12,7 @@
     >
       <div 
         v-if="showOutputFolder"
-        class="bg-[#ffffff] dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-3 overflow-hidden"
+        class="bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4 mb-3 overflow-hidden"
       >
         <div>
           <div class="flex items-center justify-between mb-3">
@@ -36,13 +36,13 @@
               <input 
                 v-model="outputPath"
                 type="text" 
-                 class="w-full px-4 py-3 pr-12 border-2 rounded-xl bg-[#f6f6f6] dark:bg-[#232529] text-gray-800 dark:text-gray-100 text-sm font-medium transition-all duration-300 shadow-sm border-gray-300 dark:border-gray-600 focus:border-gray-500 dark:focus:border-gray-400"
+                 class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                  placeholder="选择输出路径..."
                  readonly
                />
                <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
                  <button 
-                   class="p-2 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                   class="p-2 rounded-md transition-colors group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                    @click="selectOutputFolder"
                    title="选择文件夹"
                  >
@@ -111,7 +111,6 @@ const selectOutputFolder = async () => {
     if (selected && typeof selected === 'string') {
       outputPath.value = selected;
       emit('update:outputPath', selected);
-      emit('close');
     }
   } catch (error) {
     console.error('Failed to select folder:', error);
@@ -119,8 +118,8 @@ const selectOutputFolder = async () => {
 };
 
 // Watch for Tauri to be ready
-onMounted(() => {
-  initializeOutputPath();
+onMounted(async () => {
+  await initializeOutputPath();
 });
 </script>
 

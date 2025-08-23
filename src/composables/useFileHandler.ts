@@ -218,6 +218,15 @@ export function useFileHandler() {
             });
             videoFile.metadata = metadata;
             console.log('Video metadata for', file.name, ':', metadata);
+            
+            // 触发全局metadata更新事件，供其他组件使用
+            window.dispatchEvent(new CustomEvent('video-metadata-updated', {
+              detail: {
+                fileId: videoFile.id,
+                filePath: filePath,
+                metadata: metadata
+              }
+            }));
           } catch (error) {
             console.warn('Failed to get video metadata for', file.name, ':', error);
           }
@@ -301,8 +310,11 @@ export function useFileHandler() {
         time_range: settings.timeRange ? {
           start: settings.timeRange.start,
           end: settings.timeRange.end
-        } : null
+        } : null,
+        hardwareAcceleration: settings.hardwareAcceleration
       };
+      
+      console.log('Backend settings with hardware acceleration:', backendSettings);
       
       // 设置进度监听器
       const unlisten = await listen('compression-progress', (event: any) => {

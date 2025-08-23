@@ -135,8 +135,7 @@
       
       <!-- 等待中状态 -->
       <div v-else-if="task.status === 'pending'" class="flex items-center justify-between">
-        <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-             :style="{ backgroundColor: '#dbebfd', color: '#1e40af' }">
+        <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
           <Clock class="w-3 h-3 mr-1" />
           等待中
         </div>
@@ -198,7 +197,7 @@
       <!-- 暂停状态 -->
     <div v-else-if="task.status === 'paused'" class="flex items-center justify-between">
       <!-- 进度条容器 -->
-      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-orange-50 dark:bg-orange-900/30 mr-3">
+      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-orange-50/50 dark:bg-orange-900/20 mr-3">
         <!-- 进度条填充 -->
         <div 
           class="h-full rounded-full transition-all duration-300 ease-linear bg-orange-500 dark:bg-orange-500"

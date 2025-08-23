@@ -1,10 +1,11 @@
 <template>
   <div 
-    class="bg-white dark:bg-[#222221] rounded-lg border transition-colors duration-200 cursor-pointer"
+    class="rounded-lg transition-colors duration-200 cursor-pointer"
     :class="{
-      'border-blue-500 dark:border-blue-400 shadow-md': isSelected,
-      'border-gray-200 dark:border-gray-700': !isSelected
+      'bg-[#e6e6e6] dark:bg-[#4a4a4a]': isSelected,
+      'bg-white dark:bg-[#1e1e1e] hover:bg-gray-50 dark:hover:bg-[rgba(255,255,255,0.15)] border border-gray-200 dark:border-transparent': !isSelected
     }"
+    :style="!isSelected && isDark ? 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);' : ''"
     @click="$emit('select', task.id)"
   >
     <!-- 主要任务信息 -->
@@ -64,6 +65,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
+import { useTheme } from '../../composables/useTheme';
 import TaskStatusDisplay from './TaskStatusDisplay.vue';
 import TaskDetails from './TaskDetails.vue';
 import { Video } from 'lucide-vue-next';
@@ -86,6 +88,7 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
+const { isDark } = useTheme();
 
 const formatFileSize = (bytes: number): string => {
   if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';

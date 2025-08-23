@@ -5,7 +5,7 @@
     
     <div 
       ref="sliderRef"
-      class="comparison-slider w-full h-full bg-gray-200 dark:bg-dark-panel relative overflow-hidden"
+      class="comparison-slider w-full h-full bg-gray-200 dark:bg-[#1e1e1e] relative overflow-hidden"
       :style="{ '--position': `${sliderPosition}%` }"
     >
       <!-- 压缩前（左侧） -->
@@ -74,11 +74,11 @@
           <!-- 关闭按钮 -->
           <button 
             @click="closeFullscreen" 
-            class="absolute top-1 right-1 z-50 w-10 h-10 rounded-full bg-white flex items-center justify-center transition-all duration-300 hover:scale-125"
+            class="absolute top-2 right-2 z-50 w-8 h-8 rounded-full bg-white flex items-center justify-center transition-all duration-300 hover:scale-110"
             style="box-shadow: 0 0 0 2px rgba(160,160,160,0.2); background-color: #ffffff; background-image: none; border: none; outline: none;"
             title="关闭全屏 (ESC)"
           >
-            <svg class="w-5 h-5 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+            <svg class="w-4 h-4 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

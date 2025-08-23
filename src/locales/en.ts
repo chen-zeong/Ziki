@@ -96,6 +96,7 @@ export default {
     frameRate: 'Frame Rate',
     audioCodec: 'Audio Codec',
     audioSampleRate: 'Audio Sample Rate',
+    colorDepth: 'Color Depth',
     statusPending: 'Pending',
     statusQueued: 'Queued',
     statusProcessing: 'Processing',
