@@ -88,7 +88,24 @@ const formatFileSize = (bytes: number): string => {
 
 const openOutputFolder = async (task: CompressionTask) => {
   try {
-    await invoke('open_output_folder', { taskId: task.id });
+    // 获取输出文件夹路径
+    let folderPath = task.outputDirectory;
+    
+    // 如果任务没有记录输出目录，尝试从压缩文件路径中提取
+    if (!folderPath && task.file.compressedPath) {
+      const path = task.file.compressedPath;
+      const lastSlashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+      if (lastSlashIndex !== -1) {
+        folderPath = path.substring(0, lastSlashIndex);
+      }
+    }
+    
+    // 如果还是没有路径，使用默认桌面路径
+    if (!folderPath) {
+      folderPath = await invoke<string>('get_desktop_path');
+    }
+    
+    await invoke('open_output_folder', { folderPath });
   } catch (error) {
     console.error('Failed to open output folder:', error);
   }

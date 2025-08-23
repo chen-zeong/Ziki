@@ -9,6 +9,7 @@
       :video-path="videoPath"
       :compressed-video-path="compressedVideoPath"
       :compressed-video-file-path="compressedVideoFilePath"
+      :time-range="timeRange"
       @reset="$emit('reset')"
       @update-images="handleUpdateImages"
     />
@@ -47,6 +48,10 @@ interface Props {
   compressedVideoPath?: string;
   compressedVideoFilePath?: string;
   isProcessing?: boolean;
+  timeRange?: {
+    start: number;
+    end: number;
+  };
 }
 
 withDefaults(defineProps<Props>(), {

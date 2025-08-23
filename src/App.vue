@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, provide, nextTick } from 'vue';
+import { ref, computed, provide, nextTick, watch } from 'vue';
 import FileUploader from './components/FileUploader.vue';
 import VideoComparison from './components/VideoComparison.vue';
 import TaskList from './components/TaskList.vue';
@@ -76,6 +76,15 @@ const afterImage = computed(() => {
   return currentFile.value?.compressedUrl || '';
 });
 
+const computedTimeRange = computed(() => {
+  if (!timeRangeSettings.value.enabled) {
+    return undefined;
+  }
+  const start = timeToSeconds(timeRangeSettings.value.timeRange.start) || 0;
+  const end = timeToSeconds(timeRangeSettings.value.timeRange.end) || 0;
+  return { start, end };
+});
+
 const onFilesSelected = async (files: FileList) => {
   await handleFiles(files);
 };
@@ -86,13 +95,63 @@ const onCompress = async (settings: CompressionSettings) => {
   }
   
   console.log('Starting compression with output path:', outputPath.value);
+  console.log('Time range settings:', timeRangeSettings.value);
+
+  // 将时间段设置集成到压缩设置中
+  const compressionSettings = {
+    ...settings,
+    timeRange: timeRangeSettings.value.enabled ? {
+      start: timeToSeconds(timeRangeSettings.value.timeRange.start),
+      end: timeToSeconds(timeRangeSettings.value.timeRange.end)
+    } : undefined
+  };
 
   try {
-    await startCompression(settings, outputPath.value);
+    await startCompression(compressionSettings, outputPath.value);
   } catch (error) {
     console.error('Compression failed in App.vue:', error);
   }
 };
+
+// 时间格式转换：HH:MM:SS 转换为秒数
+const timeToSeconds = (timeStr: string): number | null => {
+  if (!timeStr || timeStr === '00:00:00') return null;
+  const parts = timeStr.split(':');
+  if (parts.length !== 3) return null;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parseInt(parts[2], 10);
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
+const secondsToTime = (seconds: number): string => {
+  if (isNaN(seconds) || seconds < 0) {
+    return '00:00:00';
+  }
+  const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+  const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${h}:${m}:${s}`;
+};
+
+// 监听当前文件变化，以验证和调整时间范围
+watch(currentFile, (newFile) => {
+  if (newFile && newFile.metadata && timeRangeSettings.value.enabled) {
+    const duration = newFile.metadata.duration;
+    const startSeconds = timeToSeconds(timeRangeSettings.value.timeRange.start);
+    const endSeconds = timeToSeconds(timeRangeSettings.value.timeRange.end);
+
+    // 如果结束时间超过新视频时长，则调整为新视频时长
+    if (endSeconds === null || endSeconds === 0 || endSeconds > duration) {
+      timeRangeSettings.value.timeRange.end = secondsToTime(duration);
+    }
+    
+    // 如果开始时间超过新视频时长，则重置为0
+    if (startSeconds !== null && startSeconds > duration) {
+      timeRangeSettings.value.timeRange.start = '00:00:00';
+    }
+  }
+}, { deep: true });
 
 const onUpdateImages = (images: { beforeImage?: string; afterImage?: string }) => {
   if (!currentFile.value) return;
@@ -243,6 +302,7 @@ const updateTask = (updatedTask: CompressionTask) => {
           :video-path="currentFile?.path"
           :compressed-video-path="currentFile?.compressedUrl"
           :compressed-video-file-path="currentFile?.compressedPath"
+          :time-range="computedTimeRange"
           @reset="onReset"
           @compress="onCompress"
           @update-images="onUpdateImages"

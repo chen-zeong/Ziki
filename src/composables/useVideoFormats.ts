@@ -7,7 +7,7 @@ const config = videoFormatsConfig as VideoFormatsConfig;
 
 // 当前选择的格式 - 全局状态
 const selectedFormat: Ref<string> = ref('mp4');
-const selectedVideoCodec: Ref<string> = ref('H.264');
+const selectedVideoCodec: Ref<string> = ref('H.264'); // 默认选择H264编码
 
 export function useVideoFormats() {
 

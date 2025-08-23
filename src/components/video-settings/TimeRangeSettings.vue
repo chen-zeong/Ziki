@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useTheme } from '../../composables/useTheme';
 
 interface TimeRangeData {
@@ -185,7 +185,42 @@ watch(() => props.modelValue, (newValue) => {
       end: newValue.timeRange.end
     }
   };
+  
+  // 根据时间设置推断快速选项状态
+  updateQuickOptionFromTimeRange();
 }, { deep: true });
+
+// 根据时间范围推断快速选项
+const updateQuickOptionFromTimeRange = () => {
+  if (!settings.value.enabled) {
+    selectedQuickOption.value = null;
+    return;
+  }
+  
+  const startTime = settings.value.timeRange.start;
+  const endTime = settings.value.timeRange.end;
+  
+  // 如果开始时间是00:00:00，检查结束时间是否匹配快速选项
+  if (startTime === '00:00:00') {
+    const endSeconds = timeToSeconds(endTime);
+    if (endSeconds === 30) {
+      selectedQuickOption.value = 'random30s';
+    } else if (endSeconds === 60) {
+      selectedQuickOption.value = 'random1m';
+    } else if (endSeconds === 300) {
+      selectedQuickOption.value = 'random5m';
+    } else {
+      selectedQuickOption.value = null;
+    }
+  } else {
+    selectedQuickOption.value = null;
+  }
+};
+
+// 在组件初始化时调用一次
+onMounted(() => {
+  updateQuickOptionFromTimeRange();
+});
 
 // 时间转换函数
 const timeToSeconds = (timeStr: string): number | null => {
@@ -319,8 +354,18 @@ watch(enableTimeRange, (newValue) => {
       end: '00:00:00'
     };
   } else if (newValue && props.metadata) {
-    // 启用时设置结束时间为视频时长
-    timeRange.value.end = secondsToTime(Math.floor(props.metadata.duration));
+    // 启用时，验证并校正当前的时间范围
+    const videoDurationSeconds = Math.floor(props.metadata.duration);
+    
+    const currentStartSeconds = timeToSeconds(timeRange.value.start);
+    if (currentStartSeconds && currentStartSeconds >= videoDurationSeconds) {
+      timeRange.value.start = '00:00:00';
+    }
+
+    const currentEndSeconds = timeToSeconds(timeRange.value.end);
+    if (!currentEndSeconds || currentEndSeconds === 0 || currentEndSeconds > videoDurationSeconds) {
+      timeRange.value.end = secondsToTime(videoDurationSeconds);
+    }
   }
   
   // 发射更新事件
@@ -333,8 +378,20 @@ watch(enableTimeRange, (newValue) => {
 // 监听metadata变化，自动设置结束时间默认值
 watch(() => props.metadata, (newMetadata) => {
   if (newMetadata && enableTimeRange.value) {
-    // 当有新的metadata时，更新结束时间为视频实际时长
-    timeRange.value.end = secondsToTime(Math.floor(newMetadata.duration));
+    // 检查当前设置的结束时间是否超过新视频的时长
+    const currentEndSeconds = timeToSeconds(timeRange.value.end);
+    const videoDurationSeconds = Math.floor(newMetadata.duration);
+    
+    // 如果当前结束时间为空、为0或超过视频时长，则设置为视频时长
+    if (!currentEndSeconds || currentEndSeconds === 0 || currentEndSeconds > videoDurationSeconds) {
+      timeRange.value.end = secondsToTime(videoDurationSeconds);
+    }
+    
+    // 同样检查开始时间
+    const currentStartSeconds = timeToSeconds(timeRange.value.start);
+    if (currentStartSeconds && currentStartSeconds >= videoDurationSeconds) {
+      timeRange.value.start = '00:00:00';
+    }
   }
 });
 

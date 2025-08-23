@@ -136,17 +136,31 @@ async fn generate_single_frame(video_path: String, frame_index: u32, app_handle:
         return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
     }
     
-    // First, get video duration
-    let duration_output = Command::new(&ffmpeg_path)
-        .arg("-i").arg(&video_path)
-        .arg("-f").arg("null")
-        .arg("-")
+    // First, get video duration using ffprobe (fast)
+    let duration_output = Command::new("ffprobe")
+        .args([
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_format",
+            &video_path
+        ])
         .output()
         .map_err(|e| format!("Failed to get video duration: {}", e))?;
     
-    let stderr = String::from_utf8_lossy(&duration_output.stderr);
-    let duration = parse_duration_from_ffmpeg_output(&stderr)
-        .ok_or("Failed to parse video duration")?;
+    if !duration_output.status.success() {
+        return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&duration_output.stderr)));
+    }
+    
+    let json_str = String::from_utf8(duration_output.stdout)
+        .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
+    
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    
+    let duration = json_value["format"]["duration"]
+        .as_str()
+        .and_then(|d| d.parse::<f64>().ok())
+        .ok_or("Failed to extract duration from ffprobe output")?;
     
     // Calculate timestamp for the specific frame
     let timestamp = if frame_index == 9 {
@@ -213,17 +227,31 @@ async fn generate_video_frames(video_path: String, app_handle: tauri::AppHandle)
         return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
     }
     
-    // First, get video duration
-    let duration_output = Command::new(&ffmpeg_path)
-        .arg("-i").arg(&video_path)
-        .arg("-f").arg("null")
-        .arg("-")
+    // First, get video duration using ffprobe (fast)
+    let duration_output = Command::new("ffprobe")
+        .args([
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_format",
+            &video_path
+        ])
         .output()
         .map_err(|e| format!("Failed to get video duration: {}", e))?;
     
-    let stderr = String::from_utf8_lossy(&duration_output.stderr);
-    let duration = parse_duration_from_ffmpeg_output(&stderr)
-        .ok_or("Failed to parse video duration")?;
+    if !duration_output.status.success() {
+        return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&duration_output.stderr)));
+    }
+    
+    let json_str = String::from_utf8(duration_output.stdout)
+        .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
+    
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    
+    let duration = json_value["format"]["duration"]
+        .as_str()
+        .and_then(|d| d.parse::<f64>().ok())
+        .ok_or("Failed to extract duration from ffprobe output")?;
     
     let mut frames = Vec::new();
     

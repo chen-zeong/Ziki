@@ -129,20 +129,57 @@ pub async fn compress_video(
         .map_err(|e| format!("Failed to get file size: {}", e))?
         .len();
     
-    // 首先获取视频时长用于进度计算
-    let duration_cmd = Command::new(&ffmpeg_path)
-        .arg("-i").arg(&inputPath)
-        .arg("-f").arg("null")
-        .arg("-")
+    // 使用ffprobe快速获取视频时长用于进度计算
+    let duration_cmd = Command::new("ffprobe")
+        .args([
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_format",
+            &inputPath
+        ])
         .output()
         .await
         .map_err(|e| format!("Failed to get video duration: {}", e))?;
     
-    let stderr = String::from_utf8_lossy(&duration_cmd.stderr);
-    let total_duration = parse_duration_from_ffmpeg_output(&stderr)
+    if !duration_cmd.status.success() {
+        return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&duration_cmd.stderr)));
+    }
+    
+    let json_str = String::from_utf8(duration_cmd.stdout)
+        .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
+    
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)
+        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    
+    let total_duration = json_value["format"]["duration"]
+        .as_str()
+        .and_then(|d| d.parse::<f64>().ok())
         .unwrap_or(0.0);
     
     println!("Video duration: {} seconds", total_duration);
+    
+    // 计算实际要压缩的时长（用于进度计算）
+    let actual_compression_duration = if let Some(time_range) = &settings.time_range {
+        if let Some(end) = time_range.end {
+            if let Some(start) = time_range.start {
+                let duration = end - start;
+                if duration > 0.0 {
+                    duration
+                } else {
+                    total_duration
+                }
+            } else {
+                // If only end time is specified, treat it as duration from start
+                end
+            }
+        } else {
+            total_duration
+        }
+    } else {
+        total_duration
+    };
+    
+    println!("Actual compression duration: {} seconds", actual_compression_duration);
     
     let mut cmd = Command::new(&ffmpeg_path);
     
@@ -242,7 +279,7 @@ pub async fn compress_video(
         let mut task_infos = task_info_manager.lock().await;
         task_infos.insert(taskId.clone(), TaskInfo {
             input_path: inputPath.clone(),
-            total_duration,
+            total_duration: actual_compression_duration,
             app_handle: app_handle.clone(),
             output_path: outputPath.clone(),
             settings: settings.clone(),
@@ -258,7 +295,7 @@ pub async fn compress_video(
         while let Some(line) = lines.next_line().await.unwrap_or(None) {
             println!("FFmpeg stdout line: {}", line);
             // 解析进度信息
-            if let Some(progress) = parse_ffmpeg_progress(&line, total_duration) {
+            if let Some(progress) = parse_ffmpeg_progress(&line, actual_compression_duration) {
                 println!("Parsed progress: {}%", progress);
                 // 发送进度事件到前端
                 let _ = app_handle_clone.emit("compression-progress", json!({

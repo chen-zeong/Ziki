@@ -166,6 +166,10 @@ interface Props {
   videoPath?: string;
   compressedVideoPath?: string;
   compressedVideoFilePath?: string;
+  timeRange?: {
+    start: number;
+    end: number;
+  };
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -321,19 +325,29 @@ const selectFrame = async (index: number) => {
         try {
           const originalStartTime = performance.now();
           
-          // 获取原始视频时长
+          // 始终使用原始视频的时长来生成帧
           const durationStart = performance.now();
           const originalDuration = await getVideoDuration(props.videoPath!);
-          console.log(`[Vue Debug] 获取原始视频时长完成，帧 ${index}，耗时: ${(performance.now() - durationStart).toFixed(2)}ms，时长: ${originalDuration}s`);
-          
-          // 使用优化的函数生成帧
-          console.log(`[Vue Debug] 开始调用Rust生成原始帧 ${index}，视频: ${props.videoPath}`);
+          console.log(`[Vue Debug] 获取原始视频时长，帧 ${index}，耗时: ${(performance.now() - durationStart).toFixed(2)}ms，时长: ${originalDuration}s`);
+
+          console.log(`[Vue Debug] 开始调用Rust生成原始帧 ${index}，视频: ${props.videoPath}，使用原始时长: ${originalDuration}s`);
           const rustCallStart = performance.now();
-          originalFrame = await invoke('generate_single_frame_with_duration', {
-            videoPath: props.videoPath!,
-            frameIndex: index,
-            duration: originalDuration
-          });
+          
+          // 如果有自定义时间范围，使用带时间范围的帧生成
+          if (props.timeRange) {
+            originalFrame = await invoke('generate_single_frame_with_time_range', {
+              videoPath: props.videoPath!,
+              frameIndex: index,
+              timeRangeStart: props.timeRange.start,
+              timeRangeEnd: props.timeRange.end
+            });
+          } else {
+            originalFrame = await invoke('generate_single_frame_with_duration', {
+              videoPath: props.videoPath!,
+              frameIndex: index,
+              duration: originalDuration
+            });
+          }
           console.log(`[Vue Debug] Rust调用完成，原始帧 ${index}，耗时: ${(performance.now() - rustCallStart).toFixed(2)}ms`);
           console.log(`[Vue Debug] 原始帧 ${index} 生成完成, 总耗时: ${(performance.now() - originalStartTime).toFixed(2)}ms`);
           
@@ -353,19 +367,23 @@ const selectFrame = async (index: number) => {
         try {
           const compressedStartTime = performance.now();
           
-          // 获取压缩视频时长
+          // 获取压缩视频的实际时长
           const durationStart = performance.now();
           const compressedDuration = await getVideoDuration(props.compressedVideoFilePath!);
-          console.log(`[Vue Debug] 获取压缩视频时长完成，帧 ${index}，耗时: ${(performance.now() - durationStart).toFixed(2)}ms，时长: ${compressedDuration}s`);
+          console.log(`[Vue Debug] 获取压缩视频时长，帧 ${index}，耗时: ${(performance.now() - durationStart).toFixed(2)}ms，时长: ${compressedDuration}s`);
           
-          // 使用优化的函数生成帧
-          console.log(`[Vue Debug] 开始调用Rust生成压缩帧 ${index}，视频: ${props.compressedVideoFilePath}`);
+          // 使用压缩视频的实际时长来生成帧
+          console.log(`[Vue Debug] 开始调用Rust生成压缩帧 ${index}，视频: ${props.compressedVideoFilePath}，使用压缩后时长: ${compressedDuration}s`);
           const rustCallStart = performance.now();
+          
+          // 压缩后的视频本身就是时间范围选择的结果，
+          // 因此我们应该始终使用它自己的时长来生成帧，而不是用原始的时间范围。
           compressedFrame = await invoke('generate_single_frame_with_duration', {
             videoPath: props.compressedVideoFilePath!,
             frameIndex: index,
             duration: compressedDuration
           });
+          
           console.log(`[Vue Debug] Rust调用完成，压缩帧 ${index}，耗时: ${(performance.now() - rustCallStart).toFixed(2)}ms`);
           console.log(`[Vue Debug] 压缩帧 ${index} 生成完成, 总耗时: ${(performance.now() - compressedStartTime).toFixed(2)}ms`);
           
