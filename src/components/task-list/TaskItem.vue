@@ -1,5 +1,12 @@
 <template>
-  <div class="bg-white dark:bg-[#222221] rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-200">
+  <div 
+    class="bg-white dark:bg-[#222221] rounded-lg border transition-colors duration-200 cursor-pointer"
+    :class="{
+      'border-blue-500 dark:border-blue-400 shadow-md': isSelected,
+      'border-gray-200 dark:border-gray-700': !isSelected
+    }"
+    @click="$emit('select', task.id)"
+  >
     <!-- 主要任务信息 -->
     <div class="p-3 space-y-3">
       <!-- 第一行：缩略图、标题和体积大小 -->
@@ -65,6 +72,7 @@ import type { CompressionTask } from '../../types';
 interface Props {
   task: CompressionTask;
   isExpanded: boolean;
+  isSelected?: boolean;
 }
 
 interface Emits {
@@ -72,6 +80,7 @@ interface Emits {
   (e: 'toggle-expand', taskId: string): void;
   (e: 'pause', taskId: string): void;
   (e: 'resume', taskId: string): void;
+  (e: 'select', taskId: string): void;
 }
 
 const props = defineProps<Props>();

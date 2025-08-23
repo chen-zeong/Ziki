@@ -5,10 +5,10 @@
       <button 
          class="flex items-center space-x-2 px-3 py-1 rounded-md text-sm text-white transition-colors"
          style="background-color: #578ae6;"
-         @click="emit('addFiles')"
+         @click="handleAddFiles"
        >
         <BadgePlus class="w-4 h-4" />
-        <span>添加</span>
+        <span>{{ t('toolbar.addFiles') }}</span>
       </button>
       
       <!-- 批量暂停/开始按钮 -->
@@ -21,7 +21,7 @@
           color: 'white'
         }"
         :disabled="!hasControllableTasks"
-        :title="hasProcessingTasks ? '暂停所有任务' : '开始所有任务'"
+        :title="hasProcessingTasks ? t('taskList.pauseAllTasks') : t('taskList.startAllTasks')"
         @click="toggleBatchProcessing"
       >
         <!-- 暂停图标 -->
@@ -62,7 +62,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { BadgePlus, Play, Pause } from 'lucide-vue-next';
+import { useI18n } from 'vue-i18n';
+import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import type { CompressionTask } from '../../types';
+
+const { t } = useI18n();
 
 interface Props {
   tasks: CompressionTask[];
@@ -73,6 +78,7 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
   addFiles: [];
+  filesSelected: [files: FileList];
   pauseAllTasks: [];
   startAllTasks: [];
   toggleStatusFilter: [status: string];
@@ -140,6 +146,77 @@ const toggleBatchProcessing = () => {
   } else {
     // 开始所有等待中的任务
     emit('startAllTasks');
+  }
+};
+
+// 处理添加文件按钮点击
+const handleAddFiles = async () => {
+  try {
+    // 使用 Tauri 的文件对话框选择文件
+    const selected = await open({
+      multiple: true,
+      filters: [{
+        name: 'Video and Image Files',
+        extensions: ['mp4', 'mov', 'avi', 'mkv', 'webm', 'jpg', 'jpeg', 'png', 'gif']
+      }]
+    });
+    
+    if (selected && Array.isArray(selected)) {
+      // 创建 File 对象
+       const files: File[] = [];
+       for (const filePath of selected) {
+         const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
+         const extension = fileName.split('.').pop()?.toLowerCase() || '';
+         let mimeType = 'application/octet-stream';
+         
+         if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
+           mimeType = `video/${extension === 'mov' ? 'quicktime' : extension}`;
+         } else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+           mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+         }
+         
+         // 获取文件大小
+         let fileSize = 0;
+         try {
+           fileSize = await invoke<number>('get_file_size', { filePath });
+         } catch (error) {
+           console.warn('Failed to get file size:', error);
+         }
+         
+         const mockFile = new File([], fileName, { type: mimeType });
+         (mockFile as any).path = filePath;
+         // 设置文件大小
+         Object.defineProperty(mockFile, 'size', {
+           value: fileSize,
+           writable: false,
+           enumerable: true,
+           configurable: false
+         });
+         files.push(mockFile);
+       }
+      
+      // 创建 FileList-like 对象
+      const fileList = {
+        length: files.length,
+        item: (index: number) => files[index] || null,
+        [Symbol.iterator]: function* () {
+          for (let i = 0; i < files.length; i++) {
+            yield files[i];
+          }
+        }
+      } as FileList;
+      
+      // 添加数组式访问
+      files.forEach((file, index) => {
+        (fileList as any)[index] = file;
+      });
+      
+      emit('filesSelected', fileList);
+    }
+  } catch (error) {
+    console.error('Error selecting files:', error);
+    // 如果 Tauri 对话框失败，回退到原来的事件
+    emit('addFiles');
   }
 };
 

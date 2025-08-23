@@ -74,6 +74,7 @@ export default {
   taskList: {
     title: 'Task List',
     noTasks: 'No tasks',
+    noTasksDescription: 'Upload files to start compression',
     status: {
       pending: 'Pending',
       processing: 'Processing',
@@ -88,6 +89,7 @@ export default {
     openOutputFolder: 'Open Output Folder',
     showDetails: 'Show Details',
     hideDetails: 'Hide Details',
+    delete: 'Delete',
     deleteTask: 'Delete Task',
     compressionComparison: 'Before/After Comparison',
     fileSize: 'File Size',
@@ -101,7 +103,9 @@ export default {
     statusFailed: 'Failed',
     noFilteredTasks: 'No tasks match the filter criteria',
     uploadHint: 'Upload files to start compression',
-    fileInfo: 'File Information'
+    fileInfo: 'File Information',
+    pauseAllTasks: 'Pause All Tasks',
+    startAllTasks: 'Start All Tasks'
   },
 
   // Output Folder

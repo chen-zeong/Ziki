@@ -1,7 +1,7 @@
 <template>
   <div class="mt-1">
     <!-- 压缩完成状态 -->
-    <div v-if="task.status === 'completed' && task.compressedSize" class="flex items-center space-x-3">
+    <div v-if="task.status === 'completed' && task.compressedSize" class="flex items-center justify-between">
       <!-- 完成状态信息条 -->
       <div class="relative h-8 bg-green-50 dark:bg-green-900/30 rounded-lg overflow-hidden px-3 inline-flex items-center">
         <!-- 完成状态背景 -->
@@ -20,7 +20,7 @@
       </div>
       
       <!-- 操作按钮组 -->
-      <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+      <div class="flex items-center space-x-1 flex-shrink-0">
         <!-- 打开文件夹按钮 -->
           <button
             @click="$emit('open-folder')"
@@ -52,9 +52,9 @@
     </div>
     
     <!-- 压缩中状态 -->
-    <div v-else-if="task.status === 'processing'" class="flex items-center space-x-3">
+    <div v-else-if="task.status === 'processing'" class="flex items-center justify-between">
       <!-- 进度条容器 -->
-      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-[#eeeaf7] dark:bg-[#39305a]">
+      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-[#eeeaf7] dark:bg-[#39305a] mr-3">
          <!-- 进度条填充 -->
          <div 
            class="h-full bg-purple-400 dark:bg-[#6c52a1] rounded-full transition-all duration-300 ease-linear"
@@ -71,7 +71,7 @@
       </div>
       
       <!-- 操作按钮组 -->
-      <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+      <div class="flex items-center space-x-1 flex-shrink-0">
         <!-- 暂停按钮 -->
         <button
           @click="$emit('pause', task.id)"
@@ -103,7 +103,7 @@
     </div>
       
       <!-- 压缩失败状态 -->
-      <div v-else-if="task.status === 'failed'" class="flex items-center space-x-3">
+      <div v-else-if="task.status === 'failed'" class="flex items-center justify-between">
         <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
              :title="task.error || '压缩失败'">
           <X class="w-3 h-3 mr-1" />
@@ -111,7 +111,7 @@
         </div>
         
         <!-- 操作按钮组 -->
-        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+        <div class="flex items-center space-x-1 flex-shrink-0">
           <!-- 删除按钮 -->
           <button
             @click="$emit('delete', task.id)"
@@ -134,7 +134,7 @@
       </div>
       
       <!-- 等待中状态 -->
-      <div v-else-if="task.status === 'pending'" class="flex items-center space-x-3">
+      <div v-else-if="task.status === 'pending'" class="flex items-center justify-between">
         <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
              :style="{ backgroundColor: '#dbebfd', color: '#1e40af' }">
           <Clock class="w-3 h-3 mr-1" />
@@ -142,7 +142,7 @@
         </div>
         
         <!-- 操作按钮组 -->
-        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+        <div class="flex items-center space-x-1 flex-shrink-0">
           <!-- 删除按钮 -->
           <button
             @click="$emit('delete', task.id)"
@@ -165,7 +165,7 @@
       </div>
       
       <!-- 排队中状态 -->
-      <div v-else-if="task.status === 'queued'" class="flex items-center space-x-3">
+      <div v-else-if="task.status === 'queued'" class="flex items-center justify-between">
         <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
              :style="{ backgroundColor: '#fff5dc', color: '#d97706' }">
           <Clock class="w-3 h-3 mr-1" />
@@ -173,7 +173,7 @@
         </div>
         
         <!-- 操作按钮组 -->
-        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+        <div class="flex items-center space-x-1 flex-shrink-0">
           <!-- 删除按钮 -->
           <button
             @click="$emit('delete', task.id)"
@@ -196,9 +196,9 @@
       </div>
       
       <!-- 暂停状态 -->
-    <div v-else-if="task.status === 'paused'" class="flex items-center space-x-3">
+    <div v-else-if="task.status === 'paused'" class="flex items-center justify-between">
       <!-- 进度条容器 -->
-      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-orange-50 dark:bg-orange-900/30">
+      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-orange-50 dark:bg-orange-900/30 mr-3">
         <!-- 进度条填充 -->
         <div 
           class="h-full rounded-full transition-all duration-300 ease-linear bg-orange-500 dark:bg-orange-500"
@@ -215,7 +215,7 @@
       </div>
         
         <!-- 操作按钮组 -->
-        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+        <div class="flex items-center space-x-1 flex-shrink-0">
           <!-- 恢复按钮 -->
           <button
             @click="$emit('resume', task.id)"

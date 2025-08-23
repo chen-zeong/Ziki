@@ -7,6 +7,11 @@
     "core:default",
     "opener:default",
     "dialog:default",
-    "core:window:allow-start-dragging"
+    "core:event:default",
+    "fs:default",
+    "core:window:allow-start-dragging",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "fs:allow-read-file"
   ]
 }

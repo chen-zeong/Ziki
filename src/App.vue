@@ -26,6 +26,9 @@ const {
   resumeCompression
 } = useFileHandler();
 
+// 选中的任务ID
+const selectedTaskId = ref<string | null>(null);
+
 const { isDark, toggleTheme } = useTheme();
 
 // 提供当前文件信息给子组件
@@ -232,6 +235,25 @@ const updateTask = (updatedTask: CompressionTask) => {
   }
 };
 
+// 处理任务选中
+const selectTask = (taskId: string) => {
+  selectedTaskId.value = taskId;
+  switchToTask(taskId);
+};
+
+// 监听任务变化，确保不超过99个
+watch(tasks, (newTasks) => {
+  if (newTasks.length > 99) {
+    // 删除最老的任务（按创建时间排序）
+    const sortedTasks = [...newTasks].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const tasksToRemove = sortedTasks.slice(0, newTasks.length - 99);
+    
+    tasksToRemove.forEach(task => {
+      deleteTask(task.id);
+    });
+  }
+}, { deep: true });
+
 
 </script>
 
@@ -275,11 +297,14 @@ const updateTask = (updatedTask: CompressionTask) => {
           <!-- Task List -->
           <TaskList 
             :tasks="tasks" 
+            :selected-task-id="selectedTaskId"
             :show-theme-toggle="false" 
             @add-files="() => { if (!isUploaderVisible) onReset(); }"
+            @files-selected="onFilesSelected"
             @update-task="updateTask"
             @delete-task="deleteTask"
             @resume-compression="resumeCompression"
+            @select-task="selectTask"
           />
         </div>
       </div>

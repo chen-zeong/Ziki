@@ -168,11 +168,14 @@ export function useFileHandler() {
   };
 
   const handleFiles = async (fileList: FileList) => {
+    console.log('handleFiles received fileList:', fileList);
     if (!fileList || fileList.length === 0) return;
     
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      
+    const files = Array.from(fileList);
+    console.log('Converted to array:', files);
+
+    for (const file of files) {
+      console.log('Processing file:', file);
       if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
         // Get the real file path from the File object
         const filePath = (file as any).path || (file as any).webkitRelativePath || file.name;

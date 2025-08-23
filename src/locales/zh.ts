@@ -73,6 +73,7 @@ export default {
   taskList: {
     title: '任务列表',
     noTasks: '暂无任务',
+    noTasksDescription: '上传文件开始压缩',
     status: {
       pending: '等待中',
       processing: '处理中',
@@ -85,6 +86,9 @@ export default {
     duration: '时长',
     details: '详细信息',
     openOutputFolder: '打开输出文件夹',
+    showDetails: '显示详情',
+    hideDetails: '隐藏详情',
+    delete: '删除',
     deleteTask: '删除任务',
     compressionComparison: '压缩前后对比',
     fileSize: '文件大小',
@@ -98,7 +102,9 @@ export default {
     statusFailed: '压缩失败',
     noFilteredTasks: '没有符合筛选条件的任务',
     uploadHint: '上传文件开始压缩',
-    fileInfo: '文件信息'
+    fileInfo: '文件信息',
+    pauseAllTasks: '暂停所有任务',
+    startAllTasks: '开始所有任务'
   },
 
   // 输出文件夹
