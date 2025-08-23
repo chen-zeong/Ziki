@@ -1,9 +1,35 @@
 use std::process::Stdio;
-use tokio::process::Command;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::process::{Command, Child};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tauri::{Manager, Emitter};
 use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata, parse_duration_from_ffmpeg_output};
 use serde_json::json;
+
+// 任务信息结构
+#[derive(Clone, Debug)]
+struct TaskInfo {
+    input_path: String,
+    total_duration: f64,
+    app_handle: tauri::AppHandle,
+    output_path: String,
+    settings: CompressionSettings,
+}
+
+// 全局进程管理器
+static RUNNING_PROCESSES: std::sync::OnceLock<Arc<Mutex<HashMap<String, Child>>>> = std::sync::OnceLock::new();
+// 全局任务信息管理器
+static TASK_INFO: std::sync::OnceLock<Arc<Mutex<HashMap<String, TaskInfo>>>> = std::sync::OnceLock::new();
+
+fn get_process_manager() -> &'static Arc<Mutex<HashMap<String, Child>>> {
+    RUNNING_PROCESSES.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+fn get_task_info_manager() -> &'static Arc<Mutex<HashMap<String, TaskInfo>>> {
+    TASK_INFO.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
 
 // 将前端编码器名称映射为FFmpeg编码器名称
 fn map_codec_to_ffmpeg(codec: &str) -> &str {
@@ -74,6 +100,7 @@ fn parse_ffmpeg_progress(line: &str, total_duration: f64) -> Option<f64> {
 
 #[tauri::command]
 pub async fn compress_video(
+    taskId: String,
     inputPath: String,
     outputPath: String,
     settings: CompressionSettings,
@@ -192,10 +219,30 @@ pub async fn compress_video(
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("Failed to spawn FFmpeg process: {}", e))?;
-    
+
     // 获取stdout用于进度监控
     let stdout = child.stdout.take().unwrap();
     let reader = BufReader::new(stdout);
+    
+    // 将进程存储到进程管理器中
+    {
+        let process_manager = get_process_manager();
+        let mut processes = process_manager.lock().await;
+        processes.insert(taskId.clone(), child);
+    }
+    
+    // 保存任务信息用于恢复时重新建立进度监听
+    {
+        let task_info_manager = get_task_info_manager();
+        let mut task_infos = task_info_manager.lock().await;
+        task_infos.insert(taskId.clone(), TaskInfo {
+            input_path: inputPath.clone(),
+            total_duration,
+            app_handle: app_handle.clone(),
+            output_path: outputPath.clone(),
+            settings: settings.clone(),
+        });
+    }
     
     // 在后台线程中监控进度
     let app_handle_clone = app_handle.clone();
@@ -217,11 +264,40 @@ pub async fn compress_video(
         }
     });
     
-    // 等待进程完成
-    let status = child.wait()
-        .await
-        .map_err(|e| format!("Failed to wait for FFmpeg process: {}", e))?;
-    
+    // 等待进程完成或被中断
+    let status = {
+        // 持续检查进程状态直到完成或被移除
+        loop {
+            let process_manager = get_process_manager();
+            let mut processes = process_manager.lock().await;
+            
+            if let Some(child) = processes.get_mut(&taskId) {
+                // 检查进程是否已经完成
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        // 进程已完成，从管理器中移除
+                        processes.remove(&taskId);
+                        break status;
+                    }
+                    Ok(None) => {
+                        // 进程仍在运行，继续等待
+                        drop(processes);
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        // 进程出错
+                        processes.remove(&taskId);
+                        return Err(format!("Failed to check FFmpeg process status: {}", e));
+                    }
+                }
+            } else {
+                // 进程不在管理器中，说明被暂停或删除了
+                return Err("Process was interrupted".to_string());
+            }
+        }
+    };
+
     // 等待进度监控线程完成
     let _ = progress_handle.await;
     
@@ -259,4 +335,205 @@ pub async fn compress_video(
             compressed_metadata: None,
         })
     }
+}
+
+#[tauri::command]
+pub async fn pause_task(taskId: String) -> Result<(), String> {
+    println!("Pausing task: {}", taskId);
+    
+    let process_manager = get_process_manager();
+    let mut processes = process_manager.lock().await;
+    
+    if let Some(child) = processes.get_mut(&taskId) {
+        // 使用系统信号暂停进程 (SIGSTOP)
+        if let Some(pid) = child.id() {
+            #[cfg(unix)]
+            {
+                use std::process::Command;
+                let output = Command::new("kill")
+                    .arg("-STOP")
+                    .arg(pid.to_string())
+                    .output();
+                
+                match output {
+                    Ok(result) if result.status.success() => {
+                        println!("Successfully paused task: {} (PID: {})", taskId, pid);
+                        Ok(())
+                    }
+                    Ok(result) => {
+                        let error = String::from_utf8_lossy(&result.stderr);
+                        println!("Failed to pause task {}: {}", taskId, error);
+                        Err(format!("Failed to pause task: {}", error))
+                    }
+                    Err(e) => {
+                        println!("Failed to execute kill command: {}", e);
+                        Err(format!("Failed to pause task: {}", e))
+                    }
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                Err("Process pausing is not supported on this platform".to_string())
+            }
+        } else {
+            Err("Failed to get process ID".to_string())
+        }
+    } else {
+        println!("Task {} not found in running processes", taskId);
+        Err(format!("Task {} not found", taskId))
+    }
+}
+
+#[tauri::command]
+pub async fn resume_task(
+    taskId: String,
+    app_handle: tauri::AppHandle,
+) -> Result<CompressionResult, String> {
+    println!("Resuming task: {}", taskId);
+
+    let process_manager = get_process_manager();
+    let processes = process_manager.lock().await;
+
+    if let Some(child) = processes.get(&taskId) {
+        // 使用系统信号恢复进程 (SIGCONT)
+        if let Some(pid) = child.id() {
+            #[cfg(unix)]
+            {
+                use std::process::Command;
+                let output = Command::new("kill")
+                    .arg("-CONT")
+                    .arg(pid.to_string())
+                    .output();
+
+                match output {
+                    Ok(result) if result.status.success() => {
+                        println!("Successfully resumed task: {} (PID: {})", taskId, pid);
+                        // 恢复后，我们需要像compress_video一样等待它完成
+                    }
+                    Ok(result) => {
+                        let error = String::from_utf8_lossy(&result.stderr);
+                        println!("Failed to resume task {}: {}", taskId, error);
+                        return Err(format!("Failed to resume task: {}", error));
+                    }
+                    Err(e) => {
+                        println!("Failed to execute kill command: {}", e);
+                        return Err(format!("Failed to resume task: {}", e));
+                    }
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                return Err("Process resuming is not supported on this platform".to_string());
+            }
+        } else {
+            return Err("Failed to get process ID".to_string());
+        }
+    } else {
+        println!("Task {} not found in running processes, it might have already finished or been deleted.", taskId);
+        // 如果任务已经不在运行列表中，可能已经完成或被删除。
+        // 我们可以检查任务信息是否存在来决定如何响应。
+        let task_info_manager = get_task_info_manager();
+        let task_infos = task_info_manager.lock().await;
+        if let Some(task_info) = task_infos.get(&taskId) {
+             // 任务信息还在，但进程不在了，说明可能已完成。
+             // 尝试返回一个表示成功的结果，让前端可以更新状态。
+             let original_size = std::fs::metadata(&task_info.input_path)
+                .map(|m| m.len())
+                .unwrap_or(0);
+             let compressed_size = std::fs::metadata(&task_info.output_path)
+                .map(|m| m.len())
+                .ok();
+             let compressed_metadata = get_video_metadata(task_info.output_path.clone()).ok();
+
+             return Ok(CompressionResult {
+                success: true,
+                output_path: Some(task_info.output_path.clone()),
+                error: None,
+                original_size,
+                compressed_size,
+                compressed_metadata,
+             });
+        } else {
+            // 进程和任务信息都不在了，返回错误。
+            return Err(format!("Task {} not found", taskId));
+        }
+    }
+    
+    // 释放锁，因为下面的循环会需要它
+    drop(processes);
+
+    // 等待进程完成或被中断
+    let status = {
+        loop {
+            let process_manager = get_process_manager();
+            let mut processes = process_manager.lock().await;
+
+            if let Some(child) = processes.get_mut(&taskId) {
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        processes.remove(&taskId);
+                        break status;
+                    }
+                    Ok(None) => {
+                        drop(processes);
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        processes.remove(&taskId);
+                        return Err(format!("Failed to check FFmpeg process status: {}", e));
+                    }
+                }
+            } else {
+                return Err("Process was interrupted".to_string());
+            }
+        }
+    };
+    
+    println!("Resumed FFmpeg exit status: {}", status);
+
+    // 获取任务信息以返回结果
+    let task_info_manager = get_task_info_manager();
+    let task_infos = task_info_manager.lock().await;
+    let task_info = task_infos.get(&taskId).ok_or("Task info not found after resume")?;
+
+    if status.success() {
+        let compressed_size = std::fs::metadata(&task_info.output_path)
+            .map(|m| m.len())
+            .ok();
+        
+        let compressed_metadata = match get_video_metadata(task_info.output_path.clone()) {
+            Ok(metadata) => Some(metadata),
+            Err(e) => {
+                println!("Warning: Failed to get compressed video metadata: {}", e);
+                None
+            }
+        };
+            
+        Ok(CompressionResult {
+            success: true,
+            output_path: Some(task_info.output_path.clone()),
+            error: None,
+            original_size: std::fs::metadata(&task_info.input_path).map(|m| m.len()).unwrap_or(0),
+            compressed_size,
+            compressed_metadata,
+        })
+    } else {
+        Ok(CompressionResult {
+            success: false,
+            output_path: None,
+            error: Some(format!("FFmpeg process failed with exit code: {}", status)),
+            original_size: std::fs::metadata(&task_info.input_path).map(|m| m.len()).unwrap_or(0),
+            compressed_size: None,
+            compressed_metadata: None,
+        })
+    }
+}
+
+#[tauri::command]
+pub async fn delete_task(taskId: String) -> Result<(), String> {
+    // 这里应该实现删除任务的逻辑
+    // 目前返回成功，让前端可以更新UI状态
+    println!("Deleting task: {}", taskId);
+    Ok(())
 }

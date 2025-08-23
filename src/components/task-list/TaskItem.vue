@@ -43,6 +43,7 @@
           @toggle-expand="$emit('toggle-expand', task.id)"
           @open-folder="openOutputFolder(task)"
           @pause="$emit('pause', task.id)"
+          @resume="$emit('resume', task.id)"
         />
       </div>
     </div>
@@ -71,6 +72,7 @@ interface Emits {
   (e: 'delete', taskId: string): void;
   (e: 'toggle-expand', taskId: string): void;
   (e: 'pause', taskId: string): void;
+  (e: 'resume', taskId: string): void;
 }
 
 const props = defineProps<Props>();

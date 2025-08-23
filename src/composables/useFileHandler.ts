@@ -35,15 +35,15 @@ const saveTasksToCache = (tasks: CompressionTask[]) => {
   }
 };
 
-const loadTasksFromCache = (): TaskCache[] => {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch (error) {
-    console.warn('Failed to load tasks from cache:', error);
-    return [];
-  }
-};
+// const loadTasksFromCache = (): TaskCache[] => {
+//   try {
+//     const cached = localStorage.getItem(CACHE_KEY);
+//     return cached ? JSON.parse(cached) : [];
+//   } catch (error) {
+//     console.warn('Failed to load tasks from cache:', error);
+//     return [];
+//   }
+// };
 
 export function useFileHandler() {
   const selectedFiles = ref<VideoFile[]>([]);
@@ -73,7 +73,7 @@ export function useFileHandler() {
   const deleteTask = (taskId: string) => {
     const taskIndex = tasks.value.findIndex(t => t.id === taskId);
     if (taskIndex !== -1) {
-      const deletedTask = tasks.value[taskIndex];
+      tasks.value[taskIndex]; // 获取要删除的任务
       tasks.value.splice(taskIndex, 1);
       
       // 如果删除的是当前任务，切换到第一个可用任务
@@ -93,6 +93,77 @@ export function useFileHandler() {
       }
       
       console.log('Deleted task:', taskId);
+    }
+  };
+
+  // 恢复压缩任务
+  const resumeCompression = async (taskId: string) => {
+    const task = tasks.value.find(t => t.id === taskId);
+    if (!task || task.status !== 'paused') return;
+
+    console.log('Resuming compression for task:', taskId);
+    task.status = 'processing';
+    isProcessing.value = true;
+
+    // 重新设置进度监听器
+    const unlisten = await listen('compression-progress', (event: any) => {
+      const { inputPath, progress } = event.payload;
+      if (inputPath === task.file.path) {
+        task.progress = Math.round(progress);
+        console.log(`Compression progress for ${task.file.name}: ${task.progress}%`);
+      }
+    });
+
+    try {
+      // 调用后端的 resume_task，它现在会等待任务完成
+      const result = await invoke<CompressionResult>('resume_task', { taskId });
+
+      // 立即清理监听器，避免后续进度事件干扰状态
+      unlisten();
+
+      if (result.success) {
+        // 创建一个全新的任务对象来替换旧的，以确保响应性
+        const updatedTask = {
+          ...task,
+          status: 'completed' as const,
+          progress: 100,
+          originalSize: result.originalSize,
+          compressedSize: result.compressedSize || 0,
+          compressedMetadata: result.compressedMetadata,
+          completedAt: new Date(),
+          file: {
+            ...task.file,
+            compressedPath: result.outputPath,
+            compressedUrl: result.outputPath ? convertFileSrc(result.outputPath) : undefined,
+          }
+        };
+        
+        tasks.value = tasks.value.map(t => t.id === taskId ? updatedTask : t);
+        
+        if (currentFile.value && currentFile.value.id === task.file.id) {
+          currentFile.value = { ...updatedTask.file };
+        }
+        
+        console.log('Task completed successfully:', taskId);
+      } else {
+        task.status = 'failed';
+        task.error = result.error || 'Resume failed';
+      }
+    } catch (error) {
+      unlisten(); // 确保在任何错误情况下都清理监听器
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Failed to resume compression:', errorMessage);
+
+      // 检查是否是再次被暂停
+      if (errorMessage.includes('Process was interrupted')) {
+        console.log('Task was paused again, setting status to paused:', task.id);
+        task.status = 'paused';
+      } else {
+        task.status = 'failed';
+        task.error = errorMessage;
+      }
+    } finally {
+      isProcessing.value = false;
     }
   };
 
@@ -238,21 +309,22 @@ export function useFileHandler() {
           console.log(`Compression progress for ${task.file.name}: ${task.progress}%`);
         }
       });
-      
+
       try {
          // 初始化进度
          task.progress = 0;
-         
+
          // Call backend compression
          const result = await invoke<CompressionResult>('compress_video', {
+           taskId: task.id,
            inputPath: task.file.path,
            outputPath: outputPath,
            settings: backendSettings
          });
-         
-         // 清理事件监听器
+
+         // 压缩成功后才清理事件监听器
          unlisten();
-         
+
          if (result.success) {
            task.status = 'completed';
            task.progress = 100;
@@ -275,14 +347,26 @@ export function useFileHandler() {
            task.error = result.error || 'Compression failed';
          }
        } catch (compressionError) {
-         // 确保在错误情况下也清理事件监听器
-         unlisten();
+         const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
+         // 只有在非暂停的情况下才清理事件监听器
+         if (!errorMessage.includes('Process was interrupted')) {
+            unlisten();
+         }
          throw compressionError;
        }
     } catch (error) {
       console.error('Compression error:', error);
-      task.status = 'failed';
-      task.error = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // 检查是否是暂停操作导致的中断
+      if (errorMessage.includes('Process was interrupted')) {
+        console.log('Task was paused, setting status to paused:', task.id);
+        task.status = 'paused';
+        // 不设置error，因为这不是真正的错误
+      } else {
+        task.status = 'failed';
+        task.error = errorMessage;
+      }
     } finally {
       isProcessing.value = false;
     }
@@ -314,6 +398,7 @@ export function useFileHandler() {
     formatFileSize,
     getCompressionRatio,
     switchToTask,
-    deleteTask
+    deleteTask,
+    resumeCompression
   };
 }

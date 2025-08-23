@@ -9,7 +9,7 @@ import TimeRangeSettings from './components/video-settings/TimeRangeSettings.vue
 
 import { useFileHandler } from './composables/useFileHandler';
 import { useTheme } from './composables/useTheme';
-import type { CompressionSettings } from './types';
+import type { CompressionSettings, CompressionTask } from './types';
 
 const {
   tasks,
@@ -21,7 +21,8 @@ const {
   resetUploader,
   startCompression,
   switchToTask,
-  deleteTask
+  deleteTask,
+  resumeCompression
 } = useFileHandler();
 
 const { isDark, toggleTheme } = useTheme();
@@ -41,9 +42,7 @@ const timeRangeSettings = ref({
   }
 });
 
-const toggleOutputFolder = () => {
-  showOutputFolder.value = !showOutputFolder.value;
-};
+
 
 const toggleOutputFolderPopup = () => {
   showOutputFolderPopup.value = !showOutputFolderPopup.value;
@@ -163,34 +162,14 @@ const handleBottomCompress = () => {
   }
 };
 
-// 批量暂停所有任务
-const handlePauseAllTasks = () => {
-  tasks.value.forEach(task => {
-    if (task.status === 'processing') {
-      task.status = 'paused';
-    }
-  });
-  console.log('All processing tasks paused');
-};
 
-// 批量开始所有任务
-const handleStartAllTasks = () => {
-  tasks.value.forEach(task => {
-    if (task.status === 'pending' || task.status === 'paused') {
-      task.status = 'queued';
-    }
-  });
-  console.log('All pending/paused tasks started');
-};
 
-// 处理任务切换
-const handleTaskSwitch = (taskId: string) => {
-  switchToTask(taskId);
-};
-
-// 处理任务删除
-const handleTaskDelete = (taskId: string) => {
-  deleteTask(taskId);
+// 处理任务状态更新
+const updateTask = (updatedTask: CompressionTask) => {
+  const taskIndex = tasks.value.findIndex(t => t.id === updatedTask.id);
+  if (taskIndex !== -1) {
+    tasks.value[taskIndex] = updatedTask;
+  }
 };
 
 
@@ -242,10 +221,9 @@ const handleTaskDelete = (taskId: string) => {
             :tasks="tasks" 
             :show-theme-toggle="false" 
             @add-files="() => { if (!isUploaderVisible) onReset(); }"
-            @pause-all-tasks="handlePauseAllTasks"
-            @start-all-tasks="handleStartAllTasks"
-            @switchTask="handleTaskSwitch"
-            @deleteTask="handleTaskDelete"
+            @update-task="updateTask"
+            @delete-task="deleteTask"
+            @resume-compression="resumeCompression"
           />
         </div>
       </div>

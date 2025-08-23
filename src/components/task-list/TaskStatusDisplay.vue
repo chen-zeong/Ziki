@@ -91,7 +91,7 @@
           :title="'暂停任务'"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z"/>
+            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
           </svg>
         </button>
         
@@ -171,6 +171,17 @@
         
         <!-- 操作按钮组 -->
         <div class="flex items-center space-x-1 flex-shrink-0">
+          <!-- 恢复按钮 -->
+          <button
+            @click="$emit('resume', task.id)"
+            class="p-1 text-gray-400 hover:text-green-500 dark:text-gray-500 dark:hover:text-green-400 transition-colors duration-200"
+            title="恢复任务"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </button>
+          
           <!-- 删除按钮 -->
           <button
             @click="$emit('delete', task.id)"
@@ -212,6 +223,7 @@ defineEmits<{
   'toggle-expand': [id: string];
   'open-folder': [];
   'pause': [id: string];
+  'resume': [id: string];
 }>();
 
 const formatFileSize = (bytes: number): string => {

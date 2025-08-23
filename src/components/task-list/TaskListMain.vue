@@ -29,6 +29,7 @@
           @delete="deleteTask"
           @toggle-expand="toggleTaskExpansion"
           @pause="pauseTask"
+          @resume="resumeTask"
         />
       </div>
     </div>
@@ -51,6 +52,7 @@ interface Emits {
   (e: 'add-files'): void;
   (e: 'update-task', task: CompressionTask): void;
   (e: 'delete-task', taskId: string): void;
+  (e: 'resume-compression', taskId: string): void;
 }
 
 const props = defineProps<Props>();
@@ -108,13 +110,45 @@ const deleteTask = async (taskId: string) => {
 const pauseTask = async (taskId: string) => {
   try {
     const task = props.tasks.find(t => t.id === taskId);
+    console.log('Pause task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
     if (task && task.status === 'processing') {
-      await invoke('pause_task', { taskId });
+      console.log('Calling pause_task for:', taskId);
+      try {
+        await invoke('pause_task', { taskId });
+        console.log('Task paused successfully:', taskId);
+      } catch (pauseError) {
+        // 检查是否是因为进程被中断而失败
+        const errorMessage = String(pauseError);
+        if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
+          console.log('Task was interrupted/killed, treating as paused:', taskId);
+        } else {
+          throw pauseError; // 重新抛出其他类型的错误
+        }
+      }
+      // 无论是成功暂停还是进程被中断，都更新状态为paused
       const updatedTask = { ...task, status: 'paused' as const };
       emit('update-task', updatedTask);
+    } else {
+      console.log('Task not in processing state or not found:', taskId, task?.status);
     }
   } catch (error) {
     console.error('Failed to pause task:', error);
+  }
+};
+
+const resumeTask = async (taskId: string) => {
+  try {
+    const task = props.tasks.find(t => t.id === taskId);
+    console.log('Resume task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
+    if (task && task.status === 'paused') {
+      console.log('Resuming task by restarting compression:', taskId);
+      // 触发重新压缩
+      emit('resume-compression', taskId);
+    } else {
+      console.log('Task not in paused state or not found:', taskId, task?.status);
+    }
+  } catch (error) {
+    console.error('Failed to resume task:', error);
   }
 };
 

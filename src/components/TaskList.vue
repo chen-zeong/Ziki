@@ -4,6 +4,7 @@
     @add-files="$emit('add-files')"
     @update-task="$emit('update-task', $event)"
     @delete-task="$emit('delete-task', $event)"
+    @resume-compression="$emit('resume-compression', $event)"
   />
 </template>
 
@@ -19,6 +20,7 @@ interface Emits {
   (e: 'add-files'): void;
   (e: 'update-task', task: CompressionTask): void;
   (e: 'delete-task', taskId: string): void;
+  (e: 'resume-compression', taskId: string): void;
 }
 
 const props = defineProps<Props>();

@@ -19,7 +19,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![greet, compress_video, generate_thumbnail, generate_video_frames, generate_single_frame, get_video_duration, generate_single_frame_with_duration, get_desktop_path, get_file_size, get_video_metadata, detect_all_codecs, get_platform, open_output_folder])
+        .invoke_handler(tauri::generate_handler![greet, compress_video, generate_thumbnail, generate_video_frames, generate_single_frame, get_video_duration, generate_single_frame_with_duration, get_desktop_path, get_file_size, get_video_metadata, detect_all_codecs, get_platform, open_output_folder, pause_task, resume_task, delete_task])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
