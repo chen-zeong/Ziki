@@ -12,15 +12,13 @@
     >
       <div 
         v-if="showOutputFolder"
-        class="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/40 dark:to-gray-800/20 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-3 overflow-hidden"
+        class="bg-[#ffffff] dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-3 overflow-hidden"
       >
         <div>
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center space-x-2">
               <div class="p-2 rounded-lg shadow-sm bg-gray-800 dark:bg-gray-200">
-                <svg class="w-4 h-4 text-white dark:text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
-                </svg>
+                <Folder class="w-4 h-4 text-white dark:text-gray-800" />
               </div>
               <div>
                 <label class="text-sm font-bold text-gray-800 dark:text-gray-100">
@@ -38,7 +36,7 @@
               <input 
                 v-model="outputPath"
                 type="text" 
-                 class="w-full px-4 py-3 pr-12 border-2 rounded-xl bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-100 text-sm font-medium transition-all duration-300 shadow-sm backdrop-blur-sm border-gray-300 dark:border-gray-600 focus:border-gray-500 dark:focus:border-gray-400"
+                 class="w-full px-4 py-3 pr-12 border-2 rounded-xl bg-[#f6f6f6] dark:bg-[#232529] text-gray-800 dark:text-gray-100 text-sm font-medium transition-all duration-300 shadow-sm border-gray-300 dark:border-gray-600 focus:border-gray-500 dark:focus:border-gray-400"
                  placeholder="选择输出路径..."
                  readonly
                />
@@ -48,9 +46,7 @@
                    @click="selectOutputFolder"
                    title="选择文件夹"
                  >
-                   <svg class="w-4 h-4 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
-                   </svg>
+                   <FolderPen class="w-4 h-4 group-hover:animate-pulse" />
                  </button>
                </div>
              </div>
@@ -65,6 +61,7 @@
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { FolderPen, FolderCog, Folder } from 'lucide-vue-next';
 
 // Props
 interface Props {

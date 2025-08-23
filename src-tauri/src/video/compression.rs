@@ -174,6 +174,11 @@ pub async fn compress_video(
     let ffmpeg_codec = map_codec_to_ffmpeg(&settings.codec);
     cmd.arg("-c:v").arg(ffmpeg_codec);
     
+    // Set encoding preset
+    if let Some(preset) = &settings.encoding_preset {
+        cmd.arg("-preset").arg(preset);
+    }
+    
     // Set quality (CRF or bitrate)
     match settings.quality_type.as_str() {
         "crf" => {

@@ -132,15 +132,11 @@ const encodingPreset = ref('medium');
 
 // 编码预设选项
 const presetOptions = [
-  { value: 'ultrafast', label: '极快 (文件较大)' },
-  { value: 'superfast', label: '超快' },
-  { value: 'veryfast', label: '很快' },
-  { value: 'faster', label: '较快' },
-  { value: 'fast', label: '快速' },
-  { value: 'medium', label: '中等 (推荐)' },
-  { value: 'slow', label: '慢速 (高质量)' },
-  { value: 'slower', label: '较慢' },
-  { value: 'veryslow', label: '很慢 (最高质量)' }
+  { value: 'veryfast', label: '极快' },
+  { value: 'fast', label: '很快' },
+  { value: 'medium', label: '中等' },
+  { value: 'slow', label: '较慢' },
+  { value: 'veryslow', label: '很慢' }
 ];
 
 // 标记是否正在更新，避免循环
@@ -151,7 +147,8 @@ const emitUpdate = () => {
   
   const updatedSettings = {
     ...settings.value,
-    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined
+    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined,
+    encodingPreset: encodingPreset.value
   };
   emit('update:modelValue', updatedSettings);
 };

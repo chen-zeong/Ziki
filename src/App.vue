@@ -6,6 +6,7 @@ import TaskList from './components/TaskList.vue';
 import OutputFolder from './components/OutputFolder.vue';
 import LanguageSwitcher from './components/LanguageSwitcher.vue';
 import TimeRangeSettings from './components/video-settings/TimeRangeSettings.vue';
+import { Sun, Moon, Folder, Archive, FolderCog } from 'lucide-vue-next';
 
 import { useFileHandler } from './composables/useFileHandler';
 import { useTheme } from './composables/useTheme';
@@ -191,12 +192,8 @@ const updateTask = (updatedTask: CompressionTask) => {
           @click="toggleTheme"
           data-tauri-drag-region="false"
         >
-          <svg v-if="!isDark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-          </svg>
-          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-          </svg>
+          <Sun v-if="!isDark" class="w-4 h-4" />
+          <Moon v-else class="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -231,7 +228,7 @@ const updateTask = (updatedTask: CompressionTask) => {
       <!-- 3.2 右侧面板: 预览和设置 -->
       <div class="w-2/3 flex flex-col overflow-hidden" :class="isUploaderVisible ? 'space-y-6' : 'space-y-3'">
         <!-- File Upload (Visible by default) -->
-        <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-gray-900/50 rounded-md border border-gray-300 dark:border-gray-700 flex items-center justify-center">
+        <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-gray-900/50 rounded-md flex items-center justify-center">
           <FileUploader @files-selected="onFilesSelected" />
         </div>
 
@@ -268,9 +265,7 @@ const updateTask = (updatedTask: CompressionTask) => {
               @click="toggleOutputFolderPopup"
               :title="$t('outputFolder.title') || '输出文件夹'"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
-              </svg>
+              <FolderCog class="w-4 h-4" />
             </button>
             
             <!-- 悬浮的输出文件夹设置 -->
@@ -332,9 +327,7 @@ const updateTask = (updatedTask: CompressionTask) => {
           :disabled="isProcessing || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0"
           @click="handleBatchCompress"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-          </svg>
+          <Archive class="w-4 h-4" />
           <span>批量压缩</span>
           <span class="bg-white/20 px-1.5 py-0.5 rounded text-xs">
             {{ tasks.filter(t => t.status === 'pending' || t.status === 'queued').length }}

@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200">
+  <div class="bg-white dark:bg-[#222221] rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-200">
     <!-- 主要任务信息 -->
     <div class="p-3 space-y-3">
       <!-- 第一行：缩略图、标题和体积大小 -->
@@ -14,9 +14,7 @@
               class="w-full h-full object-cover"
               @error="handleThumbnailError"
             />
-            <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-            </svg>
+            <Video v-else class="w-6 h-6 text-white" />
           </div>
         </div>
         
@@ -35,7 +33,7 @@
       </div>
       
       <!-- 第二行：状态显示 -->
-      <div>
+      <div class="w-full">
         <TaskStatusDisplay 
           :task="task" 
           :is-expanded="isExpanded"
@@ -61,6 +59,7 @@ import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
 import TaskStatusDisplay from './TaskStatusDisplay.vue';
 import TaskDetails from './TaskDetails.vue';
+import { Video } from 'lucide-vue-next';
 import type { CompressionTask } from '../../types';
 
 interface Props {

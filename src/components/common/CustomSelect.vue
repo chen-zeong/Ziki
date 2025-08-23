@@ -2,14 +2,14 @@
   <div class="relative" ref="selectRef">
     <button
       type="button"
-      class="relative w-full h-10 cursor-pointer rounded-lg py-2 pl-3 pr-8 text-left border border-gray-200 dark:border-dark-border focus:border-dark-accent focus:outline-none focus:ring-1 focus:ring-dark-accent transition-all duration-200 bg-white dark:bg-black"
+      class="relative w-full h-10 cursor-pointer rounded-lg py-2 pl-3 pr-8 text-left border transition-all duration-200 custom-select-button"
       :class="{
-        'ring-2 ring-dark-accent border-dark-accent': isOpen
+        'custom-select-focused': isOpen
       }"
       style="pointer-events: auto !important; user-select: auto !important;"
       @click.stop="toggleDropdown"
     >
-      <span class="block truncate text-gray-900 dark:text-dark-text text-sm">
+      <span class="block truncate text-sm custom-select-text">
         {{ selectedOption?.label || placeholder }}
       </span>
       <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -39,7 +39,7 @@
     >
       <div
         v-if="isOpen"
-        class="absolute z-[99999] w-full rounded-lg border border-gray-200 dark:border-dark-border overflow-auto custom-scrollbar bg-white dark:bg-black"
+        class="absolute z-[99999] w-full rounded-lg border border-gray-200 dark:border-dark-border overflow-auto custom-scrollbar bg-white dark:bg-[#232529]"
         :class="{
           'mt-2': dropdownDirection === 'down',
           'mb-2 bottom-full': dropdownDirection === 'up'
@@ -67,13 +67,7 @@
               v-if="option.value === modelValue"
               class="absolute inset-y-0 right-0 flex items-center pr-4 text-amber-600 dark:text-dark-accent"
             >
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <Check class="h-5 w-5" />
             </span>
           </div>
         </div>
@@ -84,6 +78,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Check } from 'lucide-vue-next';
 
 interface Option {
   value: string;
@@ -152,6 +147,54 @@ onUnmounted(() => {
   -moz-user-select: auto !important;
   -ms-user-select: auto !important;
   pointer-events: auto !important;
+}
+
+/* 自定义搜索框样式 */
+.custom-select-button {
+  background-color: #f6f6f6;
+  border-color: #dcdcdc;
+  color: #2c3e50;
+}
+
+.custom-select-text {
+  color: #2c3e50;
+}
+
+.custom-select-text::placeholder {
+  color: #7f8c8d;
+}
+
+.custom-select-button:hover {
+  border-color: #a0a0a0;
+}
+
+.custom-select-focused {
+  border-color: #a0a0a0 !important;
+  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.3) !important;
+}
+
+/* 夜间模式样式 */
+.dark .custom-select-button {
+  background-color: #232529;
+  border-color: #383A3F;
+  color: #E1E3E8;
+}
+
+.dark .custom-select-text {
+  color: #E1E3E8;
+}
+
+.dark .custom-select-text::placeholder {
+  color: #969BAD;
+}
+
+.dark .custom-select-button:hover {
+  border-color: #60687A;
+}
+
+.dark .custom-select-focused {
+  border-color: #60687A !important;
+  box-shadow: 0 0 0 3px rgba(120, 130, 150, 0.35) !important;
 }
 
 .custom-scrollbar {

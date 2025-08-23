@@ -10,7 +10,7 @@
       :placeholder="placeholder"
       :disabled="disabled"
       type="number"
-      class="w-full h-10 px-3 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield] bg-white dark:bg-black"
+      class="w-full h-10 px-3 pr-8 border rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield] custom-number-input"
     />
     <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col">
       <button
@@ -99,3 +99,46 @@ const decrement = () => {
   }
 }
 </script>
+
+<style scoped>
+/* 自定义数字输入框样式 */
+.custom-number-input {
+  background-color: #f6f6f6;
+  border-color: #dcdcdc;
+  color: #2c3e50;
+}
+
+.custom-number-input::placeholder {
+  color: #7f8c8d;
+}
+
+.custom-number-input:hover {
+  border-color: #a0a0a0;
+}
+
+.custom-number-input:focus {
+  outline: none;
+  border-color: #a0a0a0 !important;
+  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.3) !important;
+}
+
+/* 夜间模式样式 */
+.dark .custom-number-input {
+  background-color: #232529;
+  border-color: #383A3F;
+  color: #E1E3E8;
+}
+
+.dark .custom-number-input::placeholder {
+  color: #969BAD;
+}
+
+.dark .custom-number-input:hover {
+  border-color: #60687A;
+}
+
+.dark .custom-number-input:focus {
+  border-color: #60687A !important;
+  box-shadow: 0 0 0 3px rgba(120, 130, 150, 0.35) !important;
+}
+</style>

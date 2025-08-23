@@ -89,6 +89,8 @@ export default {
     compressionComparison: '压缩前后对比',
     fileSize: '文件大小',
     frameRate: '帧率',
+    audioCodec: '音频编码',
+    audioSampleRate: '音频采样率',
     statusPending: '等待中',
     statusQueued: '排队中',
     statusProcessing: '压缩中',

@@ -30,6 +30,12 @@
           <div v-if="task.file.metadata?.fps" class="h-8 flex items-center">
             <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.frameRate') }}</span>
           </div>
+          <div v-if="task.file.metadata?.audioCodec" class="h-8 flex items-center">
+            <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.audioCodec') }}</span>
+          </div>
+          <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center">
+            <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.audioSampleRate') }}</span>
+          </div>
         </div>
         
         <!-- 参数数值列 -->
@@ -54,6 +60,12 @@
           </div>
           <div v-if="task.file.metadata?.fps" class="h-8 flex items-center justify-end">
             <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ Number(task.file.metadata.fps).toFixed(2) }} fps</span>
+          </div>
+          <div v-if="task.file.metadata?.audioCodec" class="h-8 flex items-center justify-end">
+            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.audioCodec || 'Unknown' }}</span>
+          </div>
+          <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center justify-end">
+            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.sampleRate || 'Unknown' }}</span>
           </div>
         </div>
       </div>

@@ -9,33 +9,25 @@
         
         <!-- 完成状态文字覆盖层 -->
         <div class="relative flex items-center">
-          <svg class="w-3 h-3 mr-2 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-          </svg>
+          <CheckCircle class="w-3 h-3 mr-2 text-green-600 dark:text-green-300" />
           <span class="text-xs font-medium text-green-700 dark:text-green-200">
             {{ getCompressionRatio(task) }}
           </span>
           <!-- 压缩/膨胀箭头图标 -->
-          <svg v-if="getCompressionText(task) === '压缩'" class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
-          </svg>
-          <svg v-else class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>
-          </svg>
+          <ArrowDown v-if="getCompressionText(task) === '压缩'" class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" />
+          <ArrowUp v-else class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" />
         </div>
       </div>
       
       <!-- 操作按钮组 -->
-      <div class="flex items-center space-x-1 flex-shrink-0">
+      <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
         <!-- 打开文件夹按钮 -->
           <button
             @click="$emit('open-folder')"
             class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-200"
             :title="$t('taskList.openOutputFolder')"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
-            </svg>
+            <Folder class="w-4 h-4" />
           </button>
         
         <!-- 删除按钮 -->
@@ -44,9 +36,7 @@
           class="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
           :title="$t('taskList.delete')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-          </svg>
+          <Trash class="w-4 h-4" />
         </button>
         
         <!-- 展开信息按钮 -->
@@ -56,9 +46,7 @@
           class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200"
           :title="$t('taskList.showDetails')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
+          <ChevronDown class="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -83,16 +71,14 @@
       </div>
       
       <!-- 操作按钮组 -->
-      <div class="flex items-center space-x-1 flex-shrink-0">
+      <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
         <!-- 暂停按钮 -->
         <button
           @click="$emit('pause', task.id)"
           class="p-1 text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 transition-colors duration-200"
           :title="'暂停任务'"
         >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-          </svg>
+          <Pause class="w-4 h-4" />
         </button>
         
         <!-- 删除按钮 -->
@@ -101,9 +87,7 @@
           class="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
           :title="$t('taskList.delete')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-          </svg>
+          <Trash class="w-4 h-4" />
         </button>
         
         <!-- 展开信息按钮 -->
@@ -113,47 +97,108 @@
           class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200"
           :title="$t('taskList.showDetails')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
+          <ChevronDown class="w-4 h-4" />
         </button>
       </div>
     </div>
       
       <!-- 压缩失败状态 -->
-      <div v-else-if="task.status === 'failed'" 
-           class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-           :title="task.error || '压缩失败'">
-        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
-        </svg>
-        失败{{ task.error ? ': ' + (task.error.length > 20 ? task.error.substring(0, 20) + '...' : task.error) : '' }}
+      <div v-else-if="task.status === 'failed'" class="flex items-center space-x-3">
+        <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+             :title="task.error || '压缩失败'">
+          <X class="w-3 h-3 mr-1" />
+          失败{{ task.error ? ': ' + (task.error.length > 20 ? task.error.substring(0, 20) + '...' : task.error) : '' }}
+        </div>
+        
+        <!-- 操作按钮组 -->
+        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+          <!-- 删除按钮 -->
+          <button
+            @click="$emit('delete', task.id)"
+            class="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
+            :title="$t('taskList.delete')"
+          >
+            <Trash class="w-4 h-4" />
+          </button>
+          
+          <!-- 展开信息按钮 -->
+          <button
+            v-if="task.file.metadata"
+            @click="$emit('toggle-expand', task.id)"
+            class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200"
+            :title="$t('taskList.showDetails')"
+          >
+            <ChevronDown class="w-4 h-4" />
+          </button>
+        </div>
       </div>
       
       <!-- 等待中状态 -->
-      <div v-else-if="task.status === 'pending'" 
-           class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-           :style="{ backgroundColor: '#dbebfd', color: '#1e40af' }">
-        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        等待中
+      <div v-else-if="task.status === 'pending'" class="flex items-center space-x-3">
+        <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
+             :style="{ backgroundColor: '#dbebfd', color: '#1e40af' }">
+          <Clock class="w-3 h-3 mr-1" />
+          等待中
+        </div>
+        
+        <!-- 操作按钮组 -->
+        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+          <!-- 删除按钮 -->
+          <button
+            @click="$emit('delete', task.id)"
+            class="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
+            :title="$t('taskList.delete')"
+          >
+            <Trash class="w-4 h-4" />
+          </button>
+          
+          <!-- 展开信息按钮 -->
+          <button
+            v-if="task.file.metadata"
+            @click="$emit('toggle-expand', task.id)"
+            class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200"
+            :title="$t('taskList.showDetails')"
+          >
+            <ChevronDown class="w-4 h-4" />
+          </button>
+        </div>
       </div>
       
       <!-- 排队中状态 -->
-      <div v-else-if="task.status === 'queued'" 
-           class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-           :style="{ backgroundColor: '#fff5dc', color: '#d97706' }">
-        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        排队中
+      <div v-else-if="task.status === 'queued'" class="flex items-center space-x-3">
+        <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
+             :style="{ backgroundColor: '#fff5dc', color: '#d97706' }">
+          <Clock class="w-3 h-3 mr-1" />
+          排队中
+        </div>
+        
+        <!-- 操作按钮组 -->
+        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
+          <!-- 删除按钮 -->
+          <button
+            @click="$emit('delete', task.id)"
+            class="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
+            :title="$t('taskList.delete')"
+          >
+            <Trash class="w-4 h-4" />
+          </button>
+          
+          <!-- 展开信息按钮 -->
+          <button
+            v-if="task.file.metadata"
+            @click="$emit('toggle-expand', task.id)"
+            class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200"
+            :title="$t('taskList.showDetails')"
+          >
+            <ChevronDown class="w-4 h-4" />
+          </button>
+        </div>
       </div>
       
       <!-- 暂停状态 -->
     <div v-else-if="task.status === 'paused'" class="flex items-center space-x-3">
       <!-- 进度条容器 -->
-      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-orange-50 dark:bg-orange-900/30 shadow-lg">
+      <div class="flex-1 relative h-6 rounded-full overflow-hidden bg-orange-50 dark:bg-orange-900/30">
         <!-- 进度条填充 -->
         <div 
           class="h-full rounded-full transition-all duration-300 ease-linear bg-orange-500 dark:bg-orange-500"
@@ -170,16 +215,14 @@
       </div>
         
         <!-- 操作按钮组 -->
-        <div class="flex items-center space-x-1 flex-shrink-0">
+        <div class="flex items-center space-x-1 flex-shrink-0 ml-auto">
           <!-- 恢复按钮 -->
           <button
             @click="$emit('resume', task.id)"
             class="p-1 text-gray-400 hover:text-green-500 dark:text-gray-500 dark:hover:text-green-400 transition-colors duration-200"
             title="恢复任务"
           >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
+            <Play class="w-4 h-4" />
           </button>
           
           <!-- 删除按钮 -->
@@ -188,9 +231,7 @@
             class="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors duration-200"
             :title="$t('taskList.delete')"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
+            <Trash class="w-4 h-4" />
           </button>
           
           <!-- 展开信息按钮 -->
@@ -200,9 +241,7 @@
             class="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-all duration-200"
             :title="$t('taskList.showDetails')"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
+            <ChevronDown class="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -210,6 +249,8 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+import { CheckCircle, ArrowDown, ArrowUp, Folder, Trash, Info, Pause, Play, ChevronDown, Clock, X, Zap } from 'lucide-vue-next';
 import type { CompressionTask } from '../../types';
 
 interface Props {

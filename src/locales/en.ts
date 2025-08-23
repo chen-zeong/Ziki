@@ -92,6 +92,8 @@ export default {
     compressionComparison: 'Before/After Comparison',
     fileSize: 'File Size',
     frameRate: 'Frame Rate',
+    audioCodec: 'Audio Codec',
+    audioSampleRate: 'Audio Sample Rate',
     statusPending: 'Pending',
     statusQueued: 'Queued',
     statusProcessing: 'Processing',

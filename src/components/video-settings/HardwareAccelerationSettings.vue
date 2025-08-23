@@ -6,11 +6,13 @@
          <div class="flex items-center justify-between">
            <div class="flex items-center gap-3">
              <h3 class="text-sm font-medium text-gray-700 dark:text-dark-text">显卡加速</h3>
-             <div v-if="isHardwareAvailable" class="px-2 py-1 bg-green-100 dark:bg-dark-success/20 text-green-700 dark:text-dark-success text-xs rounded-full font-medium">
-               ⚡ 可用
+             <div v-if="isHardwareAvailable" class="px-2 py-1 bg-green-100 dark:bg-dark-success/20 text-green-700 dark:text-dark-success text-xs rounded-full font-medium flex items-center space-x-1">
+               <Zap class="w-3 h-3" />
+               <span>可用</span>
              </div>
-             <div v-else class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium">
-               ✗ 不可用
+             <div v-else class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium flex items-center space-x-1">
+               <Ban class="w-3 h-3" />
+               <span>不可用</span>
              </div>
            </div>
           
@@ -22,8 +24,8 @@
               class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
               :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-gray-200 dark:bg-dark-border'"
               :style="{
-                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#67a378' : '',
-                '--tw-ring-color': '#67a378'
+                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#3b82f6' : '',
+                '--tw-ring-color': '#3b82f6'
               }"
               @click="toggleHardwareAcceleration"
             >
@@ -50,28 +52,20 @@
              <div v-if="showSupportedFormats" class="absolute bottom-full right-0 mb-3 w-80 p-5 bg-white dark:bg-dark-panel border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl backdrop-blur-md z-50 animate-in slide-in-from-bottom-2 duration-300">
               <div class="flex items-center justify-between mb-3">
                 <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
-                  <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <CheckCircle class="w-4 h-4 text-blue-500" />
                   <span>支持的硬件编码格式</span>
                 </h4>
                 <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X class="w-4 h-4" />
                 </button>
               </div>
               <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
-                <svg class="w-6 h-6 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+                <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-gray-400" />
                 当前系统不支持任何硬件编码格式
               </div>
               <div v-else class="space-y-2 max-h-48 overflow-y-auto">
                  <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
-                   <svg class="w-3 h-3 text-dark-success flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                   </svg>
+                   <Check class="w-3 h-3 text-dark-success flex-shrink-0" />
                    <span>{{ codec.name || codec.codec_type || codec }}</span>
                  </div>
                </div>
@@ -87,6 +81,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { CheckCircle, X, AlertTriangle, Check, Zap, Ban } from 'lucide-vue-next';
 
 interface HardwareOption {
   value: string;

@@ -15,18 +15,18 @@
         />
       </div>
       
+      <!-- 视频编码选择 -->
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.videoCodec') }}</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ formatVideoCodec(metadata.videoCodec) }}</span>
+            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.videoCodec?.toUpperCase() || 'UNKNOWN' }}</span>
           </div>
         </div>
         <CustomSelect 
           v-model="videoCodec"
           :options="videoCodecOptions"
-          placeholder="选择编码器"
-          dropdown-direction="up"
+          placeholder="选择视频编码"
         />
       </div>
       
@@ -374,12 +374,8 @@ const formatVideoCodec = (codec: string): string => {
 watch(format, (newFormat) => {
   if (newFormat !== 'original') {
     setFormat(newFormat);
-    // 检查当前视频编码是否兼容新格式
-    const supportedCodecs = supportedVideoCodecs.value;
-    if (supportedCodecs.length > 0 && !supportedCodecs.includes(videoCodec.value)) {
-      // 如果当前编码不兼容，选择第一个支持的编码
-      videoCodec.value = supportedCodecs[0];
-    }
+    // 固定使用H.264编码，确保在settings中设置
+    emit('update:modelValue', { ...props.modelValue, videoCodec: 'H.264' });
   }
 });
 </script>

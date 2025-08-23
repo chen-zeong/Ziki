@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+  <div class="h-full flex flex-col bg-gray-50 dark:bg-[#2d2d2d]">
     <!-- 工具栏 -->
     <TaskListToolbar
       :tasks="tasks"

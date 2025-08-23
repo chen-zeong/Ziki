@@ -16,6 +16,7 @@ pub struct CompressionSettings {
     pub crf_value: Option<u8>,
     pub bitrate: Option<String>,
     pub time_range: Option<TimeRange>,
+    pub encoding_preset: Option<String>, // FFmpeg编码预设
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

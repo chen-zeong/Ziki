@@ -30,6 +30,12 @@
           <div v-if="task.file.metadata?.fps" class="h-8 flex items-center">
             <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.frameRate') }}</span>
           </div>
+          <div v-if="task.file.metadata?.audioCodec" class="h-8 flex items-center">
+            <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.audioCodec') }}</span>
+          </div>
+          <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center">
+            <span class="font-bold text-gray-500 dark:text-gray-400">{{ $t('taskList.audioSampleRate') }}</span>
+          </div>
         </div>
         
         <!-- 压缩前数值列 -->
@@ -55,6 +61,12 @@
           <div v-if="task.file.metadata?.fps" class="h-8 flex items-center justify-end">
             <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ Number(task.file.metadata.fps).toFixed(2) }} fps</span>
           </div>
+          <div v-if="task.file.metadata?.audioCodec" class="h-8 flex items-center justify-end">
+            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.audioCodec || 'Unknown' }}</span>
+          </div>
+          <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center justify-end">
+            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100">{{ task.file.metadata.sampleRate || 'Unknown' }}</span>
+          </div>
         </div>
         
         <!-- 压缩后数值列 -->
@@ -79,6 +91,12 @@
           </div>
           <div v-if="task.file.metadata?.fps" class="h-8 flex items-center justify-end">
             <span :class="getValueComparisonClass(Number(task.file.metadata.fps).toFixed(2) + ' fps', Number(task.file.metadata.fps).toFixed(2) + ' fps')" class="px-2 py-1 rounded">{{ Number(task.file.metadata.fps).toFixed(2) }} fps</span>
+          </div>
+          <div v-if="task.file.metadata?.audioCodec" class="h-8 flex items-center justify-end">
+            <span :class="getValueComparisonClass(task.file.metadata.audioCodec || 'Unknown', getActualAudioCodec(task))" class="px-2 py-1 rounded">{{ getActualAudioCodec(task) }}</span>
+          </div>
+          <div v-if="task.file.metadata?.sampleRate" class="h-8 flex items-center justify-end">
+            <span :class="getValueComparisonClass(task.file.metadata.sampleRate || 'Unknown', getActualSampleRate(task))" class="px-2 py-1 rounded">{{ getActualSampleRate(task) }}</span>
           </div>
         </div>
       </div>
@@ -134,6 +152,22 @@ const getActualDuration = (task: CompressionTask): number | null => {
     return task.compressedMetadata.duration;
   }
   return task.file.metadata?.duration || null;
+};
+
+// 获取压缩后的实际音频编码
+const getActualAudioCodec = (task: CompressionTask): string => {
+  if (task.compressedMetadata?.audioCodec) {
+    return task.compressedMetadata.audioCodec;
+  }
+  return task.file.metadata?.audioCodec || 'Unknown';
+};
+
+// 获取压缩后的实际音频采样率
+const getActualSampleRate = (task: CompressionTask): string => {
+  if (task.compressedMetadata?.sampleRate) {
+    return task.compressedMetadata.sampleRate;
+  }
+  return task.file.metadata?.sampleRate || 'Unknown';
 };
 
 // 格式化时长显示

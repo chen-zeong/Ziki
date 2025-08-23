@@ -60,6 +60,7 @@ export interface CompressionSettings {
   bitrate?: string;
   timeRange?: TimeRange;
   hardwareAcceleration?: 'cpu' | 'gpu';
+  encodingPreset?: string; // FFmpeg编码预设
 }
 
 export interface CompressionResult {
