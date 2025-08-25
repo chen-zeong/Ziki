@@ -168,6 +168,12 @@ export default {
   status: {
     noOutputPath: '未设置输出路径',
     ready: '就绪',
-    tasks: '任务'
+    tasks: '任务',
+    pending: '等待中',
+    queued: '排队中',
+    processing: '压缩中',
+    paused: '已暂停',
+    completed: '已完成',
+    failed: '失败'
   }
 };

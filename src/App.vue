@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, provide, nextTick, watch, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import FileUploader from './components/FileUploader.vue';
-import VideoComparison from './components/VideoComparison.vue';
-import TaskList from './components/TaskList.vue';
-import OutputFolder from './components/OutputFolder.vue';
-import LanguageSwitcher from './components/LanguageSwitcher.vue';
-import TimeRangeSettings from './components/video-settings/TimeRangeSettings.vue';
-import { Sun, Moon, Folder, Archive, FolderCog } from 'lucide-vue-next';
+import AppLayout from './layouts/AppLayout.vue';
 
 import { useFileHandler } from './composables/useFileHandler';
-import { useTheme } from './composables/useTheme';
+import { useBatchProcessor } from './composables/useBatchProcessor';
 import type { CompressionSettings, CompressionTask } from './types';
 
 const {
@@ -27,13 +21,42 @@ const {
   resumeCompression
 } = useFileHandler();
 
+// 批量处理器
+const {
+  isProcessingBatch,
+  startBatchCompression,
+  stopBatchCompression,
+  resumeBatchCompression,
+  getBatchStats
+} = useBatchProcessor();
+
 // 选中的任务ID
 const selectedTaskId = ref<string | null>(null);
 
-const { isDark, toggleTheme } = useTheme();
+// 当前选中任务
+const selectedTask = computed<CompressionTask | null>(() => {
+  return tasks.value.find(t => t.id === selectedTaskId.value) || null;
+});
 
 // 提供当前文件信息给子组件
 provide('currentFile', currentFile);
+
+// 提供“当前任务的设置”和“更新方法”给右侧设置面板
+const currentTaskSettings = computed<CompressionSettings | null>(() => selectedTask.value ? selectedTask.value.settings : null);
+provide('currentTaskSettings', currentTaskSettings);
+provide('updateCurrentTaskSettings', (updates: Partial<CompressionSettings>) => {
+  if (!selectedTask.value) return;
+  const idx = tasks.value.findIndex(t => t.id === selectedTask.value!.id);
+  if (idx !== -1) {
+    tasks.value[idx] = {
+      ...tasks.value[idx],
+      settings: {
+        ...tasks.value[idx].settings,
+        ...updates
+      }
+    } as CompressionTask;
+  }
+});
 
 const showOutputFolder = ref(false);
 const showOutputFolderPopup = ref(false);
@@ -58,8 +81,29 @@ const toggleTimeRangePopup = () => {
 };
 
 const handleTimeValidationChange = (isValid: boolean) => {
-  // 处理时间验证变化，移除日志避免递归更新
-  // console.log('Time validation changed:', isValid);
+  // 处理时间验证状态变化
+  console.log('Time validation changed:', isValid);
+};
+
+const handleTimeRangeSettingsUpdate = (newSettings: any) => {
+  timeRangeSettings.value = newSettings;
+  // 同步到当前选中任务的设置（以秒为单位存储）
+  if (selectedTask.value) {
+    const tr = newSettings.enabled ? {
+      start: timeToSeconds(newSettings.timeRange.start),
+      end: timeToSeconds(newSettings.timeRange.end)
+    } : undefined;
+    const idx = tasks.value.findIndex(t => t.id === selectedTask.value!.id);
+    if (idx !== -1) {
+      tasks.value[idx] = {
+        ...tasks.value[idx],
+        settings: {
+          ...tasks.value[idx].settings,
+          timeRange: tr
+        }
+      } as CompressionTask;
+    }
+  }
 };
 
 
@@ -138,6 +182,20 @@ const secondsToTime = (seconds: number): string => {
   return `${h}:${m}:${s}`;
 };
 
+// 根据任务设置应用时间段到UI
+const applyTaskTimeRangeToUI = (task: CompressionTask | null) => {
+  if (!task || !task.settings || !task.settings.timeRange) {
+    timeRangeSettings.value.enabled = false;
+    timeRangeSettings.value.timeRange.start = '00:00:00';
+    timeRangeSettings.value.timeRange.end = '00:00:00';
+    return;
+  }
+  const { start, end } = task.settings.timeRange;
+  timeRangeSettings.value.enabled = start !== null || end !== null;
+  timeRangeSettings.value.timeRange.start = start ? secondsToTime(start) : '00:00:00';
+  timeRangeSettings.value.timeRange.end = end ? secondsToTime(end) : '00:00:00';
+};
+
 // 监听当前文件变化，以验证和调整时间范围
 watch(currentFile, (newFile) => {
   if (newFile && newFile.metadata && timeRangeSettings.value.enabled) {
@@ -199,30 +257,52 @@ const onReset = () => {
 
 // 批量压缩处理函数
 const handleBatchCompress = async () => {
-  const pendingTasks = tasks.value.filter(t => t.status === 'pending' || t.status === 'queued');
-  if (pendingTasks.length === 0) {
+  console.log('🔥 handleBatchCompress called!');
+  console.log('Current isProcessingBatch:', isProcessingBatch.value);
+  console.log('Current tasks:', tasks.value.map(t => ({ name: t.file.name, status: t.status })));
+  
+  if (isProcessingBatch.value) {
+    // 如果正在批量处理，则停止
+    console.log('Stopping batch compression');
+    stopBatchCompression();
     return;
   }
   
-  console.log(`Starting batch compression for ${pendingTasks.length} tasks`);
+  // 检查是否有排队中的任务需要恢复
+  const queuedTasks = tasks.value.filter(t => t.status === 'queued');
+  const pendingTasks = tasks.value.filter(t => t.status === 'pending');
   
-  // 这里可以添加批量压缩的具体逻辑
-  // 例如：依次处理每个等待中的任务
-  for (const task of pendingTasks) {
-    if (task.status === 'pending') {
-      task.status = 'queued';
-    }
+  console.log('Queued tasks:', queuedTasks.length);
+  console.log('Pending tasks:', pendingTasks.length);
+  
+  if (queuedTasks.length > 0 && pendingTasks.length === 0) {
+    // 只有排队任务，恢复批量处理
+    console.log('Resuming batch compression for queued tasks');
+    await resumeBatchCompression(
+      tasks.value,
+      startCompression,
+      switchToTask,
+      outputPath.value
+    );
+  } else {
+    // 开始新的批量压缩
+    console.log('Starting new batch compression');
+    await startBatchCompression(
+      tasks.value,
+      startCompression,
+      switchToTask,
+      outputPath.value
+    );
   }
 };
 
-// VideoComparison组件引用
-const videoComparisonRef = ref<InstanceType<typeof VideoComparison> | null>(null);
+// AppLayout组件引用
+const appLayoutRef = ref<InstanceType<typeof AppLayout> | null>(null);
 
 // 底部按钮的压缩处理
 const handleBottomCompress = () => {
-  if (videoComparisonRef.value) {
-    // 调用VideoComparison组件的压缩方法
-    videoComparisonRef.value.triggerCompress();
+  if (appLayoutRef.value) {
+    appLayoutRef.value.triggerCompress();
   }
 };
 
@@ -240,6 +320,9 @@ const updateTask = (updatedTask: CompressionTask) => {
 const selectTask = (taskId: string) => {
   selectedTaskId.value = taskId;
   switchToTask(taskId);
+  // 将该任务的时间段设置应用到右下角时间段UI
+  const t = tasks.value.find(t => t.id === taskId) || null;
+  applyTaskTimeRangeToUI(t as CompressionTask | null);
 };
 
 // 初始化输出路径
@@ -257,7 +340,7 @@ onMounted(async () => {
   await initializeOutputPath();
 });
 
-// 监听任务变化，确保不超过99个
+// 监听任务变化，确保不超过99个，同时在首次有任务时默认选中第一个
 watch(tasks, (newTasks) => {
   if (newTasks.length > 99) {
     // 删除最老的任务（按创建时间排序）
@@ -268,255 +351,50 @@ watch(tasks, (newTasks) => {
       deleteTask(task.id);
     });
   }
+
+  // 如果当前没有选中任务且有任务，则默认选中第一个
+  if (!selectedTaskId.value && newTasks.length > 0) {
+    selectedTaskId.value = newTasks[0].id;
+    switchToTask(newTasks[0].id);
+    applyTaskTimeRangeToUI(newTasks[0]);
+  }
 }, { deep: true });
 
 
 </script>
 
 <template>
-  <!-- 整个应用窗口容器 -->
-  <div class="w-full h-screen bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden border border-gray-300 dark:border-dark-border transition-colors duration-300">
-    <!-- 顶部标题栏 -->
-    <div class="h-9 flex-shrink-0 bg-[#f5f5f5] dark:bg-[#2d2d2d] flex items-center justify-end px-4 border-b border-gray-200 dark:border-gray-700" data-tauri-drag-region>
-      <!-- 右侧：语言切换和主题切换 -->
-      <div class="flex items-center space-x-2">
-        <!-- Language Switcher -->
-        <LanguageSwitcher />
-        
-        <!-- Theme Toggle -->
-        <button 
-          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
-          @click="toggleTheme"
-          data-tauri-drag-region="false"
-        >
-          <Sun v-if="!isDark" class="w-4 h-4" />
-          <Moon v-else class="w-4 h-4" />
-        </button>
-      </div>
-    </div>
+  <AppLayout
+    ref="appLayoutRef"
+    :tasks="tasks"
+    :current-file="currentFile"
+    :is-uploader-visible="isUploaderVisible"
+    :selected-files="selectedFiles"
+    :is-processing="isProcessing"
+    :is-processing-batch="isProcessingBatch"
+    :selected-task-id="selectedTaskId"
+    :output-path="outputPath"
+    :time-range-settings="timeRangeSettings"
+    :show-output-folder-popup="showOutputFolderPopup"
+    :show-time-range-popup="showTimeRangePopup"
+    @files-selected="onFilesSelected"
+    @compress="onCompress"
+    @reset="onReset"
+    @update-images="onUpdateImages"
+    @update-task="updateTask"
+    @delete-task="deleteTask"
+    @resume-compression="resumeCompression"
+    @select-task="selectTask"
+    @toggle-output-folder-popup="toggleOutputFolderPopup"
+    @toggle-time-range-popup="toggleTimeRangePopup"
+    @output-path-update="handleOutputPathUpdate"
+    @time-validation-change="handleTimeValidationChange"
+    @batch-compress="handleBatchCompress"
+    @bottom-compress="handleBottomCompress"
+    @update:timeRangeSettings="handleTimeRangeSettingsUpdate"
+  />
 
 
 
-    <!-- 3. 主内容区域 -->
-    <main class="flex-grow flex pr-3 space-x-3 overflow-hidden bg-white dark:bg-dark-primary" style="pointer-events: auto;">
-      <!-- 3.1 左侧面板: 任务队列 -->
-      <div class="w-1/3 flex flex-col">
-        <div class="flex-grow overflow-hidden">
-          <!-- Output Folder Settings (Expandable) -->
-          <OutputFolder
-            v-if="showOutputFolder"
-            :show-output-folder="showOutputFolder"
-            @update:output-path="handleOutputPathUpdate"
-            @close="handleOutputFolderClose"
-          />
-          
-          <!-- Task List -->
-          <TaskList 
-            :tasks="tasks" 
-            :selected-task-id="selectedTaskId"
-            :show-theme-toggle="false" 
-            @add-files="() => { if (!isUploaderVisible) onReset(); }"
-            @files-selected="onFilesSelected"
-            @update-task="updateTask"
-            @delete-task="deleteTask"
-            @resume-compression="resumeCompression"
-            @select-task="selectTask"
-          />
-        </div>
-      </div>
 
-      <!-- 3.2 右侧面板: 预览和设置 -->
-      <div class="w-2/3 flex flex-col overflow-hidden" :class="isUploaderVisible ? 'space-y-6' : 'space-y-3'">
-        <!-- File Upload (Visible by default) -->
-        <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-[#1e1e1e] rounded-md flex items-center justify-center">
-          <FileUploader @files-selected="onFilesSelected" />
-        </div>
-
-        <!-- Quality Comparison & Settings (Hidden by default) -->
-        <VideoComparison 
-          v-else
-          ref="videoComparisonRef"
-          :title="currentFile?.name"
-          :before-image="beforeImage"
-          :after-image="afterImage"
-          :is-processing="isProcessing"
-          :video-path="currentFile?.path"
-          :compressed-video-path="currentFile?.compressedUrl"
-          :compressed-video-file-path="currentFile?.compressedPath"
-          :time-range="computedTimeRange"
-          @reset="onReset"
-          @compress="onCompress"
-          @update-images="onUpdateImages"
-        />
-      </div>
-    </main>
-
-    <!-- 4. 底部状态栏 -->
-    <footer class="flex-shrink-0 flex items-center justify-between p-2 border-t border-gray-300 dark:border-dark-border bg-[#f5f5f5] dark:bg-[#2d2d2d]" style="pointer-events: auto;">
-      <div class="flex items-center space-x-4">
-        <div class="text-xs text-gray-500 dark:text-dark-secondary">
-          <span v-if="isProcessing">{{ $t('status.processing') || '处理中' }}...</span>
-          <span v-else-if="tasks.length > 0">{{ $t('status.ready') || '就绪' }} - {{ tasks.length }} {{ $t('status.tasks') || '个任务' }}</span>
-          <span v-else>{{ $t('status.ready') || '就绪' }}</span>
-        </div>
-        <div class="flex items-center space-x-2 relative">
-          <div class="relative">
-            <button 
-              class="p-1 text-gray-500 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded transition-colors"
-              @click="toggleOutputFolderPopup"
-              :title="$t('outputFolder.title') || '输出文件夹'"
-            >
-              <FolderCog class="w-4 h-4" />
-            </button>
-            
-            <!-- 悬浮的输出文件夹设置 -->
-               <div v-if="showOutputFolderPopup">
-                 <!-- 透明遮罩层 -->
-                 <div 
-                   class="fixed inset-0 z-40" 
-                   @click="showOutputFolderPopup = false"
-                 ></div>
-                 <!-- 弹窗内容 -->
-                 <div 
-                   class="absolute bottom-full mb-2 left-0 w-80 z-50"
-                   @click.stop
-                 >
-                   <OutputFolder
-                     :show-output-folder="true"
-                     @update:output-path="handleOutputPathUpdate"
-                     @close="showOutputFolderPopup = false"
-                   />
-                 </div>
-               </div>
-          </div>
-          
-          <div class="text-xs text-gray-500 dark:text-dark-secondary max-w-xs truncate">
-            <span v-if="outputPath">{{ outputPath }}</span>
-            <span v-else>{{ $t('status.noOutputPath') || '未设置输出路径' }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="flex items-center space-x-3">
-        <!-- 自定义时间段开关 -->
-        <div class="relative">
-          <button
-            class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-700 dark:text-dark-secondary hover:text-gray-900 dark:hover:text-gray-100"
-            @click="toggleTimeRangePopup"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="timeRangeSettings.enabled ? 'text-[#518dd6] dark:text-[#518dd6]' : 'text-gray-700 dark:text-dark-secondary'">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>自定义时间段</span>
-          </button>
-          
-          <!-- 时间段设置弹出框 -->
-          <div v-if="showTimeRangePopup" class="absolute bottom-full right-0 mb-2 w-80 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 p-4">
-            <TimeRangeSettings 
-              v-model="timeRangeSettings" 
-              :metadata="currentFile?.metadata"
-              @validation-change="handleTimeValidationChange"
-            />
-          </div>
-        </div>
-        
-        <!-- 批量压缩按钮 -->
-        <button 
-          class="text-white text-sm font-semibold rounded-md transition-colors px-4 py-1.5 flex items-center space-x-2"
-          :class="isProcessing || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0 ? 'bg-gray-400 text-gray-200 cursor-not-allowed hover:bg-gray-400' : ''"
-          :style="isProcessing || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0 ? {} : { backgroundColor: '#578ae6' }"
-          :disabled="isProcessing || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0"
-          @click="handleBatchCompress"
-        >
-          <Archive class="w-4 h-4" />
-          <span>批量压缩</span>
-          <span class="bg-white/20 px-1.5 py-0.5 rounded text-xs">
-            {{ tasks.filter(t => t.status === 'pending' || t.status === 'queued').length }}
-          </span>
-        </button>
-        
-        <button 
-          class="relative overflow-hidden text-white text-sm font-semibold rounded-md transition-all duration-300 px-4 py-1.5 min-w-[100px]"
-          :class="{
-            'bg-gray-400 text-gray-200 cursor-not-allowed': !currentFile,
-            'ripple-button': !isProcessing && currentFile
-          }"
-          :style="!currentFile ? {} : { backgroundColor: '#578ae6' }"
-          :disabled="isProcessing || !currentFile"
-          @click="handleBottomCompress"
-        >
-          <!-- 非压缩状态 -->
-          <template v-if="!isProcessing">
-            开始压缩
-          </template>
-          
-          <!-- 压缩中状态 - 半透明蒙版层设计 -->
-          <template v-else>
-            <!-- 半透明蒙版层 -->
-            <div class="absolute top-0 left-0 h-full rounded-md bg-white/40 dark:bg-black/25 transition-all duration-500 ease-out progress-mask"></div>
-            
-            <div>
-              
-              压缩中...
-            </div>
-          </template>
-        </button>
-      </div>
-    </footer>
-  </div>
 </template>
-
-<style scoped>
-/* 确保任务列表容器能够自适应高度变化 */
-.lg\:col-span-2 {
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* 优化按钮悬停效果 */
-button {
-  transition: all 0.2s ease-in-out;
-}
-
-/* 涟漪按钮效果 */
-.ripple-button {
-  position: relative;
-  overflow: hidden;
-}
-
-.ripple-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.ripple-button:active::before {
-  width: 300px;
-  height: 300px;
-}
-
-/* 进度蒙版层动画 */
-.progress-mask {
-  width: 0%;
-  animation: progress-fill 3s ease-in-out infinite;
-}
-
-@keyframes progress-fill {
-  0% {
-    width: 0%;
-  }
-  50% {
-    width: 70%;
-  }
-  100% {
-    width: 0%;
-  }
-}
-
-/* 移除全局button hover效果，避免与组件内部样式冲突 */
-</style>

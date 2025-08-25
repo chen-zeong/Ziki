@@ -1,0 +1,158 @@
+<script setup lang="ts">
+import { ref, defineExpose } from 'vue';
+import { useTheme } from '../composables/useTheme';
+import HeaderBar from './HeaderBar.vue';
+import MainContent from './MainContent.vue';
+import FooterBar from './FooterBar.vue';
+
+interface Props {
+  tasks: any[];
+  currentFile: any;
+  isUploaderVisible: boolean;
+  selectedFiles: any[];
+  isProcessing: boolean;
+  isProcessingBatch?: boolean;
+  selectedTaskId: string | null;
+  outputPath: string;
+  timeRangeSettings: any;
+  showOutputFolderPopup: boolean;
+  showTimeRangePopup: boolean;
+}
+
+const props = defineProps<Props>();
+
+const emit = defineEmits([
+  'files-selected',
+  'compress',
+  'reset',
+  'update-images',
+  'update-task',
+  'delete-task',
+  'resume-compression',
+  'select-task',
+  'toggle-output-folder-popup',
+  'toggle-time-range-popup',
+  'output-path-update',
+  'time-validation-change',
+  'batch-compress',
+  'bottom-compress',
+  'update:timeRangeSettings'
+]);
+
+const { isDark } = useTheme();
+const mainContentRef = ref<InstanceType<typeof MainContent> | null>(null);
+
+// 暴露triggerCompress方法给父组件
+const triggerCompress = () => {
+  if (mainContentRef.value) {
+    mainContentRef.value.triggerCompress();
+  }
+};
+
+defineExpose({
+  triggerCompress
+});
+</script>
+
+<template>
+  <!-- 整个应用窗口容器 -->
+  <div class="w-full h-screen bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden border border-gray-300 dark:border-dark-border transition-colors duration-300">
+    <!-- 顶部标题栏 -->
+    <HeaderBar />
+
+    <!-- 主内容区域 -->
+    <MainContent
+      ref="mainContentRef"
+      :tasks="tasks"
+      :current-file="currentFile"
+      :is-uploader-visible="isUploaderVisible"
+      :selected-files="selectedFiles"
+      :is-processing="isProcessing"
+      :selected-task-id="selectedTaskId"
+      :time-range-settings="timeRangeSettings"
+      @files-selected="emit('files-selected', $event)"
+      @compress="emit('compress', $event)"
+      @reset="emit('reset')"
+      @update-images="emit('update-images', $event)"
+      @update-task="emit('update-task', $event)"
+      @delete-task="emit('delete-task', $event)"
+      @resume-compression="emit('resume-compression', $event)"
+      @select-task="emit('select-task', $event)"
+    />
+
+    <!-- 底部状态栏 -->
+    <FooterBar
+      :tasks="tasks"
+      :current-file="currentFile"
+      :is-processing="isProcessing"
+      :is-processing-batch="isProcessingBatch"
+      :output-path="outputPath"
+      :time-range-settings="timeRangeSettings"
+      :show-output-folder-popup="showOutputFolderPopup"
+      :show-time-range-popup="showTimeRangePopup"
+      @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
+      @toggle-time-range-popup="emit('toggle-time-range-popup')"
+      @output-path-update="emit('output-path-update', $event)"
+      @time-validation-change="emit('time-validation-change', $event)"
+      @batch-compress="emit('batch-compress')"
+      @bottom-compress="emit('bottom-compress')"
+      @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
+    />
+  </div>
+</template>
+
+<style scoped>
+/* 确保任务列表容器能够自适应高度变化 */
+.lg\:col-span-2 {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 优化按钮悬停效果 */
+button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* 涟漪按钮效果 */
+.ripple-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.ripple-button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* 进度蒙版层动画 */
+.progress-mask {
+  width: 0%;
+  animation: progress-fill 3s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 0%;
+  }
+}
+
+/* 移除全局button hover效果，避免与组件内部样式冲突 */
+</style>

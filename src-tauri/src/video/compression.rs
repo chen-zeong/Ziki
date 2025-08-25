@@ -341,18 +341,25 @@ pub async fn compress_video(
     
     let progress_handle = tokio::spawn(async move {
         let mut lines = reader.lines();
+        println!("🚀 Starting progress monitoring for task: {}", input_path_clone);
         while let Some(line) = lines.next_line().await.unwrap_or(None) {
             println!("FFmpeg stdout line: {}", line);
             // 解析进度信息
             if let Some(progress) = parse_ffmpeg_progress(&line, actual_compression_duration) {
-                println!("Parsed progress: {}%", progress);
+                println!("✅ Parsed progress: {}% for {}", progress, input_path_clone);
                 // 发送进度事件到前端
-                let _ = app_handle_clone.emit("compression-progress", json!({
+                let emit_result = app_handle_clone.emit("compression-progress", json!({
                     "inputPath": input_path_clone,
                     "progress": progress
                 }));
+                if let Err(e) = emit_result {
+                    println!("❌ Failed to emit progress event: {}", e);
+                } else {
+                    println!("📡 Progress event emitted successfully: {}%", progress);
+                }
             }
         }
+        println!("🏁 Progress monitoring ended for task: {}", input_path_clone);
     });
     
     // 等待进程完成或被中断

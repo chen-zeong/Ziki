@@ -54,9 +54,25 @@ export function useFileHandler() {
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
+  // 维护每个任务的进度事件监听器，避免重复监听导致的重复日志/进度
+  const activeProgressListeners = new Map<string, () => void>();
+
   // 监听任务变化，自动保存到缓存
   watch(tasks, (newTasks) => {
     saveTasksToCache(newTasks);
+  }, { deep: true });
+
+  // 监听任务状态变化：当任务不再是 processing（例如 paused/completed/failed/queued）时，清理它的进度监听器
+  watch(tasks, (newTasks) => {
+    newTasks.forEach((t) => {
+      if (t.status !== 'processing') {
+        const unlisten = activeProgressListeners.get(t.id);
+        if (unlisten) {
+          try { unlisten(); } catch (e) { console.warn('Failed to unlisten progress listener:', e); }
+          activeProgressListeners.delete(t.id);
+        }
+      }
+    });
   }, { deep: true });
 
   // 切换到指定任务
@@ -73,6 +89,13 @@ export function useFileHandler() {
   const deleteTask = (taskId: string) => {
     const taskIndex = tasks.value.findIndex(t => t.id === taskId);
     if (taskIndex !== -1) {
+      // 清理该任务可能存在的进度监听器
+      const unlisten = activeProgressListeners.get(taskId);
+      if (unlisten) {
+        try { unlisten(); } catch (e) { console.warn('Failed to unlisten before delete:', e); }
+        activeProgressListeners.delete(taskId);
+      }
+
       tasks.value[taskIndex]; // 获取要删除的任务
       tasks.value.splice(taskIndex, 1);
       
@@ -105,6 +128,13 @@ export function useFileHandler() {
     task.status = 'processing';
     isProcessing.value = true;
 
+    // 若该任务已有遗留监听器，先清理
+    const existingUnlistenResume = activeProgressListeners.get(task.id);
+    if (existingUnlistenResume) {
+      try { existingUnlistenResume(); } catch {}
+      activeProgressListeners.delete(task.id);
+    }
+
     // 重新设置进度监听器
     const unlisten = await listen('compression-progress', (event: any) => {
       const { inputPath, progress } = event.payload;
@@ -113,6 +143,8 @@ export function useFileHandler() {
         console.log(`Compression progress for ${task.file.name}: ${task.progress}%`);
       }
     });
+    // 记录监听器
+    activeProgressListeners.set(task.id, unlisten);
 
     try {
       // 调用后端的 resume_task，它现在会等待任务完成
@@ -120,6 +152,7 @@ export function useFileHandler() {
 
       // 立即清理监听器，避免后续进度事件干扰状态
       unlisten();
+      activeProgressListeners.delete(task.id);
 
       if (result.success) {
         // 创建一个全新的任务对象来替换旧的，以确保响应性
@@ -150,7 +183,10 @@ export function useFileHandler() {
         task.error = result.error || 'Resume failed';
       }
     } catch (error) {
-      unlisten(); // 确保在任何错误情况下都清理监听器
+      // 确保在任何错误情况下都清理监听器
+      try { unlisten(); } catch {}
+      activeProgressListeners.delete(task.id);
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to resume compression:', errorMessage);
 
@@ -267,7 +303,7 @@ export function useFileHandler() {
     isUploaderVisible.value = true;
   };
 
-  const startCompression = async (settings: CompressionSettings, outputDirectory?: string) => {
+  const startCompression = async (settings: CompressionSettings, outputDirectory?: string, isBatchMode = false) => {
     if (!currentFile.value) {
       return;
     }
@@ -276,6 +312,15 @@ export function useFileHandler() {
     if (!task) {
       return;
     }
+    
+    // 检查任务是否已经在处理中，避免重复启动
+    // 但是允许批量处理时重新启动任务
+    if (task.status === 'processing' && !isBatchMode) {
+      console.log(`Task ${task.file.name} is already processing, skipping`);
+      return;
+    }
+    
+    console.log(`Starting compression for task: ${task.file.name}, current status: ${task.status}`);
     
     isProcessing.value = true;
     task.status = 'processing';
@@ -316,14 +361,24 @@ export function useFileHandler() {
       
       console.log('Backend settings with hardware acceleration:', backendSettings);
       
+      // 若该任务已有遗留监听器，先清理，避免重复日志/进度
+      const existingUnlisten = activeProgressListeners.get(task.id);
+      if (existingUnlisten) {
+        try { existingUnlisten(); } catch {}
+        activeProgressListeners.delete(task.id);
+      }
+      
       // 设置进度监听器
+      console.log(`Setting up progress listener for task: ${task.file.name} (${task.file.path})`);
       const unlisten = await listen('compression-progress', (event: any) => {
         const { inputPath, progress } = event.payload;
         if (inputPath === task.file.path) {
           task.progress = Math.round(progress);
-          console.log(`Compression progress for ${task.file.name}: ${task.progress}%`);
+          console.log(`Progress ${task.progress}% for ${task.file.name}`);
         }
       });
+      // 记录监听器
+      activeProgressListeners.set(task.id, unlisten);
 
       try {
          // 初始化进度
@@ -339,6 +394,7 @@ export function useFileHandler() {
 
          // 压缩成功后才清理事件监听器
          unlisten();
+         activeProgressListeners.delete(task.id);
 
          if (result.success) {
            task.status = 'completed';
@@ -362,26 +418,25 @@ export function useFileHandler() {
            task.error = result.error || 'Compression failed';
          }
        } catch (compressionError) {
+         // 当压缩被暂停或失败时，必须清理监听器，避免遗留
+         try { unlisten(); } catch {}
+         activeProgressListeners.delete(task.id);
+
          const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
-         // 只有在非暂停的情况下才清理事件监听器
-         if (!errorMessage.includes('Process was interrupted')) {
-            unlisten();
+         
+         if (errorMessage.includes('Process was interrupted')) {
+            console.log('Task was paused, setting status to paused:', task.id);
+            task.status = 'paused';
+         } else {
+            // Real error
+            task.status = 'failed';
+            task.error = errorMessage;
          }
-         throw compressionError;
        }
     } catch (error) {
-      console.error('Compression error:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      // 检查是否是暂停操作导致的中断
-      if (errorMessage.includes('Process was interrupted')) {
-        console.log('Task was paused, setting status to paused:', task.id);
-        task.status = 'paused';
-        // 不设置error，因为这不是真正的错误
-      } else {
-        task.status = 'failed';
-        task.error = errorMessage;
-      }
+      console.error('Compression setup error:', error);
+      task.status = 'failed';
+      task.error = error instanceof Error ? error.message : String(error);
     } finally {
       isProcessing.value = false;
     }

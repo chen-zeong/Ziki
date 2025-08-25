@@ -169,6 +169,12 @@ export default {
   status: {
     noOutputPath: 'No output path set',
     ready: 'Ready',
-    tasks: 'Tasks'
+    tasks: 'Tasks',
+    pending: 'Pending',
+    queued: 'Queued',
+    processing: 'Processing',
+    paused: 'Paused',
+    completed: 'Completed',
+    failed: 'Failed'
   }
 };
