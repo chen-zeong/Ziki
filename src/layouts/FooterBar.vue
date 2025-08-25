@@ -178,10 +178,16 @@ const toggleTimeRangePopup = () => {
       <button 
         class="relative overflow-hidden text-white text-sm font-semibold rounded-md transition-all duration-300 px-4 py-1.5 min-w-[100px]"
         :class="{
-          'bg-gray-400 text-gray-200 cursor-not-allowed': isCompressButtonDisabled,
+          'bg-gray-400 text-gray-200 cursor-not-allowed': isCompressButtonDisabled && selectedTask?.status !== 'completed',
           'ripple-button': !isCompressButtonDisabled
         }"
-        :style="(selectedTask?.status === 'processing') ? { backgroundColor: '#578ae6' } : (!isCompressButtonDisabled ? { backgroundColor: '#578ae6' } : {})"
+        :style="
+          (selectedTask?.status === 'processing')
+            ? { backgroundColor: '#578ae6' }
+            : (selectedTask?.status === 'completed')
+              ? { backgroundColor: '#449062' }
+              : (!isCompressButtonDisabled ? { backgroundColor: '#578ae6' } : {})
+        "
         :disabled="isCompressButtonDisabled"
         @click="handleBottomCompress"
       >

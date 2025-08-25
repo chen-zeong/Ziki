@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, provide, nextTick, watch, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { confirm } from '@tauri-apps/plugin-dialog';
 import AppLayout from './layouts/AppLayout.vue';
 
 import { useFileHandler } from './composables/useFileHandler';
@@ -414,6 +415,77 @@ const initializeOutputPath = async () => {
   }
 };
 
+// 清空所有任务
+const handleClearAllTasks = async () => {
+  console.log('App.vue handleClearAllTasks 被调用');
+  const activeTasks = tasks.value.filter(task => 
+    task.status === 'processing' || task.status === 'queued' || task.status === 'paused'
+  );
+  
+  if (activeTasks.length > 0) {
+    // 如果有活跃任务，显示确认对话框
+    const confirmed = await confirm(
+      `当前有 ${activeTasks.length} 个任务正在进行中，确定要清空所有任务吗？这将停止所有进行中的任务，并从队列中删除。`,
+      {
+        title: '确认清空',
+        okLabel: '确定清空',
+        cancelLabel: '取消'
+      }
+    );
+
+    if (!confirmed) {
+      return;
+    }
+  } else if (tasks.value.length > 0) {
+    // 如果只有已完成或失败的任务，简单确认
+    const confirmed = await confirm(
+      '确定要清空所有任务吗？这将从队列中删除所有任务。',
+      {
+        title: '确认清空',
+        okLabel: '确定',
+        cancelLabel: '取消'
+      }
+    );
+
+    if (!confirmed) {
+      return;
+    }
+  }
+  
+  // 停止所有活跃任务
+  for (const task of activeTasks) {
+    try {
+      if (task.status === 'processing' || task.status === 'paused') {
+        await invoke('pause_task', { taskId: task.id });
+        console.log('Stopped task before clearing:', task.id);
+      }
+    } catch (error) {
+      const errorMessage = String(error);
+      if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
+        console.log('Task already stopped:', task.id);
+      } else {
+        console.warn('Failed to stop task:', task.id, error);
+      }
+    }
+  }
+  
+  // 清空所有任务
+  const allTaskIds = [...tasks.value.map(t => t.id)];
+  for (const taskId of allTaskIds) {
+    try {
+      await invoke('delete_task', { taskId });
+      deleteTask(taskId);
+    } catch (error) {
+      console.error('Failed to delete task during clear all:', taskId, error);
+    }
+  }
+  
+  // 重置选中状态
+  selectedTaskId.value = null;
+  
+  console.log('All tasks cleared successfully');
+};
+
 // 组件挂载时初始化
 onMounted(async () => {
   await initializeOutputPath();
@@ -464,6 +536,7 @@ watch(tasks, (newTasks) => {
     @delete-task="deleteTask"
     @resume-compression="handleResumeCompression"
     @select-task="selectTask"
+    @clear-all-tasks="handleClearAllTasks"
     @toggle-output-folder-popup="toggleOutputFolderPopup"
     @toggle-time-range-popup="toggleTimeRangePopup"
     @output-path-update="handleOutputPathUpdate"

@@ -2,33 +2,27 @@
   <div class="mt-4 mb-3 flex items-center justify-between flex-shrink-0">
     <!-- 左侧工具栏按钮 -->
     <div class="flex items-center space-x-3 pl-4">
+      <!-- 添加文件按钮 -->
       <button 
-         class="flex items-center justify-center px-3 rounded-md text-white transition-colors aspect-square"
-         style="background-color: #578ae6; height: 32px; width: 32px;"
+         class="flex items-center space-x-1 px-3 rounded-md text-white transition-colors"
+         style="background-color: #578ae6; height: 32px;"
          @click="handleAddFiles"
          :title="t('toolbar.addFiles')"
        >
         <Plus class="w-4 h-4" />
+        <span class="text-xs">添加</span>
       </button>
       
-      <!-- 批量暂停/开始按钮 -->
+      <!-- 清空任务按钮 -->
       <button 
-        class="flex items-center space-x-2 px-3 rounded-md text-xs text-white transition-colors"
-        :style="{
-          background: hasProcessingTasks 
-            ? 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)' 
-            : 'linear-gradient(135deg, #558ee1 0%, #4a7bc8 100%)',
-          color: 'white',
-          height: '32px'
-        }"
-        :disabled="!hasControllableTasks"
-        @click="toggleBatchProcessing"
+        class="flex items-center space-x-1 px-3 rounded-md text-white"
+        style="background-color: #eb534b; height: 32px;"
+        @click="handleClearAllTasks"
+        :disabled="tasks.length === 0"
+        title="清空所有任务"
       >
-        <!-- 暂停图标 -->
-        <Pause v-if="hasProcessingTasks" class="w-3 h-3" />
-        <!-- 播放图标 -->
-        <Play v-else class="w-3 h-3" />
-        <span>{{ hasProcessingTasks ? '批量暂停' : '批量开始' }}</span>
+        <BrushCleaning class="w-4 h-4" />
+        <span class="text-xs">清空</span>
       </button>
     </div>
     
@@ -62,7 +56,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Plus, Play, Pause } from 'lucide-vue-next';
+import { Plus, BrushCleaning } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
@@ -80,8 +74,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   addFiles: [];
   filesSelected: [files: FileList];
-  pauseAllTasks: [];
-  startAllTasks: [];
+  'clear-all-tasks': [];
   toggleStatusFilter: [status: string];
 }>();
 
@@ -125,29 +118,10 @@ const statusFilters = computed(() => [
   }
 ]);
 
-// 批量控制相关计算属性
-const hasProcessingTasks = computed(() => {
-  return props.tasks.some(task => task.status === 'processing');
-});
-
-const hasControllableTasks = computed(() => {
-  return props.tasks.some(task => 
-    task.status === 'processing' || 
-    task.status === 'pending' || 
-    task.status === 'queued' ||
-    task.status === 'paused'
-  );
-});
-
-// 批量暂停/开始处理
-const toggleBatchProcessing = () => {
-  if (hasProcessingTasks.value) {
-    // 暂停所有正在处理的任务
-    emit('pauseAllTasks');
-  } else {
-    // 开始所有等待中的任务
-    emit('startAllTasks');
-  }
+// 清空所有任务
+const handleClearAllTasks = () => {
+  console.log('清空任务按钮被点击');
+  emit('clear-all-tasks');
 };
 
 // 处理添加文件按钮点击

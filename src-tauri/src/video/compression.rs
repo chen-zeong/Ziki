@@ -631,8 +631,44 @@ pub async fn resume_task(
 
 #[tauri::command]
 pub async fn delete_task(taskId: String) -> Result<(), String> {
-    // 这里应该实现删除任务的逻辑
-    // 目前返回成功，让前端可以更新UI状态
-    println!("Deleting task: {}", taskId);
-    Ok(())
+  println!("Deleting task: {}", taskId);
+
+  // 从运行中的进程管理器中移除并尝试强制终止进程
+  let process_manager = get_process_manager();
+  let mut processes = process_manager.lock().await;
+
+  if let Some(mut child) = processes.remove(&taskId) {
+    // 进程存在，尝试强制终止
+    #[cfg(unix)]
+    {
+      if let Err(e) = child.kill().await {
+        println!("Failed to kill task process {}: {}", taskId, e);
+      } else {
+        println!("Successfully killed task process: {}", taskId);
+      }
+    }
+    #[cfg(not(unix))]
+    {
+      if let Err(e) = child.kill().await {
+        println!("Failed to kill task process {} on this platform: {}", taskId, e);
+      } else {
+        println!("Successfully killed task process: {}", taskId);
+      }
+    }
+  } else {
+    println!(
+      "Task {} not found in running processes (it may have already finished, been paused, or removed).",
+      taskId
+    );
+  }
+  drop(processes);
+
+  // 从任务信息管理器中删除记录，释放资源
+  let task_info_manager = get_task_info_manager();
+  let mut task_infos = task_info_manager.lock().await;
+  if task_infos.remove(&taskId).is_some() {
+    println!("Removed task info for {}", taskId);
+  }
+
+  Ok(())
 }

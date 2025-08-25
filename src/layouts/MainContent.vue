@@ -26,7 +26,8 @@ const emit = defineEmits([
   'update-task',
   'delete-task',
   'resume-compression',
-  'select-task'
+  'select-task',
+  'clear-all-tasks'
 ]);
 
 const showOutputFolder = ref(false);
@@ -110,6 +111,7 @@ defineExpose({
           @delete-task="emit('delete-task', $event)"
           @resume-compression="emit('resume-compression', $event)"
           @select-task="emit('select-task', $event)"
+          @clear-all-tasks="emit('clear-all-tasks')"
         />
       </div>
     </div>

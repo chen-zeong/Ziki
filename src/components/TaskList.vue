@@ -8,6 +8,7 @@
     @delete-task="$emit('delete-task', $event)"
     @resume-compression="$emit('resume-compression', $event)"
     @select-task="$emit('select-task', $event)"
+    @clear-all-tasks="$emit('clear-all-tasks')"
   />
 </template>
 
@@ -27,6 +28,7 @@ interface Emits {
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
   (e: 'select-task', taskId: string): void;
+  (e: 'clear-all-tasks'): void;
 }
 
 const props = defineProps<Props>();

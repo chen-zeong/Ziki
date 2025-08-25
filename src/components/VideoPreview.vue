@@ -268,12 +268,18 @@ const getVideoDuration = async (videoPath: string): Promise<number> => {
   }
 };
 
-// 选择帧并按需加载（优化版本）
+// 选择帧并按需加载（通用：只要任务被选中即可获取原始帧，若有压缩视频则同时获取压缩帧）
 const selectFrame = async (index: number) => {
   const requestId = Date.now(); // 生成请求ID
   console.log(`[Vue Debug] 开始选择帧 ${index}, 请求ID: ${requestId}`);
   const startTime = performance.now();
   selectedFrameIndex.value = index;
+
+  // 没有原始视频路径时无法生成帧
+  if (!props.videoPath) {
+    console.log(`[Vue Debug] 无原始视频路径，跳过加载帧 ${index}`);
+    return;
+  }
   
   // 如果帧已经在缓存中，直接更新图片并返回
   if (frameCache.value.has(index)) {
@@ -319,7 +325,7 @@ const selectFrame = async (index: number) => {
     // 并行加载原始帧和压缩帧以提高性能
     const loadPromises: Promise<void>[] = [];
     
-    // 加载原始帧
+    // 加载原始帧（始终根据原始视频生成）
     if (props.videoPath) {
       const loadOriginalFrame = async () => {
         try {
@@ -361,7 +367,7 @@ const selectFrame = async (index: number) => {
       loadPromises.push(loadOriginalFrame());
     }
     
-    // 加载压缩帧
+    // 加载压缩帧（仅当存在压缩视频路径时）
     if (props.compressedVideoFilePath) {
       const loadCompressedFrame = async () => {
         try {
@@ -376,8 +382,6 @@ const selectFrame = async (index: number) => {
           console.log(`[Vue Debug] 开始调用Rust生成压缩帧 ${index}，视频: ${props.compressedVideoFilePath}，使用压缩后时长: ${compressedDuration}s`);
           const rustCallStart = performance.now();
           
-          // 压缩后的视频本身就是时间范围选择的结果，
-          // 因此我们应该始终使用它自己的时长来生成帧，而不是用原始的时间范围。
           compressedFrame = await invoke('generate_single_frame_with_duration', {
             videoPath: props.compressedVideoFilePath!,
             frameIndex: index,
@@ -446,42 +450,53 @@ const resetFrameData = () => {
   loadingFrames.value.clear();
   videoDurationCache.value.clear();
   selectedFrameIndex.value = null;
+  localBeforeImage.value = '';
+  localAfterImage.value = '';
 };
 
 
 
-// 监听videoPath变化，清理缓存并自动选择第一帧
+// 监听videoPath变化：被选中任务变化或导入新任务时，自动加载第1帧（索引0）
 watch(() => props.videoPath, (newPath) => {
   if (!newPath) {
     resetFrameData();
   } else {
-    // 清理缓存
+    // 清理缓存并自动选择第一帧
     frameCache.value.clear();
     loadingFrames.value.clear();
-    // 自动选择第一帧
+    selectedFrameIndex.value = 0;
     selectFrame(0);
   }
 }, { immediate: true });
 
-// 监听compressedVideoFilePath变化，清理压缩帧缓存并重新加载当前帧
-watch(() => props.compressedVideoFilePath, (newPath) => {
+// 监听compressedVideoFilePath变化：压缩完成或路径变化时，刷新当前选中帧（若未选中则取第1帧）
+watch(() => props.compressedVideoFilePath, () => {
   // 完全清理所有缓存，确保重新生成所有帧
   frameCache.value.clear();
   loadingFrames.value.clear();
-  
-  // 如果有压缩视频路径，自动选择第一帧显示压缩后的画面
-  if (newPath) {
-    // 如果当前有选中的帧，重新加载该帧；否则自动选择第一帧
-    const frameToSelect = selectedFrameIndex.value !== null ? selectedFrameIndex.value : 0;
-    selectFrame(frameToSelect);
-  }
+  const index = selectedFrameIndex.value ?? 0;
+  selectFrame(index);
 }, { immediate: true });
+
+// 如果自定义时间范围变化，也刷新当前帧
+watch(() => props.timeRange, () => {
+  if (props.videoPath) {
+    const index = selectedFrameIndex.value ?? 0;
+    // 不清空所有缓存，只清除当前帧以便重算
+    frameCache.value.delete(index);
+    selectFrame(index);
+  }
+});
 
 // 组件挂载时添加键盘监听和全屏鼠标事件监听
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
   document.addEventListener('mousemove', handleFullscreenMouseMove);
   document.addEventListener('mouseup', stopFullscreenDragging);
+  // 初次挂载时，如有视频路径则选中第1帧
+  if (props.videoPath) {
+    selectFrame(0);
+  }
 });
 
 // 组件卸载时移除所有事件监听

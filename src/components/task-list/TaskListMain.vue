@@ -6,8 +6,7 @@
       :selected-statuses="selectedStatuses"
       @add-files="$emit('add-files')"
       @files-selected="$emit('files-selected', $event)"
-      @pause-all-tasks="handleBatchPause"
-      @start-all-tasks="handleBatchStart"
+      @clear-all-tasks="handleClearAllTasks"
       @toggle-status-filter="toggleStatusFilter"
     />
     
@@ -59,6 +58,7 @@ interface Emits {
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
   (e: 'select-task', taskId: string): void;
+  (e: 'clear-all-tasks'): void;
 }
 
 const props = defineProps<Props>();
@@ -104,10 +104,39 @@ const toggleTaskExpansion = (taskId: string) => {
 
 const deleteTask = async (taskId: string) => {
   try {
+    const task = props.tasks.find(t => t.id === taskId);
+    if (!task) {
+      console.error('Task not found:', taskId);
+      return;
+    }
+
+    // 如果任务正在压缩或已暂停（FFmpeg已开始），需要先取消系统任务
+    if (task.status === 'processing' || task.status === 'paused') {
+      console.log('Cancelling system task before deletion:', taskId);
+      try {
+        await invoke('pause_task', { taskId });
+        console.log('System task cancelled successfully:', taskId);
+      } catch (pauseError) {
+        const errorMessage = String(pauseError);
+        if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
+          console.log('System task already interrupted/not found:', taskId);
+        } else {
+          console.warn('Failed to cancel system task, proceeding with deletion:', pauseError);
+        }
+      }
+    }
+
+    // 调用后端删除任务
     await invoke('delete_task', { taskId });
+    
+    // 通知父组件删除任务
     emit('delete-task', taskId);
+    
+    // 清理本地状态
     expandedTasks.value.delete(taskId);
     selectedTasks.value.delete(taskId);
+    
+    console.log('Task deleted successfully:', taskId);
   } catch (error) {
     console.error('Failed to delete task:', error);
   }
@@ -158,36 +187,8 @@ const resumeTask = async (taskId: string) => {
   }
 };
 
-const handleBatchPause = async () => {
-  const pausableTasks = props.tasks.filter(task => 
-    task.status === 'processing' || task.status === 'pending' || task.status === 'queued'
-  );
-  
-  for (const task of pausableTasks) {
-    try {
-      await invoke('pause_task', { taskId: task.id });
-      const updatedTask = { ...task, status: 'paused' as const };
-      emit('update-task', updatedTask);
-    } catch (error) {
-      console.error(`Failed to pause task ${task.id}:`, error);
-    }
-  }
-};
-
-const handleBatchStart = async () => {
-  const resumableTasks = props.tasks.filter(task => 
-    task.status === 'paused' || task.status === 'failed'
-  );
-  
-  for (const task of resumableTasks) {
-    try {
-      await invoke('resume_task', { taskId: task.id });
-      const updatedTask = { ...task, status: 'queued' as const };
-      emit('update-task', updatedTask);
-    } catch (error) {
-      console.error(`Failed to resume task ${task.id}:`, error);
-    }
-  }
+const handleClearAllTasks = () => {
+  emit('clear-all-tasks');
 };
 
 // 监听任务变化，自动清理已删除任务的展开状态

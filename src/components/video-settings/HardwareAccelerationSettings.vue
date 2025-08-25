@@ -24,8 +24,8 @@
               class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
               :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-gray-200 dark:bg-dark-border'"
               :style="{
-                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#3b82f6' : '',
-                '--tw-ring-color': '#3b82f6'
+                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#5492dc' : '',
+                '--tw-ring-color': '#5492dc'
               }"
               @click="toggleHardwareAcceleration"
             >
