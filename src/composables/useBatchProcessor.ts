@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 import type { CompressionTask, CompressionSettings } from '../types';
 
 export function useBatchProcessor() {
@@ -32,7 +33,8 @@ export function useBatchProcessor() {
     tasks: CompressionTask[],
     startCompressionFn: (settings: CompressionSettings, outputDirectory?: string, isBatchMode?: boolean) => Promise<void>,
     switchToTaskFn: (taskId: string) => void,
-    outputDirectory?: string
+    outputDirectory?: string,
+    overrideSettings?: CompressionSettings | null
   ) => {
     // 检查是否已经在批量处理中
     if (isProcessingBatch.value) {
@@ -46,6 +48,14 @@ export function useBatchProcessor() {
     if (pendingTasks.length === 0) {
       console.log('No pending or queued tasks to process');
       return;
+    }
+
+    // 如果提供了覆盖设置，则应用到所有待处理任务
+    if (overrideSettings) {
+      console.log('Applying override settings to all batch tasks:', overrideSettings);
+      pendingTasks.forEach(task => {
+        task.settings = { ...task.settings, ...overrideSettings };
+      });
     }
 
     console.log(`Starting batch compression for ${pendingTasks.length} tasks`);
@@ -81,7 +91,27 @@ export function useBatchProcessor() {
         try {
           // 确保任务状态正确设置
           task.status = 'processing';
-          
+
+          // 额外安全：在批量模式下也确保不会出现多个 processing
+          const others = tasks.filter(t => t.status === 'processing' && t.id !== task.id);
+          if (others.length > 0) {
+            console.log('[BATCH_SAFETY] Detected other processing tasks, pausing them:', others.map(o => o.id));
+            for (const o of others) {
+              try {
+                await invoke('pause_task', { taskId: o.id });
+                console.log('[BATCH_SAFETY] Paused other processing task:', o.id);
+              } catch (e) {
+                const msg = String(e);
+                if (msg.includes('Process was interrupted') || msg.includes('not found')) {
+                  console.log('[BATCH_SAFETY] Other task already interrupted/not found, treat as paused:', o.id);
+                } else {
+                  console.warn('[BATCH_SAFETY] Failed to pause other processing task:', o.id, e);
+                }
+              }
+              o.status = 'paused';
+            }
+          }
+
           // 如果有下一个任务，将其设置为排队状态
           if (i + 1 < batchQueue.value.length) {
             batchQueue.value[i + 1].status = 'queued';
@@ -135,10 +165,11 @@ export function useBatchProcessor() {
     tasks: CompressionTask[],
     startCompressionFn: (settings: CompressionSettings, outputDirectory?: string, isBatchMode?: boolean) => Promise<void>,
     switchToTaskFn: (taskId: string) => void,
-    outputDirectory?: string
+    outputDirectory?: string,
+    overrideSettings?: CompressionSettings | null
   ) => {
     // 为保证逻辑一致性，直接复用 startBatchCompression（它会处理pending/queued两种状态）
-    return startBatchCompression(tasks, startCompressionFn, switchToTaskFn, outputDirectory);
+    return startBatchCompression(tasks, startCompressionFn, switchToTaskFn, outputDirectory, overrideSettings);
   };
 
   // 获取批量处理统计信息

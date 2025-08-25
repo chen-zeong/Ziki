@@ -337,19 +337,20 @@ pub async fn compress_video(
     
     // 在后台线程中监控进度
     let app_handle_clone = app_handle.clone();
-    let input_path_clone = inputPath.clone();
+    let task_id_clone = taskId.clone();
     
     let progress_handle = tokio::spawn(async move {
         let mut lines = reader.lines();
-        println!("🚀 Starting progress monitoring for task: {}", input_path_clone);
+        println!("🚀 Starting progress monitoring for task: {}", task_id_clone);
         while let Some(line) = lines.next_line().await.unwrap_or(None) {
             println!("FFmpeg stdout line: {}", line);
             // 解析进度信息
             if let Some(progress) = parse_ffmpeg_progress(&line, actual_compression_duration) {
-                println!("✅ Parsed progress: {}% for {}", progress, input_path_clone);
-                // 发送进度事件到前端
-                let emit_result = app_handle_clone.emit("compression-progress", json!({
-                    "inputPath": input_path_clone,
+                println!("✅ Parsed progress: {}% for {}", progress, task_id_clone);
+                // 发送进度事件到前端 - 使用任务特定的事件名称
+                let event_name = format!("compression-progress-{}", task_id_clone);
+                let emit_result = app_handle_clone.emit(&event_name, json!({
+                    "taskId": task_id_clone,
                     "progress": progress
                 }));
                 if let Err(e) = emit_result {
@@ -359,7 +360,7 @@ pub async fn compress_video(
                 }
             }
         }
-        println!("🏁 Progress monitoring ended for task: {}", input_path_clone);
+        println!("🏁 Progress monitoring ended for task: {}", task_id_clone);
     });
     
     // 等待进程完成或被中断

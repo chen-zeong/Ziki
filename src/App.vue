@@ -282,7 +282,8 @@ const handleBatchCompress = async () => {
       tasks.value,
       startCompression,
       switchToTask,
-      outputPath.value
+      outputPath.value,
+      currentTaskSettings.value // 应用当前设置
     );
   } else {
     // 开始新的批量压缩
@@ -291,7 +292,8 @@ const handleBatchCompress = async () => {
       tasks.value,
       startCompression,
       switchToTask,
-      outputPath.value
+      outputPath.value,
+      currentTaskSettings.value // 应用当前设置
     );
   }
 };
@@ -323,6 +325,83 @@ const selectTask = (taskId: string) => {
   // 将该任务的时间段设置应用到右下角时间段UI
   const t = tasks.value.find(t => t.id === taskId) || null;
   applyTaskTimeRangeToUI(t as CompressionTask | null);
+};
+
+// 处理恢复单个任务（支持 paused 与 queued）
+const handleResumeCompression = async (taskId: string) => {
+  console.log('handleResumeCompression 被调用，taskId:', taskId);
+  const task = tasks.value.find(t => t.id === taskId);
+  if (!task) {
+    console.log('未找到任务:', taskId);
+    return;
+  }
+
+  console.log('任务状态:', task.status, '批量处理状态:', isProcessingBatch.value);
+
+  try {
+    if (task.status === 'paused') {
+      console.log('恢复暂停的任务:', taskId);
+      // 直接调用已有的恢复逻辑
+      await resumeCompression(taskId);
+      return;
+    }
+
+    if (task.status === 'queued' || task.status === 'pending') {
+      // 如果正在批量处理，则优先处理该任务：先暂停当前任务并停止批量队列，防止并发压缩/重复监听
+      if (isProcessingBatch.value) {
+        console.log('批量处理中，准备优先处理该任务：', taskId, '先暂停当前任务并停止批量队列');
+
+        // 尝试暂停当前正在处理的任务
+        const processingTask = tasks.value.find(t => t.status === 'processing');
+        if (processingTask) {
+          try {
+            await invoke('pause_task', { taskId: processingTask.id });
+            console.log('已暂停当前任务:', processingTask.id);
+          } catch (pauseError) {
+            const errorMessage = String(pauseError);
+            if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
+              console.log('当前任务进程已中断/不存在，视为已暂停:', processingTask.id);
+            } else {
+              console.error('暂停当前任务失败:', pauseError);
+            }
+          }
+          // 同步前端状态为 paused
+          const updatedTask = { ...processingTask, status: 'paused' as const };
+          updateTask(updatedTask);
+        }
+
+        // 停止批量队列（重置 isProcessingBatch 和队列）
+        stopBatchCompression();
+      }
+
+      console.log('开始处理排队/等待中的任务:', taskId);
+      // 切到该任务以确保 startCompression 针对正确的 currentFile
+      selectedTaskId.value = taskId;
+      switchToTask(taskId);
+      applyTaskTimeRangeToUI(task);
+
+      // 使用该任务自身的设置启动压缩，传入 isBatchMode=false 来允许重新启动
+      console.log('调用 startCompression，设置:', task.settings);
+      await startCompression(task.settings, outputPath.value, false);
+      console.log('startCompression 调用完成');
+
+      // 自动恢复批量处理：当该任务完成或暂停后，如仍有排队/待处理任务且当前未处于批量模式，则自动继续批量
+      const remainingQueuedOrPending = tasks.value.filter(t => t.status === 'queued' || t.status === 'pending');
+      const hasProcessing = tasks.value.some(t => t.status === 'processing');
+      if (remainingQueuedOrPending.length > 0 && !hasProcessing && !isProcessingBatch.value) {
+        console.log('检测到仍有排队/待处理任务，且未在批量模式，自动恢复批量处理');
+        await startBatchCompression(
+          tasks.value,
+          startCompression,
+          switchToTask,
+          outputPath.value,
+          currentTaskSettings.value
+        );
+      }
+    }
+  } catch (e) {
+    console.error('handleResumeCompression error:', e);
+  }
 };
 
 // 初始化输出路径
@@ -383,7 +462,7 @@ watch(tasks, (newTasks) => {
     @update-images="onUpdateImages"
     @update-task="updateTask"
     @delete-task="deleteTask"
-    @resume-compression="resumeCompression"
+    @resume-compression="handleResumeCompression"
     @select-task="selectTask"
     @toggle-output-folder-popup="toggleOutputFolderPopup"
     @toggle-time-range-popup="toggleTimeRangePopup"

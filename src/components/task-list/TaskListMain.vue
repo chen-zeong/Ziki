@@ -146,12 +146,12 @@ const resumeTask = async (taskId: string) => {
   try {
     const task = props.tasks.find(t => t.id === taskId);
     console.log('Resume task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
-    if (task && task.status === 'paused') {
+    if (task && (task.status === 'paused' || task.status === 'queued')) {
       console.log('Resuming task by restarting compression:', taskId);
       // 触发重新压缩
       emit('resume-compression', taskId);
     } else {
-      console.log('Task not in paused state or not found:', taskId, task?.status);
+      console.log('Task not in paused/queued state or not found:', taskId, task?.status);
     }
   } catch (error) {
     console.error('Failed to resume task:', error);

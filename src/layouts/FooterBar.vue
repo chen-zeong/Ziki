@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Archive, FolderCog } from 'lucide-vue-next';
 import OutputFolder from '../components/OutputFolder.vue';
 import TimeRangeSettings from '../components/video-settings/TimeRangeSettings.vue';
@@ -26,6 +27,41 @@ const emit = defineEmits([
   'bottom-compress',
   'update:timeRangeSettings'
 ]);
+
+// 仅统计“等待中”的任务数量（不包含排队中）
+const pendingTasksCount = computed(() => {
+  return props.tasks.filter(t => t.status === 'pending').length;
+});
+
+// 当且仅当没有等待中的任务时禁用批量按钮
+const isBatchButtonDisabled = computed(() => {
+  return pendingTasksCount.value === 0;
+});
+
+// 批量按钮文案始终为“批量压缩”
+const batchButtonText = computed(() => {
+  return '批量压缩';
+});
+
+// 获取当前选中任务
+const selectedTask = computed(() => {
+  if (!props.currentFile) return null;
+  return props.tasks.find(t => t.id === props.currentFile.id) || null;
+});
+
+// 底部压缩按钮的文本
+const compressButtonText = computed(() => {
+  if (selectedTask.value?.status === 'processing') return '压缩中...';
+  if (selectedTask.value?.status === 'completed') return '已完成';
+  return '开始压缩';
+});
+
+// 底部压缩按钮是否禁用
+const isCompressButtonDisabled = computed(() => {
+  if (!props.currentFile) return true;
+  const status = selectedTask.value?.status;
+  return status === 'processing' || status === 'completed';
+});
 
 const handleOutputPathUpdate = (path: string) => {
   emit('output-path-update', path);
@@ -127,44 +163,54 @@ const toggleTimeRangePopup = () => {
       <!-- 批量压缩按钮 -->
       <button 
         class="text-white text-sm font-semibold rounded-md transition-colors px-4 py-1.5 flex items-center space-x-2"
-        :class="(isProcessing && !isProcessingBatch) || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0 ? 'bg-gray-400 text-gray-200 cursor-not-allowed hover:bg-gray-400' : ''"
-        :style="(isProcessing && !isProcessingBatch) || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0 ? {} : { backgroundColor: isProcessingBatch ? '#dc2626' : '#578ae6' }"
-        :disabled="(isProcessing && !isProcessingBatch) || tasks.filter(t => t.status === 'pending' || t.status === 'queued').length === 0"
+        :class="{ 'bg-gray-400 text-gray-200 cursor-not-allowed hover:bg-gray-400': isBatchButtonDisabled }"
+        :style="pendingTasksCount > 0 ? { backgroundColor: '#578ae6' } : {}"
+        :disabled="isBatchButtonDisabled"
         @click="handleBatchCompress"
       >
         <Archive class="w-4 h-4" />
-        <span>{{ isProcessingBatch ? '停止批量' : '批量压缩' }}</span>
-        <span class="bg-white/20 px-1.5 py-0.5 rounded text-xs">
-          {{ tasks.filter(t => t.status === 'pending' || t.status === 'queued').length }}
+        <span>{{ batchButtonText }}</span>
+        <span v-if="pendingTasksCount > 0" class="bg-white/20 px-1.5 py-0.5 rounded text-xs">
+          {{ pendingTasksCount }}
         </span>
       </button>
       
       <button 
         class="relative overflow-hidden text-white text-sm font-semibold rounded-md transition-all duration-300 px-4 py-1.5 min-w-[100px]"
         :class="{
-          'bg-gray-400 text-gray-200 cursor-not-allowed': !currentFile,
-          'ripple-button': currentFile
+          'bg-gray-400 text-gray-200 cursor-not-allowed': isCompressButtonDisabled,
+          'ripple-button': !isCompressButtonDisabled
         }"
-        :style="!currentFile ? {} : { backgroundColor: '#578ae6' }"
-        :disabled="isProcessing || !currentFile"
+        :style="(selectedTask?.status === 'processing') ? { backgroundColor: '#578ae6' } : (!isCompressButtonDisabled ? { backgroundColor: '#578ae6' } : {})"
+        :disabled="isCompressButtonDisabled"
         @click="handleBottomCompress"
       >
-        <!-- 非压缩状态 -->
-        <template v-if="!isProcessing">
-          开始压缩
-        </template>
-        
-        <!-- 压缩中状态 - 半透明蒙版层设计 -->
-        <template v-else>
+        <!-- 压缩中状态 -->
+        <template v-if="selectedTask?.status === 'processing'">
           <!-- 半透明蒙版层 -->
           <div class="absolute top-0 left-0 h-full rounded-md bg-white/40 dark:bg-black/25 transition-all duration-500 ease-out progress-mask"></div>
-          
-          <div>
-            
-            压缩中...
-          </div>
+          <span>{{ compressButtonText }}</span>
+        </template>
+        
+        <!-- 其他状态 -->
+        <template v-else>
+          <span>{{ compressButtonText }}</span>
         </template>
       </button>
     </div>
   </footer>
 </template>
+
+<style scoped>
+/* 进度蒙版层动画（作用于 FooterBar 内部的 processing 状态按钮） */
+.progress-mask {
+  width: 0%;
+  animation: progress-fill 3s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 0%; }
+}
+</style>

@@ -173,6 +173,15 @@
         
         <!-- 操作按钮组 -->
         <div class="flex items-center space-x-1 flex-shrink-0">
+          <!-- 开始按钮（让排队任务立即开始） -->
+          <button
+            @click="$emit('resume', task.id)"
+            class="p-1 text-gray-400 hover:text-green-500 dark:text-gray-500 dark:hover:text-green-400 transition-colors duration-200"
+            title="开始任务"
+          >
+            <Play class="w-4 h-4" />
+          </button>
+          
           <!-- 删除按钮 -->
           <button
             @click="$emit('delete', task.id)"
