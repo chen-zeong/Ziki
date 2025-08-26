@@ -36,7 +36,7 @@ fn map_codec_to_ffmpeg(codec: &str) -> &str {
     match codec {
         "H.264" => "libx264",
         "H.265" | "HEVC" => "libx265",
-        "AV1" => "libaom-av1",
+        "AV1" => "libsvtav1",
         "VP8" => "libvpx",
         "VP9" => "libvpx-vp9",
         "Xvid" => "libxvid",
@@ -260,11 +260,16 @@ pub async fn compress_video(
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(ffmpeg_codec);
     
-    // Set encoding preset (only for CPU encoding)
+    // Set encoding preset (only for CPU encoding and only for H.264/H.265 software encoders)
     if settings.hardware_acceleration != Some("gpu".to_string()) {
-        if let Some(preset) = &settings.encoding_preset {
-            println!("Adding preset parameter for CPU encoding: {}", preset);
-            cmd.arg("-preset").arg(preset);
+        let is_h26x_sw = ffmpeg_codec == "libx264" || ffmpeg_codec == "libx265";
+        if is_h26x_sw {
+            if let Some(preset) = &settings.encoding_preset {
+                println!("Adding preset parameter for CPU H26x encoding: {}", preset);
+                cmd.arg("-preset").arg(preset);
+            }
+        } else {
+            println!("Skipping preset parameter because codec {} is not libx264/libx265", ffmpeg_codec);
         }
     } else {
         println!("Skipping preset parameter for GPU encoding");

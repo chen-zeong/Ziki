@@ -14,6 +14,7 @@
               v-model="qualitySettings" 
               :resolution="formatSettings.resolution"
               :is-hardware-accelerated="hardwareSettings.value === 'gpu'"
+              :current-video-codec="formatSettings.videoCodec"
             />
             <!-- 硬件加速设置 -->
             <HardwareAccelerationSettings 

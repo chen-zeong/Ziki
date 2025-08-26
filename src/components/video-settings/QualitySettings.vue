@@ -9,7 +9,7 @@
         <CustomSelect 
           v-model="encodingPreset"
           :options="presetOptions"
-          :disabled="props.isHardwareAccelerated"
+          :disabled="props.isHardwareAccelerated || !isH26xCodec"
           placeholder="选择编码预设"
         />
       </div>
@@ -113,6 +113,7 @@ interface Props {
   modelValue: Partial<CompressionSettings>;
   resolution?: string;
   isHardwareAccelerated?: boolean;
+  currentVideoCodec?: string;
 }
 
 interface Emits {
@@ -120,7 +121,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isHardwareAccelerated: false
+  isHardwareAccelerated: false,
+  currentVideoCodec: ''
 });
 const emit = defineEmits<Emits>();
 
@@ -133,6 +135,13 @@ const settings = ref<Partial<CompressionSettings>>({
 const qualityMode = ref('crf');
 const bitrateValue = ref(5000);
 const encodingPreset = ref('medium');
+
+// 仅在 H.264/H.265 编码时可用
+const isH26xCodec = computed(() => {
+  const c = (props.currentVideoCodec || '').toLowerCase();
+  return c.includes('h.264') || c.includes('h264') || c.includes('libx264') ||
+         c.includes('h.265') || c.includes('hevc') || c.includes('libx265');
+});
 
 // 编码预设选项
 const presetOptions = [
@@ -259,19 +268,24 @@ const bitrateQualityClass = computed(() => {
 const resolutionBitrateHint = computed(() => {
   const resolution = props.resolution || '1920x1080';
   const range = getRecommendedBitrateRange(resolution);
-  return `${range.label} 推荐：${range.min}-${range.max} kbps`;
+  return `推荐码率范围（${range.label}）：${range.min}-${range.max} kbps`;
 });
 
-// 监听质量模式变化
-watch(qualityMode, (newMode) => {
-  if (isUpdating.value) return;
-  settings.value.qualityType = newMode as 'crf' | 'bitrate';
+// 监听外部modelValue变化，避免双向绑定冲突
+watch(() => props.modelValue, (newVal) => {
+  isUpdating.value = true;
+  settings.value = { ...settings.value, ...newVal };
+  isUpdating.value = false;
+}, { deep: true });
+
+// 监听画质模式变化
+watch(qualityMode, () => {
+  settings.value = { ...settings.value, qualityType: qualityMode.value as 'crf' | 'bitrate' };
   emitUpdate();
 });
 
-// 监听码率变化
+// 监听码率值变化
 watch(bitrateValue, () => {
-  if (isUpdating.value) return;
   emitUpdate();
 });
 
@@ -279,32 +293,8 @@ watch(bitrateValue, () => {
 watch(encodingPreset, (newPreset) => {
   if (isUpdating.value) return;
   // 编码预设不是CompressionSettings的一部分，单独处理
+  settings.value = { ...settings.value, encodingPreset: newPreset };
   emitUpdate();
 });
 
-// 监听父组件传入的值变化
-watch(() => props.modelValue, (newValue) => {
-  isUpdating.value = true;
-  
-  // 只更新实际变化的值，避免触发不必要的响应式更新
-  if (newValue.qualityType !== settings.value.qualityType) {
-    qualityMode.value = newValue.qualityType || 'crf';
-    settings.value.qualityType = newValue.qualityType;
-  }
-  
-  if (newValue.crfValue !== settings.value.crfValue) {
-    settings.value.crfValue = newValue.crfValue;
-  }
-  
-  // 编码预设不在CompressionSettings中，保持独立状态
-  
-  if (newValue.bitrate && newValue.bitrate !== settings.value.bitrate) {
-    const bitrateNum = parseInt(newValue.bitrate.replace('k', ''));
-    if (!isNaN(bitrateNum)) {
-      bitrateValue.value = bitrateNum;
-    }
-  }
-  
-  isUpdating.value = false;
-}, { deep: true });
 </script>
