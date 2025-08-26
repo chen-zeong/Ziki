@@ -8,7 +8,7 @@
     leave-to-class="max-h-0 opacity-0 transform scale-y-95"
   >
     <div v-if="isExpanded" class="overflow-hidden">
-      <div class="px-3 pb-4 pt-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
+      <div class="px-3 pb-4 pt-3 border-t border-gray-200 dark:border-gray-700 bg-[#f6f6f6] dark:bg-gray-800/30">
         
         <!-- 压缩前后对比 (仅完成的任务) -->
         <TaskComparison 

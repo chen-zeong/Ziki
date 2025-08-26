@@ -24,11 +24,11 @@
          >
        </div>
        
-       <!-- 文字标签 - 放在最上层避免被遮挡 -->
-       <div class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20 ">
+       <!-- 文字标签 - 只在任务完成时显示 -->
+       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20 ">
          压缩前
        </div>
-       <div class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20">
+       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20">
          压缩后
        </div>
        
@@ -46,7 +46,8 @@
          </svg>
        </button>
        
-      <div class="slider" @mousedown="startDragging">
+      <!-- 滑块 - 只在任务完成时显示 -->
+      <div v-if="props.taskStatus === 'completed'" class="slider" @mousedown="startDragging">
         <div class="slider-handle">
           <svg class="w-4 h-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -107,8 +108,13 @@
                 >
               </div>
               
-
-
+              <!-- 全屏模式下的文字标签 - 只在任务完成时显示 -->
+              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-3 py-2 rounded text-base z-20">
+                压缩前
+              </div>
+              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-3 py-2 rounded text-base z-20">
+                压缩后
+              </div>
               
               <!-- 全屏模式下的帧选择器 -->
                <div v-if="props.videoPath" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style="pointer-events: auto;">
@@ -133,8 +139,8 @@
                  </div>
                </div>
               
-              <!-- 全屏模式下的滑块 -->
-              <div class="fullscreen-slider-line" @mousedown="startFullscreenDragging">
+              <!-- 全屏模式下的滑块 - 只在任务完成时显示 -->
+              <div v-if="props.taskStatus === 'completed'" class="fullscreen-slider-line" @mousedown="startFullscreenDragging">
                 <div class="fullscreen-slider-handle">
                   <svg class="w-6 h-6 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -166,6 +172,7 @@ interface Props {
   videoPath?: string;
   compressedVideoPath?: string;
   compressedVideoFilePath?: string;
+  taskStatus?: string;
   timeRange?: {
     start: number;
     end: number;
@@ -173,7 +180,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: '视频预览'
+  title: '视频预览',
+  taskStatus: 'pending'
 });
 
 const emit = defineEmits<{

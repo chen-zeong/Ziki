@@ -119,7 +119,10 @@ const selectOutputFolder = async () => {
 
 // Watch for Tauri to be ready
 onMounted(async () => {
-  await initializeOutputPath();
+  // 只在Tauri环境中初始化输出路径
+  if (window.__TAURI__) {
+    await initializeOutputPath();
+  }
 });
 </script>
 

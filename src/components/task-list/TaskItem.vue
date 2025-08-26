@@ -2,8 +2,8 @@
   <div 
     class="rounded-lg transition-colors duration-200 cursor-pointer"
     :class="{
-      'bg-[#e6e6e6] dark:bg-[#4a4a4a]': isSelected,
-      'bg-white dark:bg-[#1e1e1e] hover:bg-gray-50 dark:hover:bg-[rgba(255,255,255,0.15)] border border-gray-200 dark:border-transparent': !isSelected
+      'bg-[#e6e6e6] dark:bg-[#3a3a3a]': isSelected,
+      'bg-white dark:bg-[#1e1e1e] hover:bg-gray-50 border border-gray-200 dark:border-transparent': !isSelected
     }"
     :style="!isSelected && isDark ? 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);' : ''"
     @click="$emit('select', task.id)"

@@ -260,9 +260,14 @@ pub async fn compress_video(
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(ffmpeg_codec);
     
-    // Set encoding preset
-    if let Some(preset) = &settings.encoding_preset {
-        cmd.arg("-preset").arg(preset);
+    // Set encoding preset (only for CPU encoding)
+    if settings.hardware_acceleration != Some("gpu".to_string()) {
+        if let Some(preset) = &settings.encoding_preset {
+            println!("Adding preset parameter for CPU encoding: {}", preset);
+            cmd.arg("-preset").arg(preset);
+        }
+    } else {
+        println!("Skipping preset parameter for GPU encoding");
     }
     
     // Set quality (CRF or bitrate)

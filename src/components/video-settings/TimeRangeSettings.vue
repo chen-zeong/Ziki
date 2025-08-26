@@ -284,7 +284,11 @@ const selectQuickOption = (option: string) => {
   
   selectedQuickOption.value = option;
   
+  if (!props.metadata?.duration) return;
+  
+  const videoDuration = props.metadata.duration;
   let duration: number;
+  
   switch (option) {
     case 'random30s':
       duration = 30;
@@ -299,12 +303,17 @@ const selectQuickOption = (option: string) => {
       return;
   }
   
+  // 确保时间段不超过视频时长
+  const maxStartTime = Math.max(0, videoDuration - duration);
+  const randomStartTime = Math.floor(Math.random() * (maxStartTime + 1));
+  const endTime = Math.min(randomStartTime + duration, videoDuration);
+  
   // 启用时间段并设置随机时间
   settings.value = {
     enabled: true,
     timeRange: {
-      start: '00:00:00',
-      end: secondsToTime(duration)
+      start: secondsToTime(randomStartTime),
+      end: secondsToTime(endTime)
     }
   };
 };
@@ -416,10 +425,10 @@ watch(enableTimeRange, (newValue) => {
       }
 
       // 如果结束时间为空、为0或超过视频时长，设置为视频时长
-      const currentEndSeconds = timeToSeconds(timeRange.value.end);
-      if (!currentEndSeconds || currentEndSeconds === 0 || currentEndSeconds > videoDurationSeconds) {
-        timeRange.value.end = secondsToTime(videoDurationSeconds);
-      }
+        const currentEndSeconds = timeToSeconds(timeRange.value.end);
+        if (!currentEndSeconds || currentEndSeconds === 0 || currentEndSeconds > videoDurationSeconds) {
+          timeRange.value.end = secondsToTime(videoDurationSeconds);
+        }
     } else {
       // 如果没有metadata，尝试从辅助函数设置
       setEndTimeFromMetadata();

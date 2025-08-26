@@ -4,8 +4,10 @@
       type="button"
       class="relative w-full h-10 cursor-pointer rounded-lg py-2 pl-3 pr-8 text-left border transition-all duration-200 custom-select-button"
       :class="{
-        'custom-select-focused': isOpen
+        'custom-select-focused': isOpen,
+        'opacity-60 cursor-not-allowed': props.disabled
       }"
+      :disabled="props.disabled"
       style="pointer-events: auto !important; user-select: auto !important;"
       @click.stop="toggleDropdown"
     >
@@ -55,7 +57,7 @@
             :key="option.value"
             class="relative cursor-pointer select-none py-2.5 mx-2 px-3 text-gray-900 dark:text-dark-text hover:bg-amber-50 dark:hover:bg-dark-border transition-colors duration-150 rounded-lg my-1"
             :class="{
-              'bg-amber-100 dark:bg-dark-accent/20 text-amber-900 dark:text-dark-accent': option.value === modelValue
+              'bg-amber-100 dark:bg-[#4a4a4a] text-amber-900 dark:text-dark-accent': option.value === modelValue
             }"
             style="pointer-events: auto !important; user-select: auto !important;"
             @click.stop="selectOption(option)"
@@ -90,11 +92,13 @@ interface Props {
   options: Option[];
   placeholder?: string;
   dropdownDirection?: 'down' | 'up';
+  disabled?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: '请选择...',
-  dropdownDirection: 'down'
+  dropdownDirection: 'down',
+  disabled: false
 });
 
 const emit = defineEmits<{
@@ -108,6 +112,7 @@ const selectedOption = computed(() => {
 });
 
 const toggleDropdown = () => {
+  if (props.disabled) return;
   isOpen.value = !isOpen.value;
 };
 

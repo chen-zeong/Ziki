@@ -9,6 +9,7 @@
       :video-path="videoPath"
       :compressed-video-path="compressedVideoPath"
       :compressed-video-file-path="compressedVideoFilePath"
+      :task-status="taskStatus"
       :time-range="timeRange"
       @reset="$emit('reset')"
       @update-images="handleUpdateImages"
@@ -48,6 +49,7 @@ interface Props {
   compressedVideoPath?: string;
   compressedVideoFilePath?: string;
   isProcessing?: boolean;
+  taskStatus?: string;
   timeRange?: {
     start: number;
     end: number;
@@ -56,7 +58,8 @@ interface Props {
 
 withDefaults(defineProps<Props>(), {
   title: '处理与预览',
-  isProcessing: false
+  isProcessing: false,
+  taskStatus: 'pending'
 });
 
 const emit = defineEmits<{

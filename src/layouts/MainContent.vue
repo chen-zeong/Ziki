@@ -50,6 +50,12 @@ const computedTimeRange = computed(() => {
   return { start, end };
 });
 
+// 新增：根据当前文件匹配任务，获取任务状态
+const currentTaskStatus = computed(() => {
+  const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
+  return task?.status || 'pending';
+});
+
 // 时间格式转换：HH:MM:SS 转换为秒数
 const timeToSeconds = (timeStr: string): number | null => {
   if (!timeStr || timeStr === '00:00:00') return null;
@@ -131,6 +137,7 @@ defineExpose({
         :before-image="beforeImage"
         :after-image="afterImage"
         :is-processing="isProcessing"
+        :task-status="currentTaskStatus"
         :video-path="currentFile?.path"
         :compressed-video-path="currentFile?.compressedUrl"
         :compressed-video-file-path="currentFile?.compressedPath"

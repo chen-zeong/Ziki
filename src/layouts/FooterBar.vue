@@ -170,7 +170,7 @@ const toggleTimeRangePopup = () => {
       >
         <Archive class="w-4 h-4" />
         <span>{{ batchButtonText }}</span>
-        <span v-if="pendingTasksCount > 0" class="bg-white/20 px-1.5 py-0.5 rounded text-xs">
+        <span class="bg-white/20 px-1.5 py-0.5 rounded text-xs">
           {{ pendingTasksCount }}
         </span>
       </button>

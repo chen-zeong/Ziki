@@ -488,7 +488,10 @@ const handleClearAllTasks = async () => {
 
 // 组件挂载时初始化
 onMounted(async () => {
-  await initializeOutputPath();
+  // 只在Tauri环境中初始化输出路径
+  if (window.__TAURI__) {
+    await initializeOutputPath();
+  }
 });
 
 // 监听任务变化，确保不超过99个，同时在首次有任务时默认选中第一个

@@ -9,6 +9,7 @@
         <CustomSelect 
           v-model="encodingPreset"
           :options="presetOptions"
+          :disabled="props.isHardwareAccelerated"
           placeholder="选择编码预设"
         />
       </div>
@@ -103,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, withDefaults } from 'vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
 import CustomSelect from '../common/CustomSelect.vue';
 import type { CompressionSettings } from '../../types';
@@ -111,13 +112,16 @@ import type { CompressionSettings } from '../../types';
 interface Props {
   modelValue: Partial<CompressionSettings>;
   resolution?: string;
+  isHardwareAccelerated?: boolean;
 }
 
 interface Emits {
   'update:modelValue': [value: Partial<CompressionSettings>];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  isHardwareAccelerated: false
+});
 const emit = defineEmits<Emits>();
 
 const settings = ref<Partial<CompressionSettings>>({
@@ -132,7 +136,7 @@ const encodingPreset = ref('medium');
 
 // 编码预设选项
 const presetOptions = [
-  { value: 'veryfast', label: '极快' },
+  { value: 'ultrafast', label: '极快' },
   { value: 'fast', label: '很快' },
   { value: 'medium', label: '中等' },
   { value: 'slow', label: '较慢' },
