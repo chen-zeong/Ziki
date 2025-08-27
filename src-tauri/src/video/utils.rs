@@ -27,23 +27,18 @@ pub fn get_ffmpeg_binary() -> &'static str {
     #[cfg(target_os = "macos")]
     {
         #[cfg(target_arch = "aarch64")]
-        return "compresso_ffmpeg-aarch64-apple-darwin";
+        return "ffmpeg-aarch64-apple-darwin";
         #[cfg(target_arch = "x86_64")]
-        return "compresso_ffmpeg-x86_64-apple-darwin";
+        return "ffmpeg-x86_64-apple-darwin";
     }
     
     #[cfg(target_os = "windows")]
     {
         #[cfg(target_arch = "x86_64")]
-        return "compresso_ffmpeg-x86_64-pc-windows-msvc.exe";
-        #[cfg(target_arch = "x86")]
-        return "compresso_ffmpeg-i686-pc-windows-msvc.exe";
+        return "ffmpeg-x86_64-pc-win64.exe";
     }
     
-    #[cfg(target_os = "linux")]
-    return "compresso_ffmpeg-x86_64-unknown-linux-gnu";
-    
-    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     return "ffmpeg";
 }
 
@@ -148,10 +143,27 @@ pub async fn open_output_folder(folder_path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_video_metadata(videoPath: String) -> Result<VideoMetadata, String> {
-    let ffprobe_binary = get_ffprobe_binary();
+pub fn get_video_metadata(app_handle: tauri::AppHandle, videoPath: String) -> Result<VideoMetadata, String> {
+    // In development mode, use the bin directory in src-tauri
+    // In production, use the resource directory
+    let ffprobe_path = if cfg!(debug_assertions) {
+        // Development mode: use bin directory relative to src-tauri
+        let current_exe = std::env::current_exe().unwrap();
+        let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+        src_tauri_dir.join("bin").join(get_ffprobe_binary())
+    } else {
+        // Production mode: use resource directory
+        let resource_dir = app_handle.path().resource_dir().unwrap();
+        resource_dir.join("bin").join(get_ffprobe_binary())
+    };
     
-    let output = Command::new(ffprobe_binary)
+    println!("FFprobe path for metadata: {:?}", ffprobe_path);
+    
+    if !ffprobe_path.exists() {
+        return Err(format!("FFprobe binary not found at: {:?}", ffprobe_path));
+    }
+    
+    let output = Command::new(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -173,7 +185,19 @@ pub fn get_video_metadata(videoPath: String) -> Result<VideoMetadata, String> {
 }
 
 pub fn get_ffprobe_binary() -> &'static str {
-    "ffprobe"
+    #[cfg(target_os = "macos")]
+    {
+        #[cfg(target_arch = "aarch64")]
+        return "ffprobe-aarch64-apple-darwin";
+        #[cfg(target_arch = "x86_64")]
+        return "ffprobe-x86_64-apple-darwin";
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        #[cfg(target_arch = "x86_64")]
+        return "ffprobe-x86_64-pc-win64.exe";
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]

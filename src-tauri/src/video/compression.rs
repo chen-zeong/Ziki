@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 use tokio::process::{Command, Child};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tauri::{Manager, Emitter};
-use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata, parse_duration_from_ffmpeg_output};
+use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata};
 use serde_json::json;
 
 // 任务信息结构
@@ -418,7 +418,7 @@ pub async fn compress_video(
             .ok();
         
         // 获取压缩后文件的元数据
-        let compressed_metadata = match get_video_metadata(outputPath.clone()) {
+        let compressed_metadata = match get_video_metadata(app_handle.clone(), outputPath.clone()) {
             Ok(metadata) => Some(metadata),
             Err(e) => {
                 println!("Warning: Failed to get compressed video metadata: {}", e);
@@ -552,7 +552,7 @@ pub async fn resume_task(
              let compressed_size = std::fs::metadata(&task_info.output_path)
                 .map(|m| m.len())
                 .ok();
-             let compressed_metadata = get_video_metadata(task_info.output_path.clone()).ok();
+             let compressed_metadata = get_video_metadata(task_info.app_handle.clone(), task_info.output_path.clone()).ok();
 
              return Ok(CompressionResult {
                 success: true,
@@ -611,7 +611,7 @@ pub async fn resume_task(
             .map(|m| m.len())
             .ok();
         
-        let compressed_metadata = match get_video_metadata(task_info.output_path.clone()) {
+        let compressed_metadata = match get_video_metadata(task_info.app_handle.clone(), task_info.output_path.clone()) {
             Ok(metadata) => Some(metadata),
             Err(e) => {
                 println!("Warning: Failed to get compressed video metadata: {}", e);

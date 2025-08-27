@@ -1,11 +1,11 @@
 use std::process::Command;
 use tauri::Manager;
 use base64::{Engine as _, engine::general_purpose};
-use crate::video::{get_ffmpeg_binary, parse_duration_from_ffmpeg_output};
+use crate::video::{get_ffmpeg_binary};
 
 // 获取视频时长的单独函数 - 使用ffprobe快速获取
 #[tauri::command]
-pub async fn get_video_duration(videoPath: String, app_handle: tauri::AppHandle) -> Result<f64, String> {
+pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle) -> Result<f64, String> {
     let start_time = std::time::Instant::now();
     println!("[Rust Debug] 开始获取视频时长: {}", videoPath);
     
