@@ -1,18 +1,7 @@
 <template>
   <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full">
     <div class="space-y-4">
-      <!-- 编码预设 -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">编码预设</label>
-        </div>
-        <CustomSelect 
-          v-model="encodingPreset"
-          :options="presetOptions"
-          :disabled="props.isHardwareAccelerated || !isH26xCodec"
-          placeholder="选择编码预设"
-        />
-      </div>
+
       <div>
         <div class="flex justify-between items-center mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">画质</label>
@@ -134,23 +123,8 @@ const settings = ref<Partial<CompressionSettings>>({
 
 const qualityMode = ref('crf');
 const bitrateValue = ref(5000);
-const encodingPreset = ref('medium');
 
-// 仅在 H.264/H.265 编码时可用
-const isH26xCodec = computed(() => {
-  const c = (props.currentVideoCodec || '').toLowerCase();
-  return c.includes('h.264') || c.includes('h264') || c.includes('libx264') ||
-         c.includes('h.265') || c.includes('hevc') || c.includes('libx265');
-});
 
-// 编码预设选项
-const presetOptions = [
-  { value: 'ultrafast', label: '极快' },
-  { value: 'fast', label: '很快' },
-  { value: 'medium', label: '中等' },
-  { value: 'slow', label: '较慢' },
-  { value: 'veryslow', label: '很慢' }
-];
 
 // 标记是否正在更新，避免循环
 const isUpdating = ref(false);
@@ -160,8 +134,7 @@ const emitUpdate = () => {
   
   const updatedSettings = {
     ...settings.value,
-    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined,
-    encodingPreset: encodingPreset.value
+    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined
   };
   emit('update:modelValue', updatedSettings);
 };
@@ -289,12 +262,6 @@ watch(bitrateValue, () => {
   emitUpdate();
 });
 
-// 监听编码预设变化
-watch(encodingPreset, (newPreset) => {
-  if (isUpdating.value) return;
-  // 编码预设不是CompressionSettings的一部分，单独处理
-  settings.value = { ...settings.value, encodingPreset: newPreset };
-  emitUpdate();
-});
+
 
 </script>

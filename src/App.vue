@@ -188,13 +188,15 @@ const applyTaskTimeRangeToUI = (task: CompressionTask | null) => {
   if (!task || !task.settings || !task.settings.timeRange) {
     timeRangeSettings.value.enabled = false;
     timeRangeSettings.value.timeRange.start = '00:00:00';
-    timeRangeSettings.value.timeRange.end = '00:00:00';
+    // 如果有视频文件，使用视频时长作为默认结束时间
+    const duration = task?.file?.metadata?.duration || currentFile.value?.metadata?.duration;
+    timeRangeSettings.value.timeRange.end = duration ? secondsToTime(duration) : '00:00:00';
     return;
   }
   const { start, end } = task.settings.timeRange;
   timeRangeSettings.value.enabled = start !== null || end !== null;
   timeRangeSettings.value.timeRange.start = start ? secondsToTime(start) : '00:00:00';
-  timeRangeSettings.value.timeRange.end = end ? secondsToTime(end) : '00:00:00';
+  timeRangeSettings.value.timeRange.end = end ? secondsToTime(end) : (task?.file?.metadata?.duration ? secondsToTime(task.file.metadata.duration) : '00:00:00');
 };
 
 // 监听当前文件变化，以验证和调整时间范围

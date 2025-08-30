@@ -557,7 +557,7 @@ export function useFileHandler() {
           start: settings.timeRange.start,
           end: settings.timeRange.end
         } : null,
-        encoding_preset: settings.encodingPreset ?? null,
+
         hardwareAcceleration: settings.hardwareAcceleration
       };
       

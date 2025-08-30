@@ -157,14 +157,6 @@ const timeRange = computed({
   }
 });
 
-// 是否有时间范围设置
-const hasTimeRange = computed(() => {
-  return settings.value.enabled && (
-    settings.value.timeRange.start !== '00:00:00' ||
-    settings.value.timeRange.end !== '00:00:00'
-  );
-});
-
 // 标记是否正在内部更新，避免递归
 let isInternalUpdate = false;
 

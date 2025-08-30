@@ -123,8 +123,7 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
   qualitySettings.value = {
     qualityType: s.qualityType ?? 'crf',
     crfValue: s.crfValue ?? 23,
-    bitrate: s.bitrate,
-    encodingPreset: s.encodingPreset
+    bitrate: s.bitrate
   };
   // 硬件加速
   const accel = s.hardwareAcceleration ?? (platform.value === 'macos' ? 'gpu' : 'cpu');

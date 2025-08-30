@@ -260,20 +260,7 @@ pub async fn compress_video(
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(ffmpeg_codec);
     
-    // Set encoding preset (only for CPU encoding and only for H.264/H.265 software encoders)
-    if settings.hardware_acceleration != Some("gpu".to_string()) {
-        let is_h26x_sw = ffmpeg_codec == "libx264" || ffmpeg_codec == "libx265";
-        if is_h26x_sw {
-            if let Some(preset) = &settings.encoding_preset {
-                println!("Adding preset parameter for CPU H26x encoding: {}", preset);
-                cmd.arg("-preset").arg(preset);
-            }
-        } else {
-            println!("Skipping preset parameter because codec {} is not libx264/libx265", ffmpeg_codec);
-        }
-    } else {
-        println!("Skipping preset parameter for GPU encoding");
-    }
+
     
     // Set quality (CRF or bitrate)
     match settings.quality_type.as_str() {
