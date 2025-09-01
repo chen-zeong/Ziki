@@ -552,7 +552,6 @@ export function useFileHandler() {
         } : null,
         quality_type: settings.qualityType,
         crf_value: settings.crfValue,
-        bitrate: settings.bitrate,
         time_range: settings.timeRange ? {
           start: settings.timeRange.start,
           end: settings.timeRange.end

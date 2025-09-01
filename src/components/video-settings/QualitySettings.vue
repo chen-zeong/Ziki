@@ -1,102 +1,78 @@
 <template>
-  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full">
+  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full quality-slider-container">
     <div class="space-y-4">
+      <!-- 标题和质量等级 -->
+      <div class="flex justify-between items-center mb-4">
+        <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">画质</label>
+        <div class="text-right">
+          <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded text-xs" style="background-color: #f3f4f6;">{{ qualityText }}</span>
+        </div>
+      </div>
 
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">画质</label>
-          <!-- Tab 切换 -->
-          <div class="relative flex bg-gray-100 dark:bg-dark-border rounded-md p-1 h-8">
-            <!-- 滑动背景 -->
-            <div 
-              class="absolute top-1 bottom-1 dark:bg-gray-300 rounded-md transition-all duration-300 ease-out shadow-md"
-              :style="{
-                width: 'calc(50% - 4px)',
-                left: qualityMode === 'crf' ? '4px' : 'calc(50% + 2px)',
-                transform: qualityMode === 'crf' ? 'translateX(0)' : 'translateX(-2px)',
-                backgroundColor: 'var(--slider-bg-color, #b1b1b1)'
-              }"
-            ></div>
-            
-            <button
-              type="button"
-              class="flex-1 px-4 py-1 text-xs font-medium transition-all duration-300 ease-out rounded-md relative z-10 whitespace-nowrap"
-              :class="qualityMode === 'crf' ? 'text-white dark:text-gray-800' : 'text-gray-600 dark:text-dark-secondary hover:text-gray-800 dark:hover:text-dark-text'"
-              @click="qualityMode = 'crf'"
-            >
-              CRF
-            </button>
-            <button
-              type="button"
-              class="flex-1 px-4 py-1 text-xs font-medium transition-all duration-300 ease-out rounded-md relative z-10 whitespace-nowrap"
-              :class="qualityMode === 'bitrate' ? 'text-white dark:text-gray-800' : 'text-gray-600 dark:text-dark-secondary hover:text-gray-800 dark:hover:text-dark-text'"
-              @click="qualityMode = 'bitrate'"
-            >
-              码率
-            </button>
-          </div>
-        </div>
-        
-        <!-- Tab 内容 -->
-        <div v-if="qualityMode === 'crf'" class="transition-all duration-200">
-          <div class="flex items-center space-x-2">
-            <div class="w-2/3">
-              <CustomNumberInput
-                v-model="crfValue"
-                :min="0"
-                :max="51"
-                placeholder="CRF值 (0-51)"
-              />
+      <!-- 滑动条 -->
+      <div class="relative mb-2">
+        <!-- 滑动条轨道和自定义UI -->
+        <div class="relative h-8 flex items-center">
+          <!-- 轨道背景 -->
+          <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner"></div>
+          
+          <!-- 已填充的进度条 -->
+          <div 
+            class="absolute h-3 bg-gradient-to-r from-[#558ee1] to-[#4a7bc8] dark:from-[#4a7bc8] dark:to-[#3d6ba3] rounded-full shadow-sm"
+            :style="{ width: qualityValue + '%' }"
+          ></div>
+          
+          <!-- 自定义的滑块 -->
+          <div 
+             class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 border-[#558ee1] dark:border-[#4a7bc8] cursor-pointer transition-transform duration-100 ease-out hover:scale-105"
+             :class="{ 'scale-105': showTooltip }"
+             :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform' }"
+           >
+             <!-- 滑块内部高光效果 -->
+             <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
+           </div>
+          
+          <!-- 气泡提示框 -->
+          <div 
+            class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-10 transition duration-150 ease-out"
+            :class="{ 'opacity-100 translate-y-0 scale-100': showTooltip, 'opacity-0 -translate-y-1 scale-95': !showTooltip }"
+            :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
+          >
+            <div class="tooltip-bubble">
+              {{ currentParamDisplay }}
             </div>
-            <span 
-              class="px-3 py-1 rounded-lg text-sm font-medium whitespace-nowrap"
-              :class="crfColorClass"
-            >
-              {{ crfQualityText }}
-            </span>
-          </div>
-          <div v-if="crfValidationError" class="text-xs text-red-500 dark:text-red-400 mt-1">
-            {{ crfValidationError }}
-          </div>
-          <div v-else class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            推荐值：18-28，数值越小质量越高
           </div>
         </div>
-        
-        <div v-if="qualityMode === 'bitrate'" class="transition-all duration-200">
-          <div class="flex items-center space-x-2">
-            <div class="flex-1">
-              <CustomNumberInput
-                v-model="bitrateValue"
-                :min="100"
-                :max="50000"
-                placeholder="码率 (kbps)"
-              />
-            </div>
-            <span class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-              kbps
-            </span>
-            <span 
-              class="px-3 py-1 rounded-lg text-sm font-medium whitespace-nowrap"
-              :class="bitrateQualityClass"
-            >
-              {{ bitrateQualityText }}
-            </span>
-          </div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {{ resolutionBitrateHint }}
-          </div>
-        </div>
+
+        <!-- 透明的 range input 处理逻辑 -->
+        <input 
+          type="range" 
+          id="quality-slider" 
+          v-model="qualityValue"
+          min="0" 
+          max="100" 
+          step="1" 
+          class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+          @input="updateQualityState"
+          @mouseenter="showTooltip = true"
+          @mouseleave="showTooltip = false"
+          @mousedown="showTooltip = true"
+          @mouseup="showTooltip = false"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, withDefaults } from 'vue';
-import CustomNumberInput from '../common/CustomNumberInput.vue';
-import CustomSelect from '../common/CustomSelect.vue';
+import { ref, computed, watch, withDefaults, onMounted } from 'vue';
 import type { CompressionSettings } from '../../types';
+import { 
+  getQualityLevelIndex, 
+  getEncoderQualityParam, 
+  getDefaultQualityParam,
+  QUALITY_LEVELS 
+} from '../../config/qualityMappings';
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
@@ -115,153 +91,209 @@ const props = withDefaults(defineProps<Props>(), {
 });
 const emit = defineEmits<Emits>();
 
-const settings = ref<Partial<CompressionSettings>>({
-  qualityType: 'crf',
-  crfValue: 23,
-  ...props.modelValue
+// 质量滑动条值 (0-100)
+const qualityValue = ref(80);
+
+// 气泡提示框显示状态
+const showTooltip = ref(false);
+
+// 初始化设置
+const initializeSettings = () => {
+  const defaultParam = getDefaultQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false
+  );
+  
+  const baseSettings: Partial<CompressionSettings> = {
+    qualityType: defaultParam.paramType as 'crf' | 'qv' | 'profile'
+  };
+  
+  // 根据参数类型设置对应的默认值
+  if (defaultParam.paramType === 'crf') {
+    baseSettings.crfValue = defaultParam.value as number;
+  } else if (defaultParam.paramType === 'qv') {
+    baseSettings.qvValue = defaultParam.value as number;
+  } else if (defaultParam.paramType === 'profile') {
+    baseSettings.profileValue = defaultParam.value as string;
+  }
+  
+  return {
+    ...baseSettings,
+    ...props.modelValue
+  };
+};
+
+const settings = ref<Partial<CompressionSettings>>(initializeSettings());
+
+// 初始化滑动条值
+const initializeQualityValue = () => {
+  const defaultParam = getDefaultQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false
+  );
+  qualityValue.value = defaultParam.sliderValue;
+};
+
+// 初始化
+initializeQualityValue();
+
+
+
+// 将滑动条值映射到质量描述文本
+const qualityText = computed(() => {
+  const value = qualityValue.value;
+  if (value <= 20) return '极低质量';
+  if (value <= 40) return '低质量';
+  if (value <= 60) return '中等质量';
+  if (value <= 85) return '高质量';
+  return '极高质量';
 });
 
-const qualityMode = ref('crf');
-const bitrateValue = ref(5000);
-
-
-
-// 标记是否正在更新，避免循环
-const isUpdating = ref(false);
-
-const emitUpdate = () => {
-  if (isUpdating.value) return;
+// 当前参数显示（用于气泡提示框）
+const currentParamDisplay = computed(() => {
+  const param = getEncoderQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false,
+    qualityValue.value
+  );
   
-  const updatedSettings = {
+  if (param.paramType === 'crf') {
+    return `CRF: ${param.value}`;
+  } else if (param.paramType === 'qv') {
+    return `-q:v ${param.value}`;
+  } else if (param.paramType === 'profile') {
+    return `Profile: ${param.value}`;
+  }
+  
+  return `${param.paramType}: ${param.value}`;
+});
+
+// 质量提示信息
+const qualityHint = computed(() => {
+  const value = qualityValue.value;
+  if (value <= 20) return '文件体积最小，质量较差，适合网络传输';
+  if (value <= 40) return '文件体积较小，质量一般，适合快速分享';
+  if (value <= 60) return '平衡文件大小和质量，适合大多数场景';
+  if (value <= 85) return '高质量输出，文件体积较大，适合存档';
+  return '最高质量，文件体积最大，适合专业用途';
+});
+
+
+
+// 更新质量状态
+const updateQualityState = () => {
+  // 更新滑动条填充百分比
+  const percentage = qualityValue.value;
+  const slider = document.getElementById('quality-slider') as HTMLInputElement;
+  if (slider) {
+    slider.style.setProperty('--value-percent', `${percentage}%`);
+  }
+  
+  // 获取当前编码器的质量参数（连续调节）
+  const param = getEncoderQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false,
+    qualityValue.value
+  );
+  
+  // 调试日志
+  console.log('Quality update:', {
+    sliderValue: qualityValue.value,
+    codec: props.currentVideoCodec || 'h264',
+    isHardware: props.isHardwareAccelerated || false,
+    param
+  });
+  
+  // 更新设置
+  const newSettings: Partial<CompressionSettings> = {
     ...settings.value,
-    bitrate: settings.value.qualityType === 'bitrate' ? `${bitrateValue.value}k` : undefined
-  };
-  emit('update:modelValue', updatedSettings);
-};
-
-// 为CRF值创建computed属性
-const crfValue = computed({
-  get: () => settings.value.crfValue ?? 23,
-  set: (value: number) => {
-    if (isUpdating.value) return;
-    settings.value = { ...settings.value, crfValue: value };
-    emitUpdate();
-  }
-});
-
-const crfColorClass = computed(() => {
-  const crf = settings.value.crfValue;
-  if (crf === undefined || crf === null) {
-    return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300';
-  }
-  if (crf < 0 || crf > 51) {
-    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  }
-  if (crf >= 18 && crf <= 28) {
-    return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
-  }
-  if (crf < 18) {
-    return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-  }
-  if (crf > 40) {
-    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  }
-  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-});
-
-const crfQualityText = computed(() => {
-  const crf = settings.value.crfValue;
-  if (crf === undefined || crf === null) return '默认质量';
-  if (crf < 0 || crf > 51) return '无效值';
-  if (crf < 18) return '大体积';
-  if (crf >= 18 && crf < 28) return '高质量';
-  if (crf >= 28 && crf <= 40) return '中等质量';
-  if (crf > 40) return '极低质量';
-  return '可接受';
-});
-
-const crfValidationError = computed(() => {
-  const crf = settings.value.crfValue;
-  if (crf === undefined || crf === null) return '';
-  if (crf < 0 || crf > 51) {
-    return 'CRF值必须在0-51范围内';
-  }
-  return '';
-});
-
-// 根据分辨率获取推荐码率范围
-const getRecommendedBitrateRange = (resolution: string) => {
-  const resolutionMap: Record<string, { min: number; max: number; label: string }> = {
-    '3840x2160': { min: 15000, max: 25000, label: '4K' },
-    '2560x1440': { min: 8000, max: 16000, label: '1440p' },
-    '1920x1080': { min: 5000, max: 8000, label: '1080p' },
-    '1280x720': { min: 2500, max: 5000, label: '720p' },
-    '854x480': { min: 1000, max: 2500, label: '480p' },
-    '640x360': { min: 500, max: 1000, label: '360p' }
+    qualityType: param.paramType as 'crf' | 'qv' | 'profile'
   };
   
-  return resolutionMap[resolution] || { min: 2000, max: 6000, label: '标准' };
+  // 根据参数类型设置对应的值
+  if (param.paramType === 'crf') {
+    newSettings.crfValue = param.value as number;
+  } else if (param.paramType === 'qv') {
+    newSettings.qvValue = param.value as number;
+  } else if (param.paramType === 'profile') {
+    newSettings.profileValue = param.value as string;
+  }
+  
+  settings.value = newSettings;
+  
+  console.log('Updated settings:', settings.value);
+  
+  // 发送更新事件
+  emit('update:modelValue', settings.value);
 };
 
-// 码率质量提示文本
-const bitrateQualityText = computed(() => {
-  const currentBitrate = bitrateValue.value;
-  const resolution = props.resolution || '1920x1080';
-  const range = getRecommendedBitrateRange(resolution);
-  
-  if (currentBitrate < range.min * 0.7) {
-    return '低质量';
-  } else if (currentBitrate >= range.min && currentBitrate <= range.max) {
-    return '高质量';
-  } else if (currentBitrate > range.max) {
-    return '超高质量';
-  } else {
-    return '中等质量';
-  }
-});
-
-// 码率质量提示样式
-const bitrateQualityClass = computed(() => {
-  const currentBitrate = bitrateValue.value;
-  const resolution = props.resolution || '1920x1080';
-  const range = getRecommendedBitrateRange(resolution);
-  
-  if (currentBitrate < range.min * 0.7) {
-    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  } else if (currentBitrate >= range.min && currentBitrate <= range.max) {
-    return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
-  } else if (currentBitrate > range.max) {
-    return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
-  } else {
-    return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-  }
-});
-
-// 分辨率码率提示
-const resolutionBitrateHint = computed(() => {
-  const resolution = props.resolution || '1920x1080';
-  const range = getRecommendedBitrateRange(resolution);
-  return `推荐码率范围（${range.label}）：${range.min}-${range.max} kbps`;
-});
-
-// 监听外部modelValue变化，避免双向绑定冲突
+// 监听外部modelValue变化
 watch(() => props.modelValue, (newVal) => {
-  isUpdating.value = true;
   settings.value = { ...settings.value, ...newVal };
-  isUpdating.value = false;
-}, { deep: true });
+}, { deep: true, immediate: true });
 
-// 监听画质模式变化
-watch(qualityMode, () => {
-  settings.value = { ...settings.value, qualityType: qualityMode.value as 'crf' | 'bitrate' };
-  emitUpdate();
-});
+// 监听编码器和硬件加速变化，重新初始化参数
+watch([() => props.currentVideoCodec, () => props.isHardwareAccelerated], () => {
+  // 重新初始化设置和滑动条值
+  settings.value = initializeSettings();
+  initializeQualityValue();
+  updateQualityState();
+}, { immediate: false });
 
-// 监听码率值变化
-watch(bitrateValue, () => {
-  emitUpdate();
+// 监听质量值变化
+watch(qualityValue, updateQualityState);
+
+// 组件挂载时初始化滑动条状态
+onMounted(() => {
+  updateQualityState();
 });
 
 
 
 </script>
+
+<style scoped>
+/* 隐藏原生 range 输入框的滑块 */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none; 
+  width: 0;
+  height: 0;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  border: 0;
+}
+.tooltip-bubble {
+  position: relative;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  white-space: nowrap;
+}
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(30, 41, 59, 0.96);
+}
+:deep(.dark) .tooltip-bubble {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  border-color: rgba(100, 116, 139, 0.25);
+}
+:deep(.dark) .tooltip-bubble::after {
+  border-top-color: rgba(15, 23, 42, 0.96);
+}
+</style>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优雅的动画滑动条</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 隐藏原生 range 输入框的滑块 */
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none; 
+            width: 0;
+            height: 0;
+        }
+        .slider-thumb::-moz-range-thumb {
+            width: 0;
+            height: 0;
+            border: 0;
+        }
+
+        /* 为气泡提示框添加小三角指示器 */
+        #slider-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            /* 三角形颜色与气泡背景色 (slate-800) 匹配 */
+            border-color: #1e293b transparent transparent transparent;
+        }
+        
+        /* 定义一个会呼吸的光晕动画 */
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(85, 142, 225, 0.5); }
+            70% { box-shadow: 0 0 0 12px rgba(85, 142, 225, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(85, 142, 225, 0); }
+        }
+
+        /* 当鼠标悬停在整个组件上时，为滑块应用这个动画 */
+        .group:hover #slider-thumb {
+            animation: pulse-glow 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen font-sans">
+
+    <!-- 主容器 -->
+    <div class="w-full max-w-md p-8">
+        <!-- 添加 group 类以便使用 group-hover 来控制子元素状态 -->
+        <div id="slider-component" class="relative group"> 
+            <!-- 数值显示的气泡提示框 -->
+            <div id="slider-bubble" class="absolute bottom-16 bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-lg opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-in-out whitespace-nowrap" style="left: 50%;">
+                <span id="slider-value">50</span>
+            </div>
+
+            <!-- 滑动条轨道和自定义UI -->
+            <div class="relative h-8 flex items-center">
+                <!-- 轨道背景 (加粗) -->
+                <div class="absolute w-full h-3 bg-slate-300 rounded-full"></div>
+                
+                <!-- 已填充的进度条 (加粗) -->
+                <div id="slider-fill" class="absolute h-3 bg-[#558ee1] rounded-full" style="width: 50%;"></div>
+                
+                <!-- 自定义的滑块 (thumb) (增大) -->
+                <div id="slider-thumb" class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white rounded-full shadow-md border-4 border-[#558ee1] cursor-pointer transition-transform duration-200 ease-in-out group-hover:scale-110" style="left: 50%;"></div>
+            </div>
+
+            <!-- 使用一个透明的 range input 来处理底层的逻辑 -->
+            <input 
+                type="range" 
+                id="slider-input" 
+                min="0" 
+                max="100" 
+                value="50" 
+                class="slider-thumb absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+            >
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sliderComponent = document.getElementById('slider-component');
+            const sliderInput = document.getElementById('slider-input');
+            const sliderFill = document.getElementById('slider-fill');
+            const sliderThumb = document.getElementById('slider-thumb');
+            const sliderBubble = document.getElementById('slider-bubble');
+            const sliderValue = document.getElementById('slider-value');
+
+            let currentAnimatedValue = parseFloat(sliderInput.value);
+            let animationFrameId;
+
+            // 更新UI的函数
+            function updateSliderUI(value) {
+                const percentage = ((value - sliderInput.min) / (sliderInput.max - sliderInput.min)) * 100;
+                
+                sliderFill.style.width = `${percentage}%`;
+                
+                const thumbHalfWidth = sliderThumb.offsetWidth / 2;
+                sliderThumb.style.left = `calc(${percentage}% - ${thumbHalfWidth}px)`;
+                
+                // 气泡的位置也需要动态计算，以确保始终与滑块居中对齐
+                const bubbleHalfWidth = sliderBubble.offsetWidth / 2;
+                sliderBubble.style.left = `calc(${percentage}% - ${bubbleHalfWidth}px)`;
+            }
+
+            // 优雅地动画化数字变化的函数
+            function animateValue(targetValue) {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+
+                const duration = 400;
+                const start = currentAnimatedValue;
+                const end = parseFloat(targetValue);
+                const range = end - start;
+                let startTime = null;
+
+                if (range === 0) return;
+
+                function step(currentTime) {
+                    if (!startTime) startTime = currentTime;
+                    const progress = Math.min((currentTime - startTime) / duration, 1);
+                    const easedProgress = 1 - Math.pow(1 - progress, 3);
+                    const value = start + range * easedProgress;
+                    sliderValue.textContent = Math.round(value);
+
+                    if (progress < 1) {
+                        animationFrameId = requestAnimationFrame(step);
+                    } else {
+                        sliderValue.textContent = Math.round(end);
+                        currentAnimatedValue = end;
+                    }
+                }
+
+                animationFrameId = requestAnimationFrame(step);
+            }
+            
+            // 事件监听：当输入值改变时
+            sliderInput.addEventListener('input', (event) => {
+                const newValue = event.target.value;
+                updateSliderUI(newValue);
+                animateValue(newValue);
+            });
+            
+            // 初始化
+            updateSliderUI(sliderInput.value);
+            sliderValue.textContent = sliderInput.value;
+        });
+    </script>
+</body>
+</html>
+

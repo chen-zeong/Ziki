@@ -56,9 +56,10 @@ export interface CompressionSettings {
   videoCodec: string; // 视频编码，如 'H.264', 'H.265', 'VP9' 等
   resolution: 'original' | '1920x1080' | '1280x720' | '854x480' | 'custom';
   customResolution?: CustomResolution;
-  qualityType: 'crf' | 'bitrate';
-  crfValue?: number;
-  bitrate?: string;
+  qualityType: 'crf' | 'qv' | 'profile'; // 支持多种质量参数类型
+  crfValue?: number; // CRF值，用于软件编码
+  qvValue?: number; // -q:v值，用于硬件加速
+  profileValue?: string; // Profile值，用于ProRes等编码器
   timeRange?: TimeRange;
   hardwareAcceleration?: 'cpu' | 'gpu';
 }
