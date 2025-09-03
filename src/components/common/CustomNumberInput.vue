@@ -103,7 +103,7 @@ const decrement = () => {
 <style scoped>
 /* 自定义数字输入框样式 */
 .custom-number-input {
-  background-color: #f6f6f6;
+  background-color: #f3f4f6;
   border-color: #dcdcdc;
   color: #2c3e50;
 }

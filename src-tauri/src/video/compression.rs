@@ -260,7 +260,43 @@ pub async fn compress_video(
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(ffmpeg_codec);
     
+    // Add H.265 specific tag for better compatibility
+    if ffmpeg_codec.contains("265") || ffmpeg_codec.contains("hevc") {
+        cmd.arg("-tag:v").arg("hvc1");
+    }
+    
+    // Set pixel format based on bit depth
+    println!("Received bit_depth: {:?}", settings.bit_depth);
+    // For VideoToolbox (macOS), use p010le for >=10-bit and nv12 for 8-bit
+    let is_videotoolbox = ffmpeg_codec.contains("videotoolbox");
+    let pix_fmt = if is_videotoolbox {
+        match settings.bit_depth {
+            Some(12) => {
+                println!("hevc_videotoolbox does not support 12-bit; falling back to 10-bit p010le");
+                "p010le"
+            },
+            Some(10) => "p010le",
+            _ => "nv12", // default 8-bit for VideoToolbox
+        }
+    } else {
+        match settings.bit_depth {
+            Some(10) => "yuv420p10le",
+            Some(12) => "yuv420p12le",
+            _ => "yuv420p", // Default to 8-bit
+        }
+    };
+    println!("Using pix_fmt: {}", pix_fmt);
+    cmd.arg("-pix_fmt").arg(pix_fmt);
 
+    // For hevc_videotoolbox, set main10 profile when requesting >=10-bit
+    if is_videotoolbox {
+        if let Some(depth) = settings.bit_depth {
+            if depth >= 10 {
+                println!("Setting VideoToolbox profile to main10 for {}-bit request", depth);
+                cmd.arg("-profile:v").arg("main10");
+            }
+        }
+    }
     
     // Set quality (CRF or bitrate)
     match settings.quality_type.as_str() {
@@ -286,13 +322,30 @@ pub async fn compress_video(
     } else if settings.resolution != "original" {
         scale_filter = format!("scale={}", settings.resolution.replace("x", ":"));
     }
+
+    // Ensure 10-bit is preserved through filters when using VideoToolbox
+    if is_videotoolbox {
+        if let Some(depth) = settings.bit_depth {
+            if depth >= 10 {
+                if scale_filter.is_empty() {
+                    scale_filter = "format=p010le".to_string();
+                } else {
+                    scale_filter = format!("{},format=p010le", scale_filter);
+                }
+            }
+        }
+    }
     
     if !scale_filter.is_empty() {
+        println!("Using filter chain: {}", scale_filter);
         cmd.arg("-vf").arg(scale_filter);
     }
     
     // Set audio codec to copy (no audio processing)
     cmd.arg("-c:a").arg("copy");
+    
+    // Copy subtitle streams
+    cmd.arg("-c:s").arg("copy");
     
     cmd.arg("-y").arg(&outputPath);
     

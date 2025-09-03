@@ -44,12 +44,12 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     hardware: {
       paramType: 'qv',
       values: [80, 70, 60, 50, 40], // -q:v 值（数值越小质量越高）
-      defaultIndex: 3 // 默认高质量 (q:v 50)
+      defaultIndex: 2 // 默认值改为 q:v 60
     },
     hardwareVendors: {
-      nvidia: { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 3 }, // NVENC
-      intel:  { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 3 }, // QSV
-      amd:    { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 3 }  // AMF
+      nvidia: { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 2 }, // NVENC 默认 q:v 60
+      intel:  { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 2 }, // QSV 默认 q:v 60
+      amd:    { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 2 }  // AMF 默认 q:v 60
     }
   },
   
@@ -63,7 +63,7 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     hardware: {
       paramType: 'qv',
       values: [80, 70, 60, 50, 40],
-      defaultIndex: 3
+      defaultIndex: 2
     },
     hardwareVendors: {
       // Windows 厂商分支：使用 CRF 语义映射，便于与软件编码保持一致
@@ -92,7 +92,7 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     hardware: {
       paramType: 'qv',
       values: [80, 70, 60, 50, 40],
-      defaultIndex: 3
+      defaultIndex: 2
     }
   },
   
@@ -125,7 +125,6 @@ export function getEncoderQualityParam(
 ): { paramType: string; value: number | string } {
   // 标准化编码器名称
   const normalizedCodec = normalizeCodecName(codec);
-  console.log('Normalized codec:', normalizedCodec, 'from original:', codec);
   
   const encoderConfig = ENCODER_QUALITY_MAPPINGS[normalizedCodec];
   
@@ -173,13 +172,7 @@ export function getEncoderQualityParam(
   const interpolatedValue = minValue + (maxValue - minValue) * normalizedSlider;
   const roundedValue = Math.round(interpolatedValue);
   
-  console.log('Continuous mapping:', {
-    sliderValue,
-    minValue,
-    maxValue,
-    interpolatedValue,
-    roundedValue
-  });
+
   
   return {
     paramType: mapping.paramType,

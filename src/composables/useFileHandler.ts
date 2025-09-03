@@ -4,46 +4,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 
-// 任务缓存接口
-interface TaskCache {
-  id: string;
-  videoPath: string;
-  settings: CompressionSettings;
-  outputPath: string;
-  createdAt: number;
-}
 
-// 缓存管理
-const CACHE_KEY = 'video_compression_tasks';
-const MAX_CACHE_SIZE = 99;
-
-const saveTasksToCache = (tasks: CompressionTask[]) => {
-  try {
-    const cacheData: TaskCache[] = tasks.map(task => ({
-      id: task.id,
-      videoPath: task.file.path,
-      settings: task.settings,
-      outputPath: task.outputDirectory || '',
-      createdAt: task.createdAt.getTime()
-    }));
-    
-    // 限制缓存大小
-    const limitedCache = cacheData.slice(0, MAX_CACHE_SIZE);
-    localStorage.setItem(CACHE_KEY, JSON.stringify(limitedCache));
-  } catch (error) {
-    console.warn('Failed to save tasks to cache:', error);
-  }
-};
-
-const loadTasksFromCache = (): TaskCache[] => {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    return cached ? JSON.parse(cached) : [];
-  } catch (error) {
-    console.warn('Failed to load tasks from cache:', error);
-    return [];
-  }
-};
 
 export function useFileHandler() {
   const selectedFiles = ref<VideoFile[]>([]);
@@ -52,125 +13,14 @@ export function useFileHandler() {
   const isUploaderVisible = ref(true);
   const isProcessing = ref(false);
 
-  // 从缓存恢复任务
-  const initializeFromCache = async () => {
-    try {
-      const cachedTasks = loadTasksFromCache();
-      const restoredTasks: CompressionTask[] = [];
-      
-      for (const cached of cachedTasks) {
-        try {
-          // 检查文件是否仍然存在
-          const fileExists = await invoke<boolean>('file_exists', { filePath: cached.videoPath });
-          if (!fileExists) {
-            console.log('Cached file no longer exists, skipping:', cached.videoPath);
-            continue;
-          }
-          
-          // 获取文件信息
-          const fileSize = await invoke<number>('get_file_size', { filePath: cached.videoPath });
-          const metadata = await invoke<VideoMetadata>('get_video_metadata', { videoPath: cached.videoPath }).catch(() => null);
-          
-          const fileName = cached.videoPath.split('/').pop() || cached.videoPath.split('\\').pop() || 'unknown';
-          const extension = fileName.split('.').pop()?.toLowerCase() || '';
-          let mimeType = 'application/octet-stream';
-          
-          if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
-            mimeType = `video/${extension === 'mov' ? 'quicktime' : extension}`;
-          } else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
-            mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-          }
-          
-          const mockFile = new File([], fileName, { type: mimeType });
-          (mockFile as any).path = cached.videoPath;
-          Object.defineProperty(mockFile, 'size', {
-            value: fileSize,
-            writable: false,
-            enumerable: true,
-            configurable: false
-          });
-          
-          // 检查输出文件是否存在，确定任务状态
-          let status: CompressionTask['status'] = 'pending';
-          let compressedPath: string | undefined;
-          let compressedUrl: string | undefined;
-          let compressedSize: number | undefined;
-          let progress = 0;
-          
-          const videoFile: VideoFile = {
-            id: cached.id,
-            name: fileName,
-            size: fileSize,
-            path: cached.videoPath,
-            originalUrl: convertFileSrc(cached.videoPath),
-            metadata: metadata || undefined
-          };
-          
-          if (cached.outputPath) {
-            const outputExists = await invoke<boolean>('file_exists', { filePath: cached.outputPath });
-            if (outputExists) {
-              const outputSize = await invoke<number>('get_file_size', { filePath: cached.outputPath });
-              if (outputSize > 0) {
-                status = 'completed';
-                compressedPath = cached.outputPath;
-                compressedUrl = convertFileSrc(cached.outputPath);
-                compressedSize = outputSize;
-                progress = 100;
-              }
-            }
-          }
-          
-          // 如果有压缩文件，设置压缩相关属性
-          if (compressedPath && compressedUrl) {
-            videoFile.compressedPath = compressedPath;
-            videoFile.compressedUrl = compressedUrl;
-          }
-          
-          const task: CompressionTask = {
-            id: cached.id,
-            file: videoFile,
-            settings: cached.settings,
-            status,
-            progress,
-            originalSize: fileSize,
-            outputDirectory: cached.outputPath ? cached.outputPath.substring(0, cached.outputPath.lastIndexOf('/')) : undefined,
-            createdAt: new Date(cached.createdAt),
-            compressedSize
-          };
-          
-          restoredTasks.push(task);
-          selectedFiles.value.push(videoFile);
-        } catch (error) {
-          console.warn('Failed to restore cached task:', cached.id, error);
-        }
-      }
-      
-      tasks.value = restoredTasks;
-      
-      // 如果有恢复的任务，默认选中第一个并隐藏上传器
-      if (restoredTasks.length > 0) {
-        currentFile.value = restoredTasks[0].file;
-        isUploaderVisible.value = false;
-      }
-      
-      console.log(`Restored ${restoredTasks.length} tasks from cache`);
-    } catch (error) {
-      console.error('Failed to initialize from cache:', error);
-    }
-  };
-  
-  // 初始化时从缓存加载
-  initializeFromCache();
+
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
   // 维护每个任务的进度事件监听器，避免重复监听导致的重复日志/进度
   const activeProgressListeners = new Map<string, () => void>();
 
-  // 监听任务变化，自动保存到缓存
-  watch(tasks, (newTasks) => {
-    saveTasksToCache(newTasks);
-  }, { deep: true });
+
 
   // 监听任务状态变化：当任务不再是 processing（例如 paused/completed/failed/queued）时，清理它的进度监听器
   watch(tasks, (newTasks) => {
@@ -545,7 +395,7 @@ export function useFileHandler() {
       const backendSettings = {
         format: settings.format,
         codec: settings.videoCodec,
-        resolution: settings.resolution,
+        resolution: settings.resolution || 'original',
         custom_resolution: settings.customResolution ? {
           width: settings.customResolution.width,
           height: settings.customResolution.height
@@ -557,7 +407,8 @@ export function useFileHandler() {
           end: settings.timeRange.end
         } : null,
 
-        hardwareAcceleration: settings.hardwareAcceleration
+        hardwareAcceleration: settings.hardwareAcceleration,
+        bitDepth: settings.bitDepth
       };
       
       console.log('Backend settings with hardware acceleration:', backendSettings);

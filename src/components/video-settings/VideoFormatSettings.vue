@@ -27,6 +27,8 @@
           v-model="videoCodec"
           :options="videoCodecOptions"
           placeholder="选择视频编码"
+          dropdown-direction="up"
+          :max-visible-options="3"
         />
       </div>
       
@@ -193,26 +195,13 @@ const {
   setFormat
 } = useVideoFormats();
 
-// 格式选项（添加保持原格式选项）
+// 格式选项（移除“保持原格式”选项）
 const formatOptions = computed(() => [
-  { value: 'original', label: '保持原格式', description: '不改变原始文件格式' },
   ...videoFormatOptions.value
 ]);
 
 // 视频编码选项（根据当前选择的格式动态更新）
 const videoCodecOptions = computed(() => {
-  if (format.value === 'original') {
-    // 如果选择保持原格式，显示所有编码选项（移除原始编码选项）
-    return [
-      { value: 'H.264', label: 'H.264' },
-      { value: 'H.265', label: 'H.265 (HEVC)' },
-      { value: 'VP9', label: 'VP9' },
-      { value: 'AV1', label: 'AV1' },
-      { value: 'MPEG-4', label: 'MPEG-4' },
-      { value: 'Xvid', label: 'Xvid' }
-    ];
-  }
-  
   // 根据选择的格式返回支持的编码
   setFormat(format.value);
   return supportedVideoCodecs.value.map(codec => ({
@@ -389,12 +378,10 @@ const getRecommendedCodec = () => {
 
 // 监听格式变化，自动调整编码选项
 watch(format, (newFormat) => {
-  if (newFormat !== 'original') {
-    setFormat(newFormat);
-    // 根据色彩深度自动选择编码格式
-    const recommendedCodec = getRecommendedCodec();
-    emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
-  }
+  setFormat(newFormat);
+  // 根据色彩深度自动选择编码格式
+  const recommendedCodec = getRecommendedCodec();
+  emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
 });
 
 // 监听metadata变化，自动调整编码选项

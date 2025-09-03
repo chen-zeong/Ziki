@@ -59,13 +59,64 @@
           @mousedown="showTooltip = true"
           @mouseup="showTooltip = false"
         />
+        </div>
+      </div>
+      
+      <!-- 高bit率选项 -->
+      <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+        <div class="flex justify-between items-center mb-3">
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">色彩深度</label>
+          <div class="text-right">
+            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded text-xs" style="background-color: #f3f4f6;">{{ bitDepthText }}</span>
+          </div>
+        </div>
+        
+        <div class="flex gap-1.5">
+          <!-- 8bit按钮（默认） -->
+          <button
+            @click="setBitDepth(8)"
+            :class="[
+              'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
+              selectedBitDepth === 8
+                ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
+            ]"
+          >
+            8bit
+          </button>
+          
+          <!-- 10bit按钮 -->
+          <button
+            @click="setBitDepth(10)"
+            :class="[
+              'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
+              selectedBitDepth === 10
+                ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
+            ]"
+          >
+            10bit
+          </button>
+          
+          <!-- 12bit按钮 -->
+          <button
+            @click="setBitDepth(12)"
+            :class="[
+              'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
+              selectedBitDepth === 12
+                ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
+            ]"
+          >
+            12bit
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, withDefaults, onMounted } from 'vue';
+import { ref, computed, watch, withDefaults, onMounted, inject } from 'vue';
 import type { CompressionSettings } from '../../types';
 import { 
   getQualityLevelIndex, 
@@ -73,6 +124,8 @@ import {
   getDefaultQualityParam,
   QUALITY_LEVELS 
 } from '../../config/qualityMappings';
+// 注入当前文件信息
+const currentFile = inject<{ value: any }>('currentFile');
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
@@ -97,6 +150,62 @@ const qualityValue = ref(80);
 // 气泡提示框显示状态
 const showTooltip = ref(false);
 
+// bit深度相关
+const selectedBitDepth = ref<8 | 10 | 12>(8);
+
+// bit深度文本显示
+const bitDepthText = computed(() => {
+  return `${selectedBitDepth.value}bit`;
+});
+
+// 是否可以使用10bit
+const canUse10bit = computed(() => {
+  const depth = getOriginalBitDepth();
+  return depth >= 10;
+});
+
+// 是否可以使用12bit
+const canUse12bit = computed(() => {
+  const depth = getOriginalBitDepth();
+  return depth >= 12;
+});
+
+
+
+// 设置bit深度
+const setBitDepth = (depth: 8 | 10 | 12) => {
+  selectedBitDepth.value = depth;
+  
+  // 更新设置
+  const newSettings: Partial<CompressionSettings> = {
+    ...settings.value,
+    bitDepth: depth
+  };
+  
+  settings.value = newSettings;
+  emit('update:modelValue', settings.value);
+};
+
+// 解析视频原始bit深度（兼容字符串/数字），默认返回8
+const getOriginalBitDepth = (): number => {
+  const val = currentFile?.value?.metadata?.colorDepth as unknown;
+  if (typeof val === 'number') return val;
+  if (!val) return 8;
+  const s = String(val).toLowerCase();
+  // 优先匹配更高位深
+  if (s.includes('16')) return 16;
+  if (s.includes('12')) return 12;
+  if (s.includes('10')) return 10;
+  if (s.includes('8')) return 8;
+  // Regex兜底（提取第一个1-2位数字）
+  const m = s.match(/(\d{1,2})/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    if (!Number.isNaN(n)) return n;
+  }
+  return 8;
+};
+
 // 初始化设置
 const initializeSettings = () => {
   const defaultParam = getDefaultQualityParam(
@@ -117,8 +226,24 @@ const initializeSettings = () => {
     baseSettings.profileValue = defaultParam.value as string;
   }
   
+  // 初始化bit深度 - 根据视频原始bit深度自动选择
+  const originalDepth = getOriginalBitDepth();
+  let initialBitDepth: 8 | 10 | 12;
+  if (originalDepth >= 12) {
+    initialBitDepth = 12;
+  } else if (originalDepth >= 10) {
+    initialBitDepth = 10;
+  } else {
+    initialBitDepth = 8;
+  }
+  
+  // 如果props中有指定的bitDepth，则使用props的值，否则使用初始化的值
+  const finalBitDepth = props.modelValue.bitDepth ?? initialBitDepth;
+  selectedBitDepth.value = finalBitDepth;
+  
   return {
     ...baseSettings,
+    bitDepth: finalBitDepth,
     ...props.modelValue
   };
 };
@@ -196,13 +321,7 @@ const updateQualityState = () => {
     qualityValue.value
   );
   
-  // 调试日志
-  console.log('Quality update:', {
-    sliderValue: qualityValue.value,
-    codec: props.currentVideoCodec || 'h264',
-    isHardware: props.isHardwareAccelerated || false,
-    param
-  });
+
   
   // 更新设置
   const newSettings: Partial<CompressionSettings> = {
@@ -219,9 +338,12 @@ const updateQualityState = () => {
     newSettings.profileValue = param.value as string;
   }
   
+  // 确保保留bitDepth字段
+  newSettings.bitDepth = settings.value.bitDepth || selectedBitDepth.value;
+  
   settings.value = newSettings;
   
-  console.log('Updated settings:', settings.value);
+
   
   // 发送更新事件
   emit('update:modelValue', settings.value);
@@ -230,7 +352,23 @@ const updateQualityState = () => {
 // 监听外部modelValue变化
 watch(() => props.modelValue, (newVal) => {
   settings.value = { ...settings.value, ...newVal };
+  // 更新bit深度状态
+  if (newVal.bitDepth !== undefined) {
+    selectedBitDepth.value = newVal.bitDepth;
+  }
 }, { deep: true, immediate: true });
+
+// 监听当前文件位深变化，智能默认选择（仅当外部未指定bitDepth时）
+watch(() => currentFile?.value?.metadata?.colorDepth, () => {
+  if (props.modelValue.bitDepth !== undefined) return;
+  const d = getOriginalBitDepth();
+  const auto = d >= 12 ? 12 : d >= 10 ? 10 : 8;
+  if (auto !== selectedBitDepth.value) {
+    selectedBitDepth.value = auto;
+    settings.value = { ...settings.value, bitDepth: auto };
+    emit('update:modelValue', settings.value);
+  }
+});
 
 // 监听编码器和硬件加速变化，重新初始化参数
 watch([() => props.currentVideoCodec, () => props.isHardwareAccelerated], () => {

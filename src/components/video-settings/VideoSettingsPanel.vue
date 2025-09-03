@@ -116,13 +116,16 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
   formatSettings.value = {
     format: s.format ?? 'mp4',
     videoCodec: s.videoCodec ?? 'libx264',
-    resolution: s.resolution ?? 'original',
+    resolution: s.resolution ?? undefined as any,
     customResolution: s.customResolution
   };
   // 画质相关
   qualitySettings.value = {
     qualityType: s.qualityType ?? 'crf',
-    crfValue: s.crfValue ?? 23
+    crfValue: s.crfValue ?? 23,
+    qvValue: s.qvValue,
+    profileValue: s.profileValue,
+    bitDepth: s.bitDepth
   };
   // 硬件加速
   const accel = s.hardwareAcceleration ?? (platform.value === 'macos' ? 'gpu' : 'cpu');
@@ -136,11 +139,12 @@ const resetAllSettings = () => {
   formatSettings.value = {
     format: 'mp4',
     videoCodec: 'libx264',
-    resolution: 'original'
+    resolution: undefined as any
   };
   qualitySettings.value = {
     qualityType: 'crf',
-    crfValue: 23
+    crfValue: 23,
+    bitDepth: qualitySettings.value?.bitDepth
   };
 
   // macOS下默认开启硬件加速，其他平台默认CPU编码
@@ -190,16 +194,33 @@ watch(
   { deep: true }
 );
 
+// 根据元数据解析位深，提供兜底
+const deriveBitDepthFromMetadata = (): 8 | 10 | 12 => {
+  const depth = currentVideoMetadata.value?.colorDepth || '';
+  if (/12|16/.test(depth)) return 12;
+  if (/10/.test(depth)) return 10;
+  return 8;
+};
+
 // 开始压缩
 const startCompression = () => {
   // 添加调试日志
   console.log('Hardware settings:', hardwareSettings.value);
   console.log('Hardware acceleration value:', hardwareSettings.value.value);
+  console.log('Format settings:', formatSettings.value);
+  console.log('Quality settings:', qualitySettings.value);
+  console.log('Quality settings bitDepth:', qualitySettings.value.bitDepth);
+
+  // 计算位深兜底，避免为 undefined
+  const finalBitDepth = (qualitySettings.value.bitDepth as 8 | 10 | 12 | undefined) ?? deriveBitDepthFromMetadata();
+  console.log('Final bitDepth to emit:', finalBitDepth);
   
   // 合并所有设置
   const compressionSettings: CompressionSettings = {
     ...formatSettings.value,
     ...qualitySettings.value,
+    // 确保包含位深
+    bitDepth: finalBitDepth,
     // 时间段信息由App.vue中的自定义时间段功能提供
     timeRange: undefined,
     // 添加硬件加速信息
@@ -208,6 +229,7 @@ const startCompression = () => {
   } as CompressionSettings;
   
   console.log('Final compression settings:', compressionSettings);
+  console.log('Final compression settings bitDepth:', compressionSettings.bitDepth);
   
   emit('compress', compressionSettings);
 };

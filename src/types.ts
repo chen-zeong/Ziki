@@ -62,6 +62,7 @@ export interface CompressionSettings {
   profileValue?: string; // Profile值，用于ProRes等编码器
   timeRange?: TimeRange;
   hardwareAcceleration?: 'cpu' | 'gpu';
+  bitDepth?: 8 | 10 | 12; // 色彩深度，支持8bit、10bit、12bit
 }
 
 export interface CompressionResult {

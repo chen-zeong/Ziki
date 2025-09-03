@@ -18,6 +18,8 @@ pub struct CompressionSettings {
     pub time_range: Option<TimeRange>,
     #[serde(rename = "hardwareAcceleration")]
     pub hardware_acceleration: Option<String>, // "cpu" or "gpu"
+    #[serde(rename = "bitDepth")]
+    pub bit_depth: Option<u8>, // 8, 10, or 12 bit
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

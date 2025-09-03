@@ -47,7 +47,7 @@
           'mb-2 bottom-full': dropdownDirection === 'up'
         }"
         :style="{ 
-          maxHeight: Math.min(options.length, 4) * 40 + 16 + 'px'
+          maxHeight: Math.min(options.length, props.maxVisibleOptions) * 40 + 16 + 'px'
         }"
         style="pointer-events: auto !important; user-select: auto !important;"
       >
@@ -93,12 +93,14 @@ interface Props {
   placeholder?: string;
   dropdownDirection?: 'down' | 'up';
   disabled?: boolean;
+  maxVisibleOptions?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: '请选择...',
   dropdownDirection: 'down',
-  disabled: false
+  disabled: false,
+  maxVisibleOptions: 4
 });
 
 const emit = defineEmits<{
@@ -156,7 +158,7 @@ onUnmounted(() => {
 
 /* 自定义搜索框样式 */
 .custom-select-button {
-  background-color: #f6f6f6;
+  background-color: #f3f4f6;
   border-color: #dcdcdc;
   color: #2c3e50;
 }
