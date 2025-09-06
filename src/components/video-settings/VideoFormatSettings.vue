@@ -27,7 +27,7 @@
           v-model="videoCodec"
           :options="videoCodecOptions"
           placeholder="选择视频编码"
-          dropdown-direction="up"
+          dropdown-direction="down"
           :max-visible-options="3"
         />
       </div>

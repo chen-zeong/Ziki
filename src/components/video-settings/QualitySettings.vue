@@ -49,8 +49,8 @@
           type="range" 
           id="quality-slider" 
           v-model="qualityValue"
-          min="0" 
-          max="100" 
+          min="2" 
+          max="98" 
           step="1" 
           class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
           @input="updateQualityState"
@@ -88,11 +88,14 @@
           <!-- 10bit按钮 -->
           <button
             @click="setBitDepth(10)"
+            :disabled="!canUse10bit"
+            :title="!canUse10bit ? '源视频位深不足，无法升到10bit（仅支持向下转换）' : ''"
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 10
                 ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
+              !canUse10bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
             ]"
           >
             10bit
@@ -101,11 +104,14 @@
           <!-- 12bit按钮 -->
           <button
             @click="setBitDepth(12)"
+            :disabled="!canUse12bit"
+            :title="!canUse12bit ? '源视频位深不足，无法升到12bit（仅支持向下转换）' : ''"
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 12
                 ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
+              !canUse12bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
             ]"
           >
             12bit
@@ -174,6 +180,10 @@ const canUse12bit = computed(() => {
 
 // 设置bit深度
 const setBitDepth = (depth: 8 | 10 | 12) => {
+  const originalDepth = getOriginalBitDepth();
+  // 只能向下转换：禁止选择高于原始位深的目标位深
+  if (depth > originalDepth) return;
+
   selectedBitDepth.value = depth;
   
   // 更新设置
@@ -267,11 +277,11 @@ initializeQualityValue();
 // 将滑动条值映射到质量描述文本
 const qualityText = computed(() => {
   const value = qualityValue.value;
-  if (value <= 20) return '极低质量';
-  if (value <= 40) return '低质量';
-  if (value <= 60) return '中等质量';
-  if (value <= 85) return '高质量';
-  return '极高质量';
+  if (value <= 20) return '极低质量'; // 2-20
+  if (value <= 40) return '低质量';   // 21-40
+  if (value <= 60) return '中等质量'; // 41-60
+  if (value <= 85) return '高质量';   // 61-85
+  return '极高质量';                  // 86-98
 });
 
 // 当前参数显示（用于气泡提示框）
@@ -291,16 +301,6 @@ const currentParamDisplay = computed(() => {
   }
   
   return `${param.paramType}: ${param.value}`;
-});
-
-// 质量提示信息
-const qualityHint = computed(() => {
-  const value = qualityValue.value;
-  if (value <= 20) return '文件体积最小，质量较差，适合网络传输';
-  if (value <= 40) return '文件体积较小，质量一般，适合快速分享';
-  if (value <= 60) return '平衡文件大小和质量，适合大多数场景';
-  if (value <= 85) return '高质量输出，文件体积较大，适合存档';
-  return '最高质量，文件体积最大，适合专业用途';
 });
 
 

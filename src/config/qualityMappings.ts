@@ -14,11 +14,11 @@ export interface EncoderConfig {
 
 // 质量等级定义 (0-4 对应 极低-极高)
 export const QUALITY_LEVELS = [
-  { name: '极低质量', range: [0, 20] },
+  { name: '极低质量', range: [2, 20] },
   { name: '低质量', range: [21, 40] },
   { name: '中等质量', range: [41, 60] },
   { name: '高质量', range: [61, 85] },
-  { name: '极高质量', range: [86, 100] }
+  { name: '极高质量', range: [86, 98] }
 ];
 
 // 将各种可能的编码器名称规范化为映射表中使用的键
@@ -38,18 +38,18 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
   'h264': {
     software: {
       paramType: 'crf',
-      values: [35, 30, 25, 23, 18], // 极低到极高质量的CRF值
-      defaultIndex: 3 // 默认高质量 (CRF 23)
+      values: [32, 28, 23, 20, 18], // 极低到极高质量的CRF值 (CRF越大质量越低)
+      defaultIndex: 2 // 默认高质量 (CRF 23)
     },
     hardware: {
       paramType: 'qv',
-      values: [80, 70, 60, 50, 40], // -q:v 值（数值越小质量越高）
-      defaultIndex: 2 // 默认值改为 q:v 60
+      values: [40, 55, 70, 75, 80], // -q:v 值（数值越大质量越高）
+      defaultIndex: 2 // 默认值改为 q:v 70
     },
     hardwareVendors: {
-      nvidia: { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 2 }, // NVENC 默认 q:v 60
-      intel:  { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 2 }, // QSV 默认 q:v 60
-      amd:    { paramType: 'qv', values: [80, 70, 60, 50, 40], defaultIndex: 2 }  // AMF 默认 q:v 60
+      nvidia: { paramType: 'qv', values: [40, 55, 70, 75, 80], defaultIndex: 2 }, // NVENC 默认 q:v 70
+      intel:  { paramType: 'qv', values: [40, 55, 70, 75, 80], defaultIndex: 2 }, // QSV 默认 q:v 70
+      amd:    { paramType: 'qv', values: [40, 55, 70, 75, 80], defaultIndex: 2 }  // AMF 默认 q:v 70
     }
   },
   
@@ -57,19 +57,19 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
   'h265': {
     software: {
       paramType: 'crf',
-      values: [35, 30, 25, 23, 18],
-      defaultIndex: 3
+      values: [32, 28, 23, 20, 18],
+      defaultIndex: 2
     },
     hardware: {
       paramType: 'qv',
-      values: [80, 70, 60, 50, 40],
+      values: [40, 55, 70, 75, 80],
       defaultIndex: 2
     },
     hardwareVendors: {
       // Windows 厂商分支：使用 CRF 语义映射，便于与软件编码保持一致
-      nvidia: { paramType: 'crf', values: [35, 30, 25, 23, 18], defaultIndex: 3 }, // NVENC -> 后端映射到 -cq
-      intel:  { paramType: 'crf', values: [35, 30, 25, 23, 18], defaultIndex: 3 }, // QSV   -> 后端映射到 -global_quality
-      amd:    { paramType: 'crf', values: [35, 30, 25, 23, 18], defaultIndex: 3 }  // AMF   -> 后端映射到 -q:v（近似）
+      nvidia: { paramType: 'crf', values: [32, 28, 23, 20, 18], defaultIndex: 2 }, // NVENC -> 后端映射到 -cq
+      intel:  { paramType: 'crf', values: [32, 28, 23, 20, 18], defaultIndex: 2 }, // QSV   -> 后端映射到 -global_quality
+      amd:    { paramType: 'crf', values: [32, 28, 23, 20, 18], defaultIndex: 2 }  // AMF   -> 后端映射到 -q:v（近似）
      }
   },
   
@@ -91,7 +91,7 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     },
     hardware: {
       paramType: 'qv',
-      values: [80, 70, 60, 50, 40],
+      values: [40, 55, 70, 75, 80],
       defaultIndex: 2
     }
   },
@@ -164,15 +164,15 @@ export function getEncoderQualityParam(
   
   // 对于数值参数（CRF、qv），使用线性插值实现连续调节
   const values = mapping.values as number[];
-  const minValue = Math.max(...values); // 最差质量（最大值）
-  const maxValue = Math.min(...values); // 最佳质量（最小值）
+  // 根据参数类型选择映射方向
+  const isCRF = mapping.paramType === 'crf';
+  const minValue = isCRF ? Math.max(...values) : Math.min(...values); // CRF: 大为差; QV: 小为差
+  const maxValue = isCRF ? Math.min(...values) : Math.max(...values); // CRF: 小为优; QV: 大为优
   
-  // 将滑块值(0-100)映射到参数范围
-  const normalizedSlider = sliderValue / 100; // 0-1
+  // 将滑块值(2-98)映射到参数范围
+  const normalizedSlider = (sliderValue - 2) / 96; // 0-1
   const interpolatedValue = minValue + (maxValue - minValue) * normalizedSlider;
   const roundedValue = Math.round(interpolatedValue);
-  
-
   
   return {
     paramType: mapping.paramType,
@@ -219,11 +219,12 @@ export function getDefaultQualityParam(
     sliderValue = Math.round((qualityLevel.range[0] + qualityLevel.range[1]) / 2);
   } else {
     const values = mapping.values as number[];
-    const minValue = Math.max(...values);
-    const maxValue = Math.min(...values);
+    const isCRF = mapping.paramType === 'crf';
+    const minValue = isCRF ? Math.max(...values) : Math.min(...values);
+    const maxValue = isCRF ? Math.min(...values) : Math.max(...values);
     const target = values[defaultIndex] as number;
     const t = (maxValue === minValue) ? 1 : (target - minValue) / (maxValue - minValue);
-    sliderValue = Math.max(0, Math.min(100, Math.round(t * 100)));
+    sliderValue = Math.max(2, Math.min(98, Math.round(t * 96 + 2)));
   }
   
   return {
