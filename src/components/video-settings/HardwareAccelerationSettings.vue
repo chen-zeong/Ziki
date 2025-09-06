@@ -66,11 +66,27 @@
               <div v-else class="space-y-2 max-h-48 overflow-y-auto">
                  <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
                    <Check class="w-3 h-3 text-dark-success flex-shrink-0" />
-                   <span>{{ codec.name || codec.codec_type || codec }}</span>
+                   <span>{{ codec }}</span>
                  </div>
                </div>
             </div>
           </div>
+        </div>
+
+        <!-- 检测状态与重新检测 -->
+        <div class="flex items-center justify-between mt-3">
+          <div class="text-xs text-gray-500 dark:text-dark-secondary">
+            <span v-if="isDetectingHardwareEncoders">{{ detectHint }}</span>
+            <span v-else-if="hardwareSupport">上次检测时间：{{ formatTime(hardwareSupport.tested_at) }}</span>
+            <span v-else>尚未检测硬件编码器</span>
+          </div>
+          <button
+            class="px-2 py-1 text-xs font-medium rounded-md transition-colors border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border disabled:opacity-50"
+            @click="refreshHardware"
+            :disabled="isDetectingHardwareEncoders"
+          >
+            重新检测
+          </button>
         </div>
     </div>
     
@@ -100,6 +116,21 @@ interface Codec {
   hardware_type?: string;
 }
 
+// 新增：与后端Rust结构对齐
+interface EncoderSupport {
+  name: string;     // ffmpeg encoder name, e.g. "h264_videotoolbox", "h264_nvenc"
+  codec: 'h264' | 'hevc' | 'av1' | 'vp9' | 'prores';
+  vendor: string;   // Apple VT | NVIDIA | Intel | AMD
+  supported: boolean;
+  error_message?: string | null;
+}
+
+interface HardwareSupport {
+  platform: 'macos' | 'windows' | 'linux' | 'unknown';
+  tested_at: number; // unix seconds
+  encoders: EncoderSupport[];
+}
+
 interface Props {
   modelValue: {
     value: string;
@@ -123,6 +154,11 @@ const codecs = ref<Codec[]>([]);
 const isDetecting = ref(false);
 const platform = ref<'macos' | 'windows' | 'linux'>('macos');
 
+// 新增：硬件编码器支持与检测状态
+const hardwareSupport = ref<HardwareSupport | null>(null);
+const isDetectingHardwareEncoders = ref(false);
+const detectHint = ref('');
+
 const hardwareAcceleration = computed({
   get() {
     return props.modelValue;
@@ -132,7 +168,7 @@ const hardwareAcceleration = computed({
   }
 });
 
-// 检测编解码器支持
+// 旧：检测编解码器支持（保留作为回退）
 const detectCodecs = async () => {
   if (isDetecting.value) return;
   
@@ -148,6 +184,39 @@ const detectCodecs = async () => {
   }
 };
 
+// 新：加载硬件编码器支持（使用缓存）
+const loadHardwareSupport = async () => {
+  if (isDetectingHardwareEncoders.value) return;
+  isDetectingHardwareEncoders.value = true;
+  detectHint.value = '正在检测硬件编码器，请稍候...';
+  try {
+    const result = await invoke<HardwareSupport>('get_hardware_encoder_support');
+    hardwareSupport.value = result;
+  } catch (error) {
+    console.error('Failed to get hardware encoder support:', error);
+    hardwareSupport.value = { platform: platform.value, tested_at: Math.floor(Date.now()/1000), encoders: [] } as HardwareSupport;
+  } finally {
+    isDetectingHardwareEncoders.value = false;
+    detectHint.value = '';
+  }
+};
+
+// 新：刷新硬件编码器支持（忽略缓存）
+const refreshHardware = async () => {
+  if (isDetectingHardwareEncoders.value) return;
+  isDetectingHardwareEncoders.value = true;
+  detectHint.value = '正在重新检测硬件编码器，请稍候...';
+  try {
+    const result = await invoke<HardwareSupport>('refresh_hardware_encoder_support');
+    hardwareSupport.value = result;
+  } catch (error) {
+    console.error('Failed to refresh hardware encoder support:', error);
+  } finally {
+    isDetectingHardwareEncoders.value = false;
+    detectHint.value = '';
+  }
+};
+
 // 检测平台
 const detectPlatform = async () => {
   try {
@@ -158,44 +227,41 @@ const detectPlatform = async () => {
   }
 };
 
-// 检查编码格式是否支持硬件加速
-const checkHardwareSupport = (codecName: string): boolean => {
-  if (!codecName || !codecs.value.length) return false;
-  
-  // 根据平台检查支持的硬件编码格式
-  if (platform.value === 'macos') {
-    // macOS 使用 videotoolbox
-    const supportedCodecs = ['h264_videotoolbox', 'hevc_videotoolbox', 'prores_videotoolbox'];
-    const normalizedCodec = codecName.toLowerCase();
-    
-    if (normalizedCodec.includes('h264') || normalizedCodec.includes('h.264')) {
-      return codecs.value.some(codec => codec.name === 'h264_videotoolbox');
-    }
-    if (normalizedCodec.includes('hevc') || normalizedCodec.includes('h265') || normalizedCodec.includes('h.265')) {
-      return codecs.value.some(codec => codec.name === 'hevc_videotoolbox');
-    }
-    if (normalizedCodec.includes('prores')) {
-      return codecs.value.some(codec => codec.name === 'prores_videotoolbox');
-    }
-  }
-  
-  return false;
+// 工具：格式化时间
+const formatTime = (sec: number) => {
+  const d = new Date(sec * 1000);
+  return d.toLocaleString();
 };
 
-// 获取支持的硬件编码格式列表
+// 名称归一化为逻辑codec
+const normalizeTargetCodec = (codecName: string): EncoderSupport['codec'] | null => {
+  const n = (codecName || '').toLowerCase();
+  if (n.includes('h264') || n.includes('h.264') || n.includes('avc')) return 'h264';
+  if (n.includes('hevc') || n.includes('h265') || n.includes('h.265')) return 'hevc';
+  if (n.includes('av1')) return 'av1';
+  if (n.includes('vp9')) return 'vp9';
+  if (n.includes('prores')) return 'prores';
+  return null;
+};
+
+// 检查编码格式是否支持硬件加速（使用新数据）
+const checkHardwareSupport = (codecName: string): boolean => {
+  const target = normalizeTargetCodec(codecName);
+  if (!target) return false;
+  const list = hardwareSupport.value?.encoders || [];
+  return list.some(e => e.codec === target && e.supported);
+};
+
+// 获取支持的硬件编码格式列表（使用新数据）
 const supportedCodecs = computed(() => {
-  if (!codecs.value.length) return [];
-  
-  if (platform.value === 'macos') {
-    return codecs.value.filter(codec => 
-      codec.name.includes('videotoolbox') && 
-      codec.codec_type === 'encoder' &&
-      codec.media_type === 'video'
-    );
-  }
-  
-  // 其他平台的支持可以在这里添加
-  return [];
+  const list = hardwareSupport.value?.encoders || [];
+  const supported = list.filter(e => e.supported);
+  if (supported.length === 0) return [] as string[];
+  // 展示人性化名称：H.264 (Apple VT) 等
+  const nameMap: Record<EncoderSupport['codec'], string> = {
+    h264: 'H.264', hevc: 'H.265/HEVC', av1: 'AV1', vp9: 'VP9', prores: 'ProRes'
+  };
+  return supported.map(e => `${nameMap[e.codec]} (${e.vendor})`);
 });
 
 // 硬件加速选项
@@ -207,7 +273,7 @@ const hardwareOptions = computed<HardwareOption[]>(() => {
       value: 'cpu',
       name: 'CPU编码',
       description: '兼容性最高，适用于所有设备，速度较慢',
-      icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z',
+      icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9Vz',
       available: true
     },
     {
@@ -258,7 +324,7 @@ const handleGpuAcceleration = () => {
     console.log('macOS 显卡加速已启用');
     console.log('使用 VideoToolbox 硬件编码器');
     console.log('当前编码格式:', props.currentVideoCodec);
-    console.log('支持的硬件编码器:', supportedCodecs.value.map(c => c.name).join(', '));
+    console.log('支持的硬件编码器:', supportedCodecs.value.join(', '));
     
     // 检查具体的编码器支持
     const codecName = props.currentVideoCodec?.toLowerCase() || '';
@@ -270,8 +336,7 @@ const handleGpuAcceleration = () => {
       console.log('将使用 prores_videotoolbox 编码器');
     }
   } else if (platform.value === 'windows') {
-    console.log('Windows 显卡加速功能暂未实现');
-    // Windows 系统暂时留空，后续可以添加 NVENC、QuickSync 等支持
+    console.log('Windows 显卡加速：根据检测结果选择 NVENC/QSV/AMF');
   } else {
     console.log('当前平台不支持显卡加速');
   }
@@ -295,14 +360,10 @@ const toggleHardwareAcceleration = () => {
   }
 };
 
-
-
-
-
 // 监听当前视频编码格式变化
 watch(() => props.currentVideoCodec, async (newCodec) => {
-  if (newCodec && codecs.value.length === 0) {
-    await detectCodecs();
+  if (!hardwareSupport.value) {
+    await loadHardwareSupport();
   }
   
   // 如果当前选择的是显卡加速但新编码格式不支持，自动切换到CPU编码
@@ -320,7 +381,7 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
 // 组件挂载时初始化
 onMounted(async () => {
   await detectPlatform();
-  await detectCodecs();
+  await loadHardwareSupport();
 });
 
 
