@@ -6,6 +6,7 @@ use tokio::process::{Command, Child};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tauri::{Manager, Emitter};
 use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata};
+use crate::video::utils::get_hardware_encoder_support;
 use serde_json::json;
 
 // 任务信息结构
@@ -212,53 +213,87 @@ pub async fn compress_video(
     println!("Video codec: {}", settings.codec);
     
     // Set video codec (映射为FFmpeg编码器名称，考虑硬件加速)
-    let ffmpeg_codec = if settings.hardware_acceleration == Some("gpu".to_string()) {
+    let ffmpeg_codec: String = if settings.hardware_acceleration == Some("gpu".to_string()) {
         println!("Using GPU acceleration");
         // 检查当前平台并使用相应的硬件加速编码器
         if cfg!(target_os = "macos") {
             println!("Platform: macOS, using VideoToolbox");
             // macOS 使用 VideoToolbox
             match settings.codec.as_str() {
-                "H.264" | "libx264" => {
+                "H.264" | "libx264" | "h264" => {
                     println!("Selected h264_videotoolbox encoder");
-                    "h264_videotoolbox"
+                    "h264_videotoolbox".to_string()
                 },
-                "H.265" | "HEVC" | "libx265" => {
+                "H.265" | "HEVC" | "libx265" | "hevc" => {
                     println!("Selected hevc_videotoolbox encoder");
-                    "hevc_videotoolbox"
+                    "hevc_videotoolbox".to_string()
                 },
                 "ProRes" | "prores" => {
                     println!("Selected prores_videotoolbox encoder");
-                    "prores_videotoolbox"
+                    "prores_videotoolbox".to_string()
                 },
                 _ => {
                     println!("Codec {} not supported for hardware acceleration, falling back to software", settings.codec);
-                    map_codec_to_ffmpeg(&settings.codec) // 回退到软件编码
+                    map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
                 }
             }
         } else if cfg!(target_os = "windows") {
-            println!("Platform: Windows, using NVENC");
-            // Windows 可以使用 NVENC 或 QuickSync (未来扩展)
-            match settings.codec.as_str() {
-                "H.264" | "libx264" => "h264_nvenc", // 或 h264_qsv
-                "H.265" | "HEVC" | "libx265" => "hevc_nvenc", // 或 hevc_qsv
-                _ => {
-                    println!("Codec {} not supported for hardware acceleration on Windows, falling back to software", settings.codec);
-                    map_codec_to_ffmpeg(&settings.codec) // 回退到软件编码
+            println!("Platform: Windows, selecting HW encoder by availability");
+            // Windows: 根据检测到的硬件能力优先选择 AMD AMF -> Intel QSV -> NVIDIA NVENC
+            let base = match settings.codec.as_str() {
+                "H.264" | "libx264" | "h264" => "h264",
+                "H.265" | "HEVC" | "libx265" | "hevc" => "hevc",
+                "AV1" | "libsvtav1" | "av1" => "av1",
+                _ => "",
+            };
+            let mut selected: Option<String> = None;
+            if !base.is_empty() {
+                if let Ok(hs) = get_hardware_encoder_support(app_handle.clone()) {
+                    let have = |name: &str| hs.encoders.iter().any(|e| e.name == name);
+                    let candidates = vec![
+                        format!("{}_amf", base),
+                        format!("{}_qsv", base),
+                        format!("{}_nvenc", base),
+                    ];
+                    for c in &candidates {
+                        if have(c) {
+                            selected = Some(c.clone());
+                            break;
+                        }
+                    }
+                    println!(
+                        "Detected HW encoders: {:?}",
+                        hs.encoders.iter().map(|e| e.name.clone()).collect::<Vec<_>>()
+                    );
+                } else {
+                    println!("Hardware support detection failed; falling back to defaults");
+                }
+            }
+            match selected {
+                Some(s) => {
+                    println!("Selected Windows HW encoder: {}", s);
+                    s
+                }
+                None => {
+                    println!(
+                        "Codec {} not supported by available HW encoders on Windows, falling back to software",
+                        settings.codec
+                    );
+                    map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
                 }
             }
         } else {
             println!("Platform not supported for hardware acceleration, falling back to software");
             // 其他平台回退到软件编码
-            map_codec_to_ffmpeg(&settings.codec)
+            map_codec_to_ffmpeg(&settings.codec).to_string()
         }
     } else {
         println!("Using CPU encoding");
-        map_codec_to_ffmpeg(&settings.codec)
+        map_codec_to_ffmpeg(&settings.codec).to_string()
     };
     
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
-    cmd.arg("-c:v").arg(ffmpeg_codec);
+    cmd.arg("-c:v").arg(&ffmpeg_codec);
     
     // Add H.265 specific tag for better compatibility
     if ffmpeg_codec.contains("265") || ffmpeg_codec.contains("hevc") {
@@ -388,15 +423,25 @@ pub async fn compress_video(
     // 在后台线程中监控进度
     let app_handle_clone = app_handle.clone();
     let task_id_clone = taskId.clone();
+    let display_name = if cfg!(target_os = "windows") {
+        std::path::Path::new(&inputPath)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(&taskId)
+            .to_string()
+    } else {
+        taskId.clone()
+    };
+    let display_name_clone = display_name.clone();
     
     let progress_handle = tokio::spawn(async move {
         let mut lines = reader.lines();
-        println!("🚀 Starting progress monitoring for task: {}", task_id_clone);
+        println!("🚀 Starting progress monitoring for task: {}", display_name_clone);
         while let Some(line) = lines.next_line().await.unwrap_or(None) {
             println!("FFmpeg stdout line: {}", line);
             // 解析进度信息
             if let Some(progress) = parse_ffmpeg_progress(&line, actual_compression_duration) {
-                println!("✅ Parsed progress: {}% for {}", progress, task_id_clone);
+                println!("✅ Parsed progress: {}% for {}", progress, display_name_clone);
                 // 发送进度事件到前端 - 使用任务特定的事件名称
                 let event_name = format!("compression-progress-{}", task_id_clone);
                 let emit_result = app_handle_clone.emit(&event_name, json!({
@@ -410,7 +455,7 @@ pub async fn compress_video(
                 }
             }
         }
-        println!("🏁 Progress monitoring ended for task: {}", task_id_clone);
+        println!("🏁 Progress monitoring ended for task: {}", display_name_clone);
     });
     
     // 等待进程完成或被中断

@@ -236,6 +236,8 @@ export function useFileHandler() {
       if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
         // Get the real file path from the File object
         const filePath = (file as any).path || (file as any).webkitRelativePath || file.name;
+        // Normalize display name to basename (Windows/macOS friendly)
+        const displayName = (filePath ? String(filePath).split(/[\\/]/).pop() : file.name) || file.name;
         
         // Get actual file size using Tauri API
         let actualSize = file.size || 0;
@@ -249,7 +251,7 @@ export function useFileHandler() {
         
         const videoFile: VideoFile = {
           id: generateId(),
-          name: file.name,
+          name: displayName,
           size: actualSize,
           path: filePath,
           originalUrl: URL.createObjectURL(file)
@@ -264,7 +266,7 @@ export function useFileHandler() {
           });
           videoFile.thumbnailUrl = thumbnailUrl;
         } catch (error) {
-          console.warn('Failed to generate thumbnail for', file.name, ':', error);
+          console.warn('Failed to generate thumbnail for', displayName, ':', error);
         }
         
         // Get video metadata for video files
@@ -274,7 +276,7 @@ export function useFileHandler() {
               videoPath: filePath
             });
             videoFile.metadata = metadata;
-            console.log('Video metadata for', file.name, ':', metadata);
+            console.log('Video metadata for', displayName, ':', metadata);
             
             // 触发全局metadata更新事件，供其他组件使用
             window.dispatchEvent(new CustomEvent('video-metadata-updated', {
@@ -285,7 +287,7 @@ export function useFileHandler() {
               }
             }));
           } catch (error) {
-            console.warn('Failed to get video metadata for', file.name, ':', error);
+            console.warn('Failed to get video metadata for', displayName, ':', error);
           }
         }
         

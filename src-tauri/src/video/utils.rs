@@ -202,7 +202,7 @@ pub fn get_ffprobe_binary() -> &'static str {
     #[cfg(target_os = "windows")]
     {
         #[cfg(target_arch = "x86_64")]
-        return "ffprobe-x86_64-pc-win64.exe";
+        return "ffprobe-x86_64-pc-windows-msvc.exe";
     }
     
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
