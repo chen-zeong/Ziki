@@ -57,7 +57,7 @@ defineExpose({
 
 <template>
   <!-- 整个应用窗口容器 -->
-  <div class="w-full h-screen bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden border border-gray-300 dark:border-dark-border transition-colors duration-300">
+  <div class="w-full h-[100dvh] min-h-[100dvh] bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden transition-colors duration-300">
     <!-- 顶部标题栏 -->
     <HeaderBar />
 

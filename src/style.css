@@ -11,6 +11,16 @@
   --slider-bg-color: #e5e7eb;
 }
 
+/* 让根元素填满窗口，并在亮/暗主题下使用一致的背景色，避免窗口边缘露出默认黑底 */
+html, body, #app {
+  width: 100%;
+  height: 100dvh; /* 使用动态视口高度，避免 Windows 拉伸时出现 1px 缝隙 */
+  background-color: #f5f5f5; /* 与 Header/Footer 一致的浅灰 */
+}
+.dark html, .dark body, .dark #app {
+  background-color: #1e1e1e; /* 与暗色背景一致 */
+}
+
 body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
