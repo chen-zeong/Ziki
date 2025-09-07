@@ -56,38 +56,6 @@
       "description": "Flash视频格式，逐渐被淘汰",
       "recommended": false
     },
-    "3gp": {
-      "name": "3GP",
-      "extension": ".3gp",
-      "videoCodecs": ["H.263", "H.264"],
-      "audioCodecs": ["AMR", "AAC"],
-      "description": "移动设备专用，文件小",
-      "recommended": false
-    },
-    "m4v": {
-      "name": "M4V",
-      "extension": ".m4v",
-      "videoCodecs": ["H.264", "H.265"],
-      "audioCodecs": ["AAC"],
-      "description": "iTunes专用格式，支持DRM",
-      "recommended": false
-    },
-    "ts": {
-      "name": "TS",
-      "extension": ".ts",
-      "videoCodecs": ["H.264", "H.265", "MPEG-2"],
-      "audioCodecs": ["AAC", "AC-3", "DTS"],
-      "description": "传输流格式，适合广播",
-      "recommended": false
-    },
-    "m2ts": {
-      "name": "M2TS",
-      "extension": ".m2ts",
-      "videoCodecs": ["H.264", "H.265", "MPEG-2"],
-      "audioCodecs": ["AAC", "AC-3", "DTS"],
-      "description": "蓝光光盘格式",
-      "recommended": false
-    },
     "avif": {
       "name": "AVIF",
       "extension": ".avif",
