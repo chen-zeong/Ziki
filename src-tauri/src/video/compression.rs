@@ -531,6 +531,76 @@ pub async fn compress_video(
     }
 }
 
+#[cfg(windows)]
+fn suspend_process(pid: u32) -> Result<(), String> {
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{CreateToolhelp32Snapshot, Thread32First, Thread32Next, THREADENTRY32, TH32CS_SNAPTHREAD};
+    use windows_sys::Win32::System::Threading::{OpenThread, SuspendThread, THREAD_SUSPEND_RESUME};
+
+    unsafe {
+        let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+        if snapshot == INVALID_HANDLE_VALUE {
+            return Err("CreateToolhelp32Snapshot failed".to_string());
+        }
+
+        let mut entry: THREADENTRY32 = std::mem::zeroed();
+        entry.dwSize = std::mem::size_of::<THREADENTRY32>() as u32;
+
+        let mut has_thread = Thread32First(snapshot, &mut entry) != 0;
+        while has_thread {
+            if entry.th32OwnerProcessID == pid {
+                let h_thread = OpenThread(THREAD_SUSPEND_RESUME, 0, entry.th32ThreadID);
+                if h_thread != std::ptr::null_mut() {
+                    let res = SuspendThread(h_thread);
+                    CloseHandle(h_thread);
+                    if res == u32::MAX {
+                        CloseHandle(snapshot);
+                        return Err(format!("SuspendThread failed for TID {}", entry.th32ThreadID));
+                    }
+                }
+            }
+            has_thread = Thread32Next(snapshot, &mut entry) != 0;
+        }
+        CloseHandle(snapshot);
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn resume_process(pid: u32) -> Result<(), String> {
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{CreateToolhelp32Snapshot, Thread32First, Thread32Next, THREADENTRY32, TH32CS_SNAPTHREAD};
+    use windows_sys::Win32::System::Threading::{OpenThread, ResumeThread, THREAD_SUSPEND_RESUME};
+
+    unsafe {
+        let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+        if snapshot == INVALID_HANDLE_VALUE {
+            return Err("CreateToolhelp32Snapshot failed".to_string());
+        }
+
+        let mut entry: THREADENTRY32 = std::mem::zeroed();
+        entry.dwSize = std::mem::size_of::<THREADENTRY32>() as u32;
+
+        let mut has_thread = Thread32First(snapshot, &mut entry) != 0;
+        while has_thread {
+            if entry.th32OwnerProcessID == pid {
+                let h_thread = OpenThread(THREAD_SUSPEND_RESUME, 0, entry.th32ThreadID);
+                if h_thread != std::ptr::null_mut() {
+                    let res = ResumeThread(h_thread);
+                    CloseHandle(h_thread);
+                    if res == u32::MAX {
+                        CloseHandle(snapshot);
+                        return Err(format!("ResumeThread failed for TID {}", entry.th32ThreadID));
+                    }
+                }
+            }
+            has_thread = Thread32Next(snapshot, &mut entry) != 0;
+        }
+        CloseHandle(snapshot);
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn pause_task(taskId: String) -> Result<(), String> {
     println!("Pausing task: {}", taskId);
@@ -565,7 +635,20 @@ pub async fn pause_task(taskId: String) -> Result<(), String> {
                     }
                 }
             }
-            #[cfg(not(unix))]
+            #[cfg(windows)]
+            {
+                match suspend_process(pid) {
+                    Ok(_) => {
+                        println!("Successfully suspended task: {} (PID: {})", taskId, pid);
+                        Ok(())
+                    }
+                    Err(e) => {
+                        println!("Failed to suspend task {}: {}", taskId, e);
+                        Err(format!("Failed to pause task: {}", e))
+                    }
+                }
+            }
+            #[cfg(not(any(unix, windows)))]
             {
                 Err("Process pausing is not supported on this platform".to_string())
             }
@@ -615,7 +698,19 @@ pub async fn resume_task(
                     }
                 }
             }
-            #[cfg(not(unix))]
+            #[cfg(windows)]
+            {
+                match resume_process(pid) {
+                    Ok(_) => {
+                        println!("Successfully resumed task: {} (PID: {})", taskId, pid);
+                    }
+                    Err(e) => {
+                        println!("Failed to resume task {}: {}", taskId, e);
+                        return Err(format!("Failed to resume task: {}", e));
+                    }
+                }
+            }
+            #[cfg(not(any(unix, windows)))]
             {
                 return Err("Process resuming is not supported on this platform".to_string());
             }
