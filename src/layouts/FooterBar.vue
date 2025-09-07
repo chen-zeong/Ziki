@@ -150,14 +150,16 @@ const toggleTimeRangePopup = () => {
         </button>
         
         <!-- 时间段设置弹出框 -->
-        <div v-if="showTimeRangePopup" class="absolute bottom-full right-0 mb-2 w-80 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 p-4">
-          <TimeRangeSettings 
-            :model-value="timeRangeSettings" 
-            @update:model-value="$emit('update:timeRangeSettings', $event)"
-            :metadata="currentFile?.metadata"
-            @validation-change="handleTimeValidationChange"
-          />
-        </div>
+        <transition name="fade-up">
+          <div v-if="showTimeRangePopup" class="absolute bottom-full right-0 mb-2 w-80 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 p-4">
+            <TimeRangeSettings 
+              :model-value="timeRangeSettings" 
+              @update:model-value="$emit('update:timeRangeSettings', $event)"
+              :metadata="currentFile?.metadata"
+              @validation-change="handleTimeValidationChange"
+            />
+          </div>
+        </transition>
       </div>
       
       <!-- 批量压缩按钮 -->
@@ -218,5 +220,20 @@ const toggleTimeRangePopup = () => {
   0% { width: 0%; }
   50% { width: 70%; }
   100% { width: 0%; }
+}
+/* 与硬件支持列表一致的淡入上移动画 */
+.fade-up-enter-active,
+.fade-up-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fade-up-enter-from,
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.fade-up-enter-to,
+.fade-up-leave-from {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

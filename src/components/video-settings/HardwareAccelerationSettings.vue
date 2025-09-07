@@ -24,8 +24,8 @@
               class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
               :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-gray-200 dark:bg-dark-border'"
               :style="{
-                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#5492dc' : '',
-                '--tw-ring-color': '#5492dc'
+                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#558ee1' : '',
+                '--tw-ring-color': '#558ee1'
               }"
               @click="toggleHardwareAcceleration"
             >
@@ -39,7 +39,8 @@
           <!-- 不可用时显示查看支持列表按钮 -->
           <div v-else class="relative flex items-center gap-2 h-6">
             <button
-              @click="showSupportedFormats = !showSupportedFormats"
+              ref="supportBtnRef"
+              @click="toggleSupportedFormats"
               class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
               style="color: #9150e1; background-color: rgba(145, 80, 225, 0.1);"
               @mouseover="($event.target as HTMLElement).style.color = '#7c3aed'"
@@ -48,46 +49,62 @@
               查看支持列表
             </button>
             
-            <!-- 向上弹出的支持格式列表 -->
-             <div v-if="showSupportedFormats" class="absolute bottom-full right-0 mb-3 w-80 p-5 bg-white dark:bg-dark-panel border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl backdrop-blur-md z-50 animate-in slide-in-from-bottom-2 duration-300">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
-                  <CheckCircle class="w-4 h-4 text-blue-500" />
-                  <span>支持的硬件编码格式</span>
-                </h4>
-                <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
-                  <X class="w-4 h-4" />
-                </button>
-              </div>
-              <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
-                <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                当前系统不支持任何硬件编码格式
-              </div>
-              <div v-else class="space-y-2 max-h-48 overflow-y-auto">
-                 <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
-                   <Check class="w-3 h-3 text-dark-success flex-shrink-0" />
-                   <span>{{ codec }}</span>
-                 </div>
-               </div>
-            </div>
+            <!-- 使用 Teleport 将弹出框放到 body，避免被父容器裁剪或遮挡 -->
+            <Teleport to="body">
+              <transition name="fade-up">
+                <div
+                  v-if="showSupportedFormats"
+                  ref="supportPopupRef"
+                  class="fixed w-96 p-5 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-2xl shadow-lg z-[10000]"
+                  :style="{ top: popupPosition.top + 'px', left: popupPosition.left + 'px' }"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
+                      <CheckCircle class="w-4 h-4 text-blue-500" />
+                      <span>支持的硬件编码格式</span>
+                    </h4>
+                    <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
+                      <X class="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
+                    <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                    当前系统不支持任何硬件编码格式
+                  </div>
+                  <div v-else class="space-y-2 max-h-48 overflow-y-auto">
+                     <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
+                       <Check class="w-3 h-3 text-dark-success flex-shrink-0" />
+                       <span>{{ codec }}</span>
+                     </div>
+                   </div>
+  
+                   <!-- 分割线 -->
+                   <div class="border-t border-gray-100 dark:border-dark-border my-4"></div>
+  
+                   <!-- 检测信息与操作 -->
+                   <div class="flex items-center justify-between">
+                     <div class="flex items-center text-xs text-gray-500 dark:text-dark-secondary">
+                       <Clock class="w-3 h-3 mr-1 opacity-70" />
+                       <span>上次检测时间：{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
+                     </div>
+                     <button
+                       class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#5492dc] hover:bg-[#4a82c6] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                       @click="refreshHardware"
+                       :disabled="isDetectingHardwareEncoders"
+                     >
+                       <Loader2 v-if="isDetectingHardwareEncoders" class="w-3 h-3 animate-spin" />
+                       <RefreshCw v-else class="w-3 h-3" />
+                       <span>{{ isDetectingHardwareEncoders ? '检测中…' : '重新检测' }}</span>
+                     </button>
+                   </div>
+                </div>
+              </transition>
+            </Teleport>
           </div>
         </div>
 
-        <!-- 检测状态与重新检测 -->
-        <div class="flex items-center justify-between mt-3">
-          <div class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span v-if="isDetectingHardwareEncoders">{{ detectHint }}</span>
-            <span v-else-if="hardwareSupport">上次检测时间：{{ formatTime(hardwareSupport.tested_at) }}</span>
-            <span v-else>尚未检测硬件编码器</span>
-          </div>
-          <button
-            class="px-2 py-1 text-xs font-medium rounded-md transition-colors border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border disabled:opacity-50"
-            @click="refreshHardware"
-            :disabled="isDetectingHardwareEncoders"
-          >
-            重新检测
-          </button>
-        </div>
+        <!-- 移除外部的检测状态与重新检测行，内容已移动到弹出框内 -->
+        
     </div>
     
 
@@ -95,9 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
-import { CheckCircle, X, AlertTriangle, Check, Zap, Ban } from 'lucide-vue-next';
+import { CheckCircle, X, AlertTriangle, Check, Zap, Ban, Clock, RefreshCw, Loader2 } from 'lucide-vue-next';
 
 interface HardwareOption {
   value: string;
@@ -348,8 +365,7 @@ const handleCpuEncoding = () => {
   console.log('当前编码格式:', props.currentVideoCodec);
 };
 
-const showSupportedFormats = ref(false);
-
+// 恢复：硬件加速开关切换
 const toggleHardwareAcceleration = () => {
   if (hardwareAcceleration.value.value === 'gpu') {
     hardwareAcceleration.value = { value: 'cpu', name: 'CPU编码' };
@@ -357,6 +373,43 @@ const toggleHardwareAcceleration = () => {
   } else {
     hardwareAcceleration.value = { value: 'gpu', name: '显卡加速' };
     handleGpuAcceleration();
+  }
+};
+
+const showSupportedFormats = ref(false);
+
+const supportBtnRef = ref<HTMLElement | null>(null);
+const supportPopupRef = ref<HTMLElement | null>(null);
+const popupPosition = ref({ top: 0, left: 0 });
+
+const calcPopupPosition = () => {
+  if (!supportBtnRef.value) return;
+  const btnRect = supportBtnRef.value.getBoundingClientRect();
+  const width = supportPopupRef.value?.offsetWidth ?? 384; // 24rem
+  const height = supportPopupRef.value?.offsetHeight ?? 0;
+  // 右对齐到按钮，向上展开
+  let left = btnRect.right + window.scrollX - width;
+  left = Math.min(left, window.scrollX + window.innerWidth - width - 8);
+  left = Math.max(left, window.scrollX + 8);
+  let top = btnRect.top + window.scrollY - height - 12; // 位于按钮上方 12px
+  top = Math.max(top, window.scrollY + 8); // 不要超出视口顶部
+  popupPosition.value = { top, left };
+};
+
+// 点击外部关闭弹出层
+const onDocClick = (e: MouseEvent) => {
+  if (!showSupportedFormats.value) return;
+  const target = e.target as Node;
+  if (supportBtnRef.value && (target === supportBtnRef.value || supportBtnRef.value.contains(target))) return;
+  if (supportPopupRef.value && supportPopupRef.value.contains(target)) return;
+  showSupportedFormats.value = false;
+};
+
+const toggleSupportedFormats = async () => {
+  showSupportedFormats.value = !showSupportedFormats.value;
+  await nextTick();
+  if (showSupportedFormats.value) {
+    calcPopupPosition();
   }
 };
 
@@ -382,7 +435,31 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
 onMounted(async () => {
   await detectPlatform();
   await loadHardwareSupport();
+  window.addEventListener('resize', calcPopupPosition);
+  window.addEventListener('scroll', calcPopupPosition, true);
+  document.addEventListener('click', onDocClick);
 });
 
-
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', calcPopupPosition);
+  window.removeEventListener('scroll', calcPopupPosition, true);
+  document.removeEventListener('click', onDocClick);
+});
 </script>
+
+<style scoped>
+.fade-up-enter-active,
+.fade-up-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fade-up-enter-from,
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.fade-up-enter-to,
+.fade-up-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>

@@ -12,6 +12,9 @@
           v-model="format"
           :options="formatOptions"
           placeholder="选择输出格式"
+          dropdown-direction="down"
+          :teleport-to-body="true"
+          :max-visible-options="4"
         />
       </div>
       
@@ -27,8 +30,9 @@
           v-model="videoCodec"
           :options="videoCodecOptions"
           placeholder="选择视频编码"
-          dropdown-direction="down"
-          :max-visible-options="3"
+          dropdown-direction="up"
+          :teleport-to-body="true"
+          :max-visible-options="4"
         />
       </div>
       
@@ -86,6 +90,8 @@
             :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
             :placeholder="metadata?.resolution ? `${metadata.resolution} (原始)` : '选择分辨率'"
             dropdown-direction="up"
+            :teleport-to-body="true"
+            :max-visible-options="4"
           />
         </div>
       </div>

@@ -31,55 +31,66 @@
       </span>
     </button>
 
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="transform scale-95 opacity-0"
-      enter-to-class="transform scale-100 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="transform scale-100 opacity-100"
-      leave-to-class="transform scale-95 opacity-0"
-    >
+    <!-- Teleport 模式（避免被遮挡） -->
+    <Teleport v-if="isOpen" to="body">
       <div
-        v-if="isOpen"
-        class="absolute z-[99999] w-full rounded-lg border border-gray-200 dark:border-dark-border overflow-auto custom-scrollbar bg-white dark:bg-[#232529]"
-        :class="{
-          'mt-2': dropdownDirection === 'down',
-          'mb-2 bottom-full': dropdownDirection === 'up'
-        }"
-        :style="{ 
-          maxHeight: Math.min(options.length, props.maxVisibleOptions) * 40 + 16 + 'px'
-        }"
-        style="pointer-events: auto !important; user-select: auto !important;"
+        class="fixed z-[99999]"
+        :style="{ top: dropdownPos.top + 'px', left: dropdownPos.left + 'px', width: dropdownPos.width + 'px', height: dropdownPos.height + 'px' }"
+        @click.stop
       >
-        <div class="py-1">
+        <transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="transform scale-95 opacity-0"
+          enter-to-class="transform scale-100 opacity-100"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="transform scale-100 opacity-100"
+          leave-to-class="transform scale-95 opacity-0"
+        >
           <div
-            v-for="option in options"
-            :key="option.value"
-            class="relative cursor-pointer select-none py-2.5 mx-2 px-3 text-gray-900 dark:text-dark-text hover:bg-amber-50 dark:hover:bg-dark-border transition-colors duration-150 rounded-lg my-1"
+            v-if="isOpen"
+            ref="dropdownRef"
+            class="absolute w-full rounded-lg border border-gray-200 dark:border-dark-border overflow-auto custom-scrollbar bg-white dark:bg-[#232529]"
             :class="{
-              'bg-amber-100 dark:bg-[#4a4a4a] text-amber-900 dark:text-dark-accent': option.value === modelValue
+              'top-full mt-2': dropdownDirection === 'down',
+              'bottom-full mb-2': dropdownDirection === 'up'
             }"
+            :style="{ maxHeight: (Math.min(options.length, props.maxVisibleOptions) * (computedItemHeight + 4) + 12) + 'px' }"
             style="pointer-events: auto !important; user-select: auto !important;"
-            @click.stop="selectOption(option)"
           >
-            <span class="block truncate text-sm">
-              {{ option.label }}
-            </span>
-            <span
-              v-if="option.value === modelValue"
-              class="absolute inset-y-0 right-0 flex items-center pr-4 text-amber-600 dark:text-dark-accent"
-            >
-              <Check class="h-5 w-5" />
-            </span>
+            <div class="py-1">
+              <div
+                v-for="option in options"
+                :key="option.value"
+                class="relative cursor-pointer select-none py-2.5 mx-2 px-3 text-gray-900 dark:text-dark-text hover:bg-amber-50 dark:hover:bg-dark-border transition-colors duration-150 rounded-lg my-1"
+                data-option-item
+                :class="{
+                  'bg-amber-100 dark:bg-[#4a4a4a] text-amber-900 dark:text-dark-accent': option.value === modelValue
+                }"
+                style="pointer-events: auto !important; user-select: auto !important;"
+                @click.stop="selectOption(option)"
+              >
+                <span class="block truncate text-sm">
+                  {{ option.label }}
+                </span>
+                <span
+                  v-if="option.value === modelValue"
+                  class="absolute inset-y-0 right-0 flex items-center pr-4 text-amber-600 dark:text-dark-accent"
+                >
+                  <Check class="h-5 w-5" />
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+        </transition>
       </div>
-    </transition>
+    </Teleport>
+
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { Check } from 'lucide-vue-next';
 
 interface Option {
@@ -94,13 +105,15 @@ interface Props {
   dropdownDirection?: 'down' | 'up';
   disabled?: boolean;
   maxVisibleOptions?: number;
+  teleportToBody?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: '请选择...',
   dropdownDirection: 'down',
   disabled: false,
-  maxVisibleOptions: 4
+  maxVisibleOptions: 4,
+  teleportToBody: true
 });
 
 const emit = defineEmits<{
@@ -108,24 +121,65 @@ const emit = defineEmits<{
 }>();
 const isOpen = ref(false);
 const selectRef = ref<HTMLElement>();
+const dropdownRef = ref<HTMLElement>();
+const dropdownPos = ref({ top: 0, left: 0, width: 0, height: 0 });
+const computedItemHeight = ref(48); // 估算项高度，打开后用实际测量覆盖
 
 const selectedOption = computed(() => {
   return props.options.find(option => option.value === props.modelValue);
 });
 
+const updateDropdownFixedPos = () => {
+  if (!selectRef.value) return;
+  const rect = selectRef.value.getBoundingClientRect();
+  dropdownPos.value = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+};
+
+const computeItemHeight = () => {
+  if (!dropdownRef.value) return;
+  const el = dropdownRef.value.querySelector('[data-option-item]') as HTMLElement | null;
+  if (!el) return;
+  const styles = window.getComputedStyle(el);
+  const height = el.getBoundingClientRect().height;
+  // 不将上下 margin 计入单项高度，防止计算溢出导致显示 4.5 项
+  computedItemHeight.value = Math.ceil(height);
+};
+
 const toggleDropdown = () => {
   if (props.disabled) return;
   isOpen.value = !isOpen.value;
+  if (isOpen.value) {
+    updateDropdownFixedPos();
+    window.addEventListener('scroll', updateDropdownFixedPos, true);
+    window.addEventListener('resize', updateDropdownFixedPos);
+    nextTick(() => computeItemHeight());
+    window.addEventListener('resize', computeItemHeight);
+  } else {
+    window.removeEventListener('scroll', updateDropdownFixedPos, true);
+    window.removeEventListener('resize', updateDropdownFixedPos);
+    window.removeEventListener('resize', computeItemHeight);
+  }
 };
 
 const selectOption = (option: Option) => {
   emit('update:modelValue', option.value);
   isOpen.value = false;
+  window.removeEventListener('scroll', updateDropdownFixedPos, true);
+  window.removeEventListener('resize', updateDropdownFixedPos);
+  window.removeEventListener('resize', computeItemHeight);
 };
 
 const handleClickOutside = (event: Event) => {
-  if (selectRef.value && !selectRef.value.contains(event.target as Node)) {
+  const target = event.target as Node;
+  // 如果点击发生在 Teleport 的下拉框内部，不关闭
+  if (dropdownRef.value && dropdownRef.value.contains(target)) {
+    return;
+  }
+  if (selectRef.value && !selectRef.value.contains(target)) {
     isOpen.value = false;
+    window.removeEventListener('scroll', updateDropdownFixedPos, true);
+    window.removeEventListener('resize', updateDropdownFixedPos);
+    window.removeEventListener('resize', computeItemHeight);
   }
 };
 
@@ -135,6 +189,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('scroll', updateDropdownFixedPos, true);
+  window.removeEventListener('resize', updateDropdownFixedPos);
+  window.removeEventListener('resize', computeItemHeight);
 });
 </script>
 

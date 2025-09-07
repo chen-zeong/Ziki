@@ -18,16 +18,16 @@
           
           <!-- 已填充的进度条 -->
           <div 
-            class="absolute h-3 bg-gradient-to-r from-[#558ee1] to-[#4a7bc8] dark:from-[#4a7bc8] dark:to-[#3d6ba3] rounded-full shadow-sm"
-            :style="{ width: qualityValue + '%' }"
+            class="absolute h-3 rounded-full shadow-sm"
+            :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
           ></div>
           
           <!-- 自定义的滑块 -->
           <div 
-             class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 border-[#558ee1] dark:border-[#4a7bc8] cursor-pointer transition-transform duration-100 ease-out hover:scale-105"
-             :class="{ 'scale-105': showTooltip }"
-             :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform' }"
-           >
+            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105"
+            :class="{ 'scale-105': showTooltip }"
+            :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
+          >
              <!-- 滑块内部高光效果 -->
              <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
            </div>
@@ -78,9 +78,10 @@
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 8
-                ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
+                ? 'text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
             ]"
+            :style="selectedBitDepth === 8 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
           >
             8bit
           </button>
@@ -93,10 +94,11 @@
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 10
-                ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
+                ? 'text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
               !canUse10bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
             ]"
+            :style="selectedBitDepth === 10 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
           >
             10bit
           </button>
@@ -109,10 +111,11 @@
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 12
-                ? 'bg-[#558ee1] text-white border-[#4b7fd0]'
+                ? 'text-white'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
               !canUse12bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
             ]"
+            :style="selectedBitDepth === 12 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
           >
             12bit
           </button>
