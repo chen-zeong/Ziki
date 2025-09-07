@@ -146,14 +146,14 @@ const onCompress = async (settings: CompressionSettings) => {
   console.log('Starting compression with output path:', outputPath.value);
   console.log('Time range settings:', timeRangeSettings.value);
 
-  // 将时间段设置集成到压缩设置中
+  // 优先使用“当前选中任务”的持久化时间段（由 handleTimeRangeSettingsUpdate 写入），
+  // 若该任务未设置时间段，则不要从全局 UI 继承上一任务的时间段，避免污染。
+  const taskTimeRange = selectedTask.value?.settings?.timeRange;
+
   const compressionSettings = {
     ...settings,
-    timeRange: timeRangeSettings.value.enabled ? {
-      start: timeToSeconds(timeRangeSettings.value.timeRange.start),
-      end: timeToSeconds(timeRangeSettings.value.timeRange.end)
-    } : undefined
-  };
+    timeRange: taskTimeRange !== undefined ? taskTimeRange : undefined
+  } as CompressionSettings;
 
   try {
     await startCompression(compressionSettings, outputPath.value);

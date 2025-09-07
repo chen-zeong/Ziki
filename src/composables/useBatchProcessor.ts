@@ -50,11 +50,12 @@ export function useBatchProcessor() {
       return;
     }
 
-    // 如果提供了覆盖设置，则应用到所有待处理任务
+    // 如果提供了覆盖设置，则应用到所有待处理任务（不覆盖 timeRange，保持每个任务自己的时间段）
     if (overrideSettings) {
-      console.log('Applying override settings to all batch tasks:', overrideSettings);
+      console.log('Applying override settings to all batch tasks (excluding timeRange):', overrideSettings);
+      const { timeRange: _ignoredTimeRange, ...overrideWithoutTimeRange } = overrideSettings as any;
       pendingTasks.forEach(task => {
-        task.settings = { ...task.settings, ...overrideSettings };
+        task.settings = { ...task.settings, ...overrideWithoutTimeRange } as CompressionSettings;
       });
     }
 

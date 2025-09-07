@@ -465,10 +465,15 @@ const resetFrameData = () => {
 
 
 // 监听videoPath变化：被选中任务变化或导入新任务时，自动加载第1帧（索引0）
-watch(() => props.videoPath, (newPath) => {
+watch(() => props.videoPath, (newPath, oldPath) => {
   if (!newPath) {
     resetFrameData();
   } else {
+    // 当视频源发生变化时，清除该路径对应的时长缓存，避免复用上一个任务的时长
+    try {
+      if (oldPath) videoDurationCache.value.delete(oldPath);
+      if (newPath) videoDurationCache.value.delete(newPath);
+    } catch {}
     // 清理缓存并自动选择第一帧
     frameCache.value.clear();
     loadingFrames.value.clear();
@@ -478,13 +483,34 @@ watch(() => props.videoPath, (newPath) => {
 }, { immediate: true });
 
 // 监听compressedVideoFilePath变化：压缩完成或路径变化时，刷新当前选中帧（若未选中则取第1帧）
-watch(() => props.compressedVideoFilePath, () => {
-  // 完全清理所有缓存，确保重新生成所有帧
+watch(() => props.compressedVideoFilePath, (newPath, oldPath) => {
+  // 每次压缩视频文件路径变化时，清除对应路径（以及旧路径）的时长缓存，
+  // 防止由于同名覆盖（如 *_compressed.mp4）导致读取到上一次的缓存时长（例如1分钟）。
+  try {
+    if (oldPath) videoDurationCache.value.delete(oldPath);
+    if (newPath) videoDurationCache.value.delete(newPath);
+  } catch {}
+  // 完全清理帧缓存，确保重新生成所有帧
   frameCache.value.clear();
   loadingFrames.value.clear();
   const index = selectedFrameIndex.value ?? 0;
   selectFrame(index);
 }, { immediate: true });
+
+// 监听任务状态变化：当进入处理或完成态时，清理缓存，避免同一路径覆盖导致的旧时长被复用
+watch(() => props.taskStatus, (newStatus) => {
+  if (newStatus === 'processing' || newStatus === 'completed') {
+    try {
+      if (props.compressedVideoFilePath) {
+        videoDurationCache.value.delete(props.compressedVideoFilePath);
+      }
+    } catch {}
+    frameCache.value.clear();
+    loadingFrames.value.clear();
+    const index = selectedFrameIndex.value ?? 0;
+    if (props.videoPath) selectFrame(index);
+  }
+});
 
 // 如果自定义时间范围变化，也刷新当前帧
 watch(() => props.timeRange, () => {
