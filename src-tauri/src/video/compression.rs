@@ -862,3 +862,65 @@ pub async fn delete_task(taskId: String) -> Result<(), String> {
 
   Ok(())
 }
+
+// ======================
+// New: terminate all tasks
+// ======================
+/// 终止所有正在运行的压缩进程，并清理任务信息。
+pub async fn terminate_all_running_processes() {
+    println!("[Shutdown] Terminating all running FFmpeg processes...");
+    // 终止进程
+    {
+        let process_manager = get_process_manager();
+        let mut processes = process_manager.lock().await;
+        // 使用drain安全地取出所有子进程
+        let mut killed_count = 0usize;
+        let mut failed: Vec<(String, String)> = Vec::new();
+        for (task_id, mut child) in processes.drain() {
+            match child.kill().await {
+                Ok(_) => {
+                    println!("[Shutdown] Killed task process: {}", task_id);
+                    killed_count += 1;
+                }
+                Err(e) => {
+                    println!("[Shutdown] Failed to kill task {}: {}", task_id, e);
+                    failed.push((task_id, e.to_string()));
+                }
+            }
+        }
+        println!("[Shutdown] Kill summary -> success: {}, failed: {}", killed_count, failed.len());
+        if !failed.is_empty() {
+            for (id, err) in failed { println!("[Shutdown]   - {}: {}", id, err); }
+        }
+    }
+    // 在清空任务信息之前，向前端发送取消事件
+    let snapshot: Vec<(String, tauri::AppHandle)> = {
+        let task_info_manager = get_task_info_manager();
+        let task_infos = task_info_manager.lock().await;
+        task_infos
+            .iter()
+            .map(|(id, info)| (id.clone(), info.app_handle.clone()))
+            .collect()
+    };
+    for (task_id, app_handle) in snapshot {
+        let event_name = format!("compression-cancelled-{}", task_id);
+        let _ = app_handle.emit(&event_name, json!({
+            "taskId": task_id,
+            "status": "cancelled"
+        }));
+    }
+    // 清空任务信息
+    {
+        let task_info_manager = get_task_info_manager();
+        let mut task_infos = task_info_manager.lock().await;
+        task_infos.clear();
+        println!("[Shutdown] Cleared task infos");
+    }
+}
+
+/// 可选：暴露为前端可调用的命令
+#[tauri::command]
+pub async fn terminate_all_tasks() -> Result<(), String> {
+    terminate_all_running_processes().await;
+    Ok(())
+}

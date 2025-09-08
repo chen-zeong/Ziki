@@ -28,7 +28,7 @@ export interface VideoFile {
 export interface CompressionTask {
   id: string;
   file: VideoFile;
-  status: 'pending' | 'queued' | 'processing' | 'paused' | 'completed' | 'failed';
+  status: 'pending' | 'queued' | 'processing' | 'paused' | 'completed' | 'failed' | 'cancelled';
   progress: number;
   originalSize: number;
   compressedSize?: number;
