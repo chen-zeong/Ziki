@@ -43,10 +43,10 @@ const batchButtonText = computed(() => {
   return '批量压缩';
 });
 
-// 获取当前选中任务
+// 获取当前选中任务（与 MainContent 保持一致，按 file.id 匹配）
 const selectedTask = computed(() => {
   if (!props.currentFile) return null;
-  return props.tasks.find(t => t.id === props.currentFile.id) || null;
+  return props.tasks.find(t => t.file?.id === props.currentFile.id) || null;
 });
 
 // 底部压缩按钮的文本
@@ -62,6 +62,9 @@ const isCompressButtonDisabled = computed(() => {
   const status = selectedTask.value?.status;
   return status === 'processing' || status === 'completed';
 });
+
+// 当前任务是否锁定（完成后不可更改设置）
+const isSettingsLocked = computed(() => selectedTask.value?.status === 'completed');
 
 const handleOutputPathUpdate = (path: string) => {
   emit('output-path-update', path);
@@ -86,6 +89,7 @@ const toggleOutputFolderPopup = () => {
 };
 
 const toggleTimeRangePopup = () => {
+  if (isSettingsLocked.value) return; // 已完成任务禁止打开时间段设置
   emit('toggle-time-range-popup');
 };
 </script>
@@ -141,6 +145,8 @@ const toggleTimeRangePopup = () => {
       <div class="relative">
         <button
           class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-700 dark:text-dark-secondary hover:text-gray-900 dark:hover:text-gray-100"
+          :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSettingsLocked }"
+          :disabled="isSettingsLocked"
           @click="toggleTimeRangePopup"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="timeRangeSettings.enabled ? 'text-[#518dd6] dark:text-[#518dd6]' : 'text-gray-700 dark:text-dark-secondary'">
@@ -156,6 +162,7 @@ const toggleTimeRangePopup = () => {
               :model-value="timeRangeSettings" 
               @update:model-value="$emit('update:timeRangeSettings', $event)"
               :metadata="currentFile?.metadata"
+              :disabled="isSettingsLocked"
               @validation-change="handleTimeValidationChange"
             />
           </div>

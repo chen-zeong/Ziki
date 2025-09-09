@@ -2,9 +2,11 @@
   <div class="h-full flex flex-col">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
-      <div class="h-full">
+      <div class="h-full relative">
+        <!-- 已完成任务时的交互遮罩 -->
+        <div v-if="isSettingsLocked" class="absolute inset-0 z-10 cursor-not-allowed" style="background: transparent;"></div>
         <!-- 基础设置内容 -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-60': isSettingsLocked }">
           <div class="space-y-4">
             <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" :hide-quality="true" />
           </div>
@@ -56,6 +58,7 @@ const currentVideoMetadata = computed(() => {
 interface Props {
   isProcessing?: boolean;
   videoPath?: string;
+  taskStatus?: string;
 }
 
 interface Emits {
@@ -63,10 +66,14 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isProcessing: false
+  isProcessing: false,
+  taskStatus: 'pending'
 });
 
 const emit = defineEmits<Emits>();
+
+// 是否锁定设置（任务已完成时）
+const isSettingsLocked = computed(() => props.taskStatus === 'completed');
 
 // 使用shallowRef避免深度响应式导致的循环更新
 const formatSettings = shallowRef<Partial<CompressionSettings>>({

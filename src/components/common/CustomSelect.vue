@@ -36,7 +36,6 @@
       <div
         class="fixed z-[99999]"
         :style="{ top: dropdownPos.top + 'px', left: dropdownPos.left + 'px', width: dropdownPos.width + 'px', height: dropdownPos.height + 'px' }"
-        @click.stop
       >
         <transition
           enter-active-class="transition duration-200 ease-out"

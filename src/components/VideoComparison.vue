@@ -31,6 +31,7 @@
       ref="videoSettingsPanelRef"
       :video-path="videoPath"
       :is-processing="isProcessing"
+      :task-status="taskStatus"
       @compress="handleCompress"
     />
   </div>

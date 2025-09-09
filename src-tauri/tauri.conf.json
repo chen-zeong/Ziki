@@ -14,10 +14,10 @@
     "windows": [
       {
         "titleBarStyle": "Overlay",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
+        "width": 1147,
+        "height": 852,
+        "minWidth": 1147,
+        "minHeight": 852,
         "dragDropEnabled": true
       }
     ],
