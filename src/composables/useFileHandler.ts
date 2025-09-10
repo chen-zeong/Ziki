@@ -306,19 +306,21 @@ export function useFileHandler() {
           name: displayName,
           size: actualSize,
           path: filePath,
-          originalUrl: URL.createObjectURL(file)
+          originalUrl: (typeof window !== 'undefined' && (window as any).__TAURI__ && filePath)
+            ? convertFileSrc(filePath)
+            : URL.createObjectURL(file)
         };
         
-
-        
-        // Generate thumbnail for video file
-        try {
-          const thumbnailUrl = await invoke<string>('generate_thumbnail', {
-            videoPath: filePath
-          });
-          videoFile.thumbnailUrl = thumbnailUrl;
-        } catch (error) {
-          console.warn('Failed to generate thumbnail for', displayName, ':', error);
+        // Only generate thumbnail for video files
+        if (file.type.startsWith('video/')) {
+          try {
+            const thumbnailUrl = await invoke<string>('generate_thumbnail', {
+              videoPath: filePath
+            });
+            videoFile.thumbnailUrl = thumbnailUrl;
+          } catch (error) {
+            console.warn('Failed to generate thumbnail for', displayName, ':', error);
+          }
         }
         
         // Get video metadata for video files
@@ -351,20 +353,52 @@ export function useFileHandler() {
           isUploaderVisible.value = false;
         }
         
+        // Determine task type and defaults
+        const isVideo = file.type.startsWith('video/');
+        const taskType = isVideo ? 'video' : 'image';
+        
         // Add task for this file
         const task: CompressionTask = {
           id: videoFile.id,
+          type: taskType as any,
           file: videoFile,
           status: 'pending',
           progress: 0,
           originalSize: actualSize,
-          settings: {
-            format: 'mp4',
-            videoCodec: 'libx264',
-            resolution: 'original',
-            qualityType: 'crf',
-            crfValue: 23
-          },
+          settings: isVideo
+            ? {
+                format: 'mp4',
+                videoCodec: 'libx264',
+                resolution: 'original',
+                qualityType: 'crf',
+                crfValue: 23
+              }
+            : {
+                // 图片任务默认：保持原始分辨率；PNG 的首次导入默认输出 JPEG，第二次才默认 PNG
+                format: (() => {
+                  const lower = displayName.toLowerCase();
+                  if (lower.endsWith('.png')) {
+                    try {
+                      const done = localStorage.getItem('pngFirstDefaultToJpgDone') === '1';
+                      if (!done) {
+                        localStorage.setItem('pngFirstDefaultToJpgDone', '1');
+                        return 'jpeg';
+                      }
+                      return 'png';
+                    } catch (_) {
+                      // 如果 localStorage 不可用，退回原逻辑
+                      return 'png';
+                    }
+                  }
+                  if (lower.endsWith('.webp')) return 'webp';
+                  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'jpeg';
+                  return 'jpeg';
+                })(),
+                videoCodec: 'image',
+                resolution: 'original',
+                qualityType: 'crf',
+                crfValue: 80 // 0-100 画质滑块默认 80
+              },
           createdAt: new Date()
         };
         tasks.value.unshift(task);
@@ -474,7 +508,43 @@ export function useFileHandler() {
         activeProgressListeners.delete(task.id);
       }
       
-      // 设置进度监听器
+      // 分流：视频走 compress_video，图片走 compress_image（图片暂不设置进度监听器）
+      if (task.type === 'image') {
+        try {
+          const result = await invoke<CompressionResult>('compress_image', {
+            taskId: task.id,
+            inputPath: task.file.path,
+            outputPath: outputPath,
+            settings: backendSettings
+          });
+
+          if (result.success) {
+            task.status = 'completed';
+            task.progress = 100;
+            task.originalSize = result.originalSize;
+            task.compressedSize = result.compressedSize || 0;
+            task.completedAt = new Date();
+            task.file.compressedPath = result.outputPath;
+            task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
+            task.outputDirectory = outputDir;
+            if (currentFile.value && currentFile.value.id === task.file.id) {
+              currentFile.value = { ...task.file };
+            }
+          } else {
+            task.status = 'failed';
+            task.error = result.error || 'Compression failed';
+          }
+        } catch (compressionError) {
+          const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
+          task.status = 'failed';
+          task.error = errorMessage;
+        } finally {
+          isProcessing.value = false;
+        }
+        return; // 图片路径已完成
+      }
+      
+      // 设置进度监听器（仅视频）
       console.log(`Setting up progress listener for task: ${task.file.name} (${task.file.path})`);
       const unlisten = await listen(`compression-progress-${task.id}`, (event: any) => {
         const { taskId, progress } = event.payload;

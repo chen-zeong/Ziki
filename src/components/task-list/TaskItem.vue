@@ -16,8 +16,8 @@
         <div class="flex-shrink-0">
           <div class="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <img 
-              v-if="task.file.thumbnailUrl"
-              :src="task.file.thumbnailUrl"
+              v-if="task.file.thumbnailUrl || task.type === 'image'"
+              :src="task.file.thumbnailUrl || task.file.originalUrl"
               :alt="task.file.name"
               class="w-full h-full object-cover"
               @error="handleThumbnailError"

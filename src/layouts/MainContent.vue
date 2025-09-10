@@ -50,10 +50,16 @@ const computedTimeRange = computed(() => {
   return { start, end };
 });
 
-// 新增：根据当前文件匹配任务，获取任务状态
+// 根据当前文件匹配任务状态
 const currentTaskStatus = computed(() => {
   const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
   return task?.status || 'pending';
+});
+
+// 根据当前文件匹配任务类型（video/image）
+const currentTaskType = computed(() => {
+  const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
+  return (task as any)?.type || 'video';
 });
 
 // 时间格式转换：HH:MM:SS 转换为秒数
@@ -138,10 +144,10 @@ defineExpose({
         :after-image="afterImage"
         :is-processing="isProcessing"
         :task-status="currentTaskStatus"
-        :video-path="currentFile?.path"
-        :compressed-video-path="currentFile?.compressedUrl"
-        :compressed-video-file-path="currentFile?.compressedPath"
-        :time-range="computedTimeRange"
+        :video-path="currentTaskType === 'video' ? currentFile?.path : undefined"
+        :compressed-video-path="currentTaskType === 'video' ? currentFile?.compressedUrl : undefined"
+        :compressed-video-file-path="currentTaskType === 'video' ? currentFile?.compressedPath : undefined"
+        :time-range="currentTaskType === 'video' ? computedTimeRange : undefined"
         @reset="onReset"
         @compress="emit('compress', $event)"
         @update-images="emit('update-images', $event)"

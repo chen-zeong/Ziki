@@ -419,7 +419,6 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
     await loadHardwareSupport();
   }
   
-  // 如果当前选择的是显卡加速但新编码格式不支持，自动切换到CPU编码
   if (hardwareAcceleration.value.value === 'gpu' && newCodec && !checkHardwareSupport(newCodec)) {
     selectHardware({
       value: 'cpu',
@@ -429,12 +428,12 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
       available: true
     });
   }
-});
+// 修正为标准写法
+}, { immediate: true }
+);
 
-// 组件挂载时初始化
 onMounted(async () => {
   await detectPlatform();
-  await loadHardwareSupport();
   window.addEventListener('resize', calcPopupPosition);
   window.addEventListener('scroll', calcPopupPosition, true);
   document.addEventListener('click', onDocClick);

@@ -1,6 +1,8 @@
 // 导出视频格式相关类型
 export type { VideoFormatsConfig, VideoFormat, VideoCodec, AudioCodec } from './types/videoFormats';
 
+export type TaskType = 'video' | 'image';
+
 export interface VideoMetadata {
   format: string; // 视频格式，如 'mp4', 'mkv' 等
   videoCodec: string; // 视频编码，如 'H.264', 'H.265' 等
@@ -27,12 +29,13 @@ export interface VideoFile {
 
 export interface CompressionTask {
   id: string;
+  type: TaskType; // 新增：任务类型（视频/图片）
   file: VideoFile;
   status: 'pending' | 'queued' | 'processing' | 'paused' | 'completed' | 'failed' | 'cancelled';
   progress: number;
   originalSize: number;
   compressedSize?: number;
-  compressedMetadata?: VideoMetadata; // 压缩后的视频元数据
+  compressedMetadata?: VideoMetadata; // 压缩后的视频元数据（图片任务可忽略）
   settings: CompressionSettings;
   outputDirectory?: string; // 输出文件夹路径
   createdAt: Date;
@@ -52,17 +55,17 @@ export interface TimeRange {
 }
 
 export interface CompressionSettings {
-  format: string; // 视频容器格式，如 'mp4', 'mkv', 'webm' 等
-  videoCodec: string; // 视频编码，如 'H.264', 'H.265', 'VP9' 等
+  format: string; // 视频容器格式，如 'mp4', 'mkv', 'webm' 等；图片任务同样使用目标格式 'jpeg' | 'png' | 'webp'
+  videoCodec: string; // 视频编码，如 'H.264', 'H.265', 'VP9' 等；图片任务可填 'image'
   resolution: 'original' | '1920x1080' | '1280x720' | '854x480' | 'custom';
   customResolution?: CustomResolution;
-  qualityType: 'crf' | 'qv' | 'profile'; // 支持多种质量参数类型
-  crfValue?: number; // CRF值，用于软件编码
+  qualityType: 'crf' | 'qv' | 'profile'; // 现阶段保留原有定义，图片任务临时复用crfValue表达0-100质量
+  crfValue?: number; // CRF值或图片质量（0-100）
   qvValue?: number; // -q:v值，用于硬件加速
   profileValue?: string; // Profile值，用于ProRes等编码器
-  timeRange?: TimeRange;
+  timeRange?: TimeRange; // 图片任务将忽略
   hardwareAcceleration?: 'cpu' | 'gpu';
-  bitDepth?: 8 | 10 | 12; // 色彩深度，支持8bit、10bit、12bit
+  bitDepth?: 8 | 10 | 12; // 色彩深度，支持8bit、10bit、12bit（图片任务忽略）
 }
 
 export interface CompressionResult {

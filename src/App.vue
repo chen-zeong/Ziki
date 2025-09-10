@@ -271,18 +271,31 @@ const handleBatchCompress = async () => {
     return;
   }
   
-  // 检查是否有排队中的任务需要恢复
-  const queuedTasks = tasks.value.filter(t => t.status === 'queued');
-  const pendingTasks = tasks.value.filter(t => t.status === 'pending');
+  // 获取当前选中任务类型
+  const selectedTask = currentFile.value && tasks.value.find(t => t.file.id === currentFile.value?.id);
+  const selectedTaskType = selectedTask?.type || null;
   
-  console.log('Queued tasks:', queuedTasks.length);
-  console.log('Pending tasks:', pendingTasks.length);
+  if (!selectedTaskType) {
+    console.log('没有选中的任务或任务类型未知，跳过批量压缩');
+    return;
+  }
+  
+  console.log('选中任务类型:', selectedTaskType);
+  
+  // 检查是否有排队中的任务需要恢复（仅该类型）
+  const queuedTasks = tasks.value.filter(t => t.status === 'queued' && t.type === selectedTaskType);
+  const pendingTasks = tasks.value.filter(t => t.status === 'pending' && t.type === selectedTaskType);
+  
+  console.log(`${selectedTaskType} 类型 - Queued tasks:`, queuedTasks.length);
+  console.log(`${selectedTaskType} 类型 - Pending tasks:`, pendingTasks.length);
   
   if (queuedTasks.length > 0 && pendingTasks.length === 0) {
     // 只有排队任务，恢复批量处理
-    console.log('Resuming batch compression for queued tasks');
+    console.log(`Resuming batch compression for queued ${selectedTaskType} tasks`);
+    // 创建仅包含该类型任务的临时数组
+    const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
     await resumeBatchCompression(
-      tasks.value,
+      filteredTasks,
       startCompression,
       switchToTask,
       outputPath.value,
@@ -290,9 +303,11 @@ const handleBatchCompress = async () => {
     );
   } else {
     // 开始新的批量压缩
-    console.log('Starting new batch compression');
+    console.log(`Starting new batch compression for ${selectedTaskType} tasks`);
+    // 创建仅包含该类型任务的临时数组
+    const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
     await startBatchCompression(
-      tasks.value,
+      filteredTasks,
       startCompression,
       switchToTask,
       outputPath.value,
@@ -494,6 +509,8 @@ onMounted(async () => {
   if (window.__TAURI__) {
     await initializeOutputPath();
   }
+  // 预加载硬件编码器支持，避免后续切换视频时卡顿
+  await invoke('get_hardware_encoder_support');
 });
 
 // 监听任务变化，确保不超过99个，同时在首次有任务时默认选中第一个

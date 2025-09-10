@@ -28,12 +28,20 @@ const emit = defineEmits([
   'update:timeRangeSettings'
 ]);
 
-// 仅统计“等待中”的任务数量（不包含排队中）
-const pendingTasksCount = computed(() => {
-  return props.tasks.filter(t => t.status === 'pending').length;
+// 获取当前选中任务（与 MainContent 保持一致，按 file.id 匹配）
+const selectedTask = computed(() => {
+  if (!props.currentFile) return null;
+  return props.tasks.find(t => t.file?.id === props.currentFile.id) || null;
 });
 
-// 当且仅当没有等待中的任务时禁用批量按钮
+// 仅统计“等待中/排队中”的任务数量，并且仅限于当前选中的任务类型
+const pendingTasksCount = computed(() => {
+  const type = selectedTask.value?.type;
+  if (!type) return 0;
+  return props.tasks.filter(t => (t.status === 'pending' || t.status === 'queued') && t.type === type).length;
+});
+
+// 当且仅当没有等待/排队中的任务时禁用批量按钮
 const isBatchButtonDisabled = computed(() => {
   return pendingTasksCount.value === 0;
 });
@@ -41,12 +49,6 @@ const isBatchButtonDisabled = computed(() => {
 // 批量按钮文案始终为“批量压缩”
 const batchButtonText = computed(() => {
   return '批量压缩';
-});
-
-// 获取当前选中任务（与 MainContent 保持一致，按 file.id 匹配）
-const selectedTask = computed(() => {
-  if (!props.currentFile) return null;
-  return props.tasks.find(t => t.file?.id === props.currentFile.id) || null;
 });
 
 // 底部压缩按钮的文本
@@ -65,6 +67,9 @@ const isCompressButtonDisabled = computed(() => {
 
 // 当前任务是否锁定（完成后不可更改设置）
 const isSettingsLocked = computed(() => selectedTask.value?.status === 'completed');
+
+// 仅在视频任务显示时间段设置
+const showTimeRangeUI = computed(() => selectedTask.value?.type === 'video');
 
 const handleOutputPathUpdate = (path: string) => {
   emit('output-path-update', path);
@@ -141,8 +146,8 @@ const toggleTimeRangePopup = () => {
       </div>
     </div>
     <div class="flex items-center space-x-3">
-      <!-- 自定义时间段开关 -->
-      <div class="relative">
+      <!-- 自定义时间段开关（仅视频显示） -->
+      <div class="relative" v-if="showTimeRangeUI">
         <button
           class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-700 dark:text-dark-secondary hover:text-gray-900 dark:hover:text-gray-100"
           :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSettingsLocked }"

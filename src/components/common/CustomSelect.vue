@@ -1,297 +1,201 @@
 <template>
-  <div class="relative" ref="selectRef">
+  <div :class="['relative', containerClass]" ref="triggerRef">
+    <!-- 触发按钮 -->
     <button
       type="button"
-      class="relative w-full h-10 cursor-pointer rounded-lg py-2 pl-3 pr-8 text-left border transition-all duration-200 custom-select-button"
-      :class="{
-        'custom-select-focused': isOpen,
-        'opacity-60 cursor-not-allowed': props.disabled
-      }"
-      :disabled="props.disabled"
-      style="pointer-events: auto !important; user-select: auto !important;"
+      class="w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-md px-3 py-2 text-left shadow-sm hover:bg-gray-50 dark:hover:bg-[#151515] focus:outline-none focus:ring-2 focus:ring-amber-500 relative pr-9"
       @click.stop="toggleDropdown"
     >
-      <span class="block truncate text-sm custom-select-text">
-        {{ selectedOption?.label || placeholder }}
-      </span>
-      <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-        <svg
-          class="h-5 w-5 text-gray-400 transition-transform duration-200"
-          :class="{ 'rotate-180': isOpen }"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-            clip-rule="evenodd"
-          />
-        </svg>
-      </span>
+      <span :class="['block truncate', isPlaceholder ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200']">{{ selectedLabel || placeholder }}</span>
+      <ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
     </button>
 
-    <!-- Teleport 模式（避免被遮挡） -->
-    <Teleport v-if="isOpen" to="body">
-      <div
-        class="fixed z-[99999]"
-        :style="{ top: dropdownPos.top + 'px', left: dropdownPos.left + 'px', width: dropdownPos.width + 'px', height: dropdownPos.height + 'px' }"
-      >
-        <transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="transform scale-95 opacity-0"
-          enter-to-class="transform scale-100 opacity-100"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="transform scale-100 opacity-100"
-          leave-to-class="transform scale-95 opacity-0"
+    <!-- Teleport 到 body，避免被父容器裁剪 -->
+    <teleport v-if="teleportToBody" to="body">
+      <!-- 点击遮罩 -->
+      <div v-show="isOpen" class="fixed inset-0 z-[9998]" @click="closeDropdown"></div>
+      <!-- 下拉容器（fixed + 计算定位） -->
+      <transition name="fade-scale">
+        <div
+          v-show="isOpen"
+          ref="dropdownRef"
+          class="fixed z-[9999] bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-auto"
+          :style="menuStyle"
         >
-          <div
-            v-if="isOpen"
-            ref="dropdownRef"
-            class="absolute w-full rounded-lg border border-gray-200 dark:border-dark-border overflow-auto custom-scrollbar bg-white dark:bg-[#232529]"
-            :class="{
-              'top-full mt-2': dropdownDirection === 'down',
-              'bottom-full mb-2': dropdownDirection === 'up'
-            }"
-            :style="{ maxHeight: (Math.min(options.length, props.maxVisibleOptions) * (computedItemHeight + 4) + 12) + 'px' }"
-            style="pointer-events: auto !important; user-select: auto !important;"
-          >
-            <div class="py-1">
-              <div
-                v-for="option in options"
-                :key="option.value"
-                class="relative cursor-pointer select-none py-2.5 mx-2 px-3 text-gray-900 dark:text-dark-text hover:bg-amber-50 dark:hover:bg-dark-border transition-colors duration-150 rounded-lg my-1"
-                data-option-item
-                :class="{
-                  'bg-amber-100 dark:bg-[#4a4a4a] text-amber-900 dark:text-dark-accent': option.value === modelValue
-                }"
-                style="pointer-events: auto !important; user-select: auto !important;"
-                @click.stop="selectOption(option)"
-              >
-                <span class="block truncate text-sm">
-                  {{ option.label }}
-                </span>
-                <span
-                  v-if="option.value === modelValue"
-                  class="absolute inset-y-0 right-0 flex items-center pr-4 text-amber-600 dark:text-dark-accent"
-                >
-                  <Check class="h-5 w-5" />
-                </span>
-              </div>
-            </div>
-          </div>
-        </transition>
-      </div>
-    </Teleport>
+          <ul class="py-1 text-sm text-gray-700 dark:text-gray-200 space-y-1">
+            <li
+              v-for="opt in visibleOptions"
+              :key="opt.value"
+              :class="[
+                'px-3 py-2 flex items-center justify-between cursor-pointer rounded-md mx-1',
+                opt.value === props.modelValue ? 'bg-amber-50 dark:bg-[#1a1405] text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-[#1c1c1c]'
+              ]"
+              @click.stop="selectOption(opt.value)"
+            >
+              <span class="truncate">{{ opt.label }}</span>
+              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500" />
+            </li>
+          </ul>
+        </div>
+      </transition>
+    </teleport>
 
-
+    <!-- 非 Teleport 模式（相对定位） -->
+    <div v-else>
+      <div v-show="isOpen" class="fixed inset-0 z-40" @click="closeDropdown"></div>
+      <transition name="fade-scale">
+        <div
+          v-show="isOpen"
+          ref="dropdownRef"
+          class="absolute z-50 w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 max-h-60 overflow-auto"
+          :class="dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'"
+        >
+          <ul class="py-1 text-sm text-gray-700 dark:text-gray-200 space-y-1">
+            <li
+              v-for="opt in visibleOptions"
+              :key="opt.value"
+              :class="[
+                'px-3 py-2 flex items-center justify-between cursor-pointer rounded-md mx-1',
+                opt.value === props.modelValue ? 'bg-amber-50 dark:bg-[#1a1405] text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-[#1c1c1c]'
+              ]"
+              @click.stop="selectOption(opt.value)"
+            >
+              <span class="truncate">{{ opt.label }}</span>
+              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500" />
+            </li>
+          </ul>
+        </div>
+      </transition>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-import { Check } from 'lucide-vue-next';
+import { ref, computed, watch, nextTick, onBeforeUnmount, type CSSProperties } from 'vue';
+import { ChevronDown, Check } from 'lucide-vue-next';
 
-interface Option {
-  value: string;
-  label: string;
-}
+interface Option { value: string; label: string }
 
 interface Props {
-  modelValue: string;
   options: Option[];
+  modelValue?: string;
   placeholder?: string;
-  dropdownDirection?: 'down' | 'up';
-  disabled?: boolean;
-  maxVisibleOptions?: number;
+  dropdownDirection?: 'up' | 'down';
   teleportToBody?: boolean;
+  maxVisibleOptions?: number;
+  containerClass?: string;
+  strictDirection?: boolean; // 新增：严格遵循方向，不触发自动翻转
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: '请选择...',
+  modelValue: undefined,
+  placeholder: '请选择',
   dropdownDirection: 'down',
-  disabled: false,
-  maxVisibleOptions: 4,
-  teleportToBody: true
+  teleportToBody: false,
+  maxVisibleOptions: 6,
+  containerClass: '',
+  strictDirection: false
 });
 
-const emit = defineEmits<{
-  'update:modelValue': [value: string];
-}>();
+const emit = defineEmits(['update:modelValue']);
+
 const isOpen = ref(false);
-const selectRef = ref<HTMLElement>();
-const dropdownRef = ref<HTMLElement>();
-const dropdownPos = ref({ top: 0, left: 0, width: 0, height: 0 });
-const computedItemHeight = ref(48); // 估算项高度，打开后用实际测量覆盖
+const triggerRef = ref<HTMLElement | null>(null);
+const dropdownRef = ref<HTMLElement | null>(null);
+const menuStyle = ref<CSSProperties>({});
 
-const selectedOption = computed(() => {
-  return props.options.find(option => option.value === props.modelValue);
+const selectedLabel = computed(() => {
+  const opt = props.options.find(o => o.value === props.modelValue);
+  return opt?.label || '';
 });
+const isPlaceholder = computed(() => !selectedLabel.value);
 
-const updateDropdownFixedPos = () => {
-  if (!selectRef.value) return;
-  const rect = selectRef.value.getBoundingClientRect();
-  dropdownPos.value = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
-};
+// 不再截断 options，使用 maxHeight 控制可视数量
+const visibleOptions = computed(() => props.options);
 
-const computeItemHeight = () => {
-  if (!dropdownRef.value) return;
-  const el = dropdownRef.value.querySelector('[data-option-item]') as HTMLElement | null;
-  if (!el) return;
-  const styles = window.getComputedStyle(el);
-  const height = el.getBoundingClientRect().height;
-  // 不将上下 margin 计入单项高度，防止计算溢出导致显示 4.5 项
-  computedItemHeight.value = Math.ceil(height);
-};
+function computePosition() {
+  const el = triggerRef.value;
+  const menu = dropdownRef.value;
+  if (!el || !menu) return;
+  const rect = el.getBoundingClientRect();
 
-const toggleDropdown = () => {
-  if (props.disabled) return;
+  // 先设置最小宽度，避免换行引发尺寸抖动
+  menuStyle.value.minWidth = rect.width + 'px';
+  menuStyle.value.width = rect.width + 'px';
+  menuStyle.value.left = rect.left + 'px';
+  // 默认向下展开，渲染后再根据实际高度纠正
+  menuStyle.value.top = rect.bottom + 4 + 'px';
+
+  nextTick(() => {
+    // 量测单项高度，计算所需 maxHeight，确保第 N 项完整可见
+    const firstItem = menu.querySelector('li') as HTMLElement | null;
+    const itemH = firstItem ? firstItem.getBoundingClientRect().height : 36; // 兜底 36px
+    const spacing = Math.max(0, (props.maxVisibleOptions - 1)) * 4; // space-y-1 => 4px * (N-1)
+    const padding = 8; // ul: py-1 => 8px
+    const border = 2; // 上下边框约 2px
+    const desiredMax = itemH * props.maxVisibleOptions + spacing + padding + border + 2; // +2 余量防裁剪
+
+    const viewportMax = window.innerHeight - 24; // 距离视窗边缘预留
+    menuStyle.value.maxHeight = Math.min(desiredMax, viewportMax) + 'px';
+
+    // 根据是否溢出决定向上展开；当 strictDirection=true 时，忽略自动翻转
+    const menuRect = menu.getBoundingClientRect();
+    const h = menuRect.height || desiredMax;
+    const wantUp = props.dropdownDirection === 'up';
+    const overflowDown = rect.bottom + 4 + h > window.innerHeight - 8;
+    if (wantUp || (!props.strictDirection && overflowDown)) {
+      const top = Math.max(8, rect.top - h - 4);
+      menuStyle.value.top = top + 'px';
+    } else {
+      // 明确向下且严格遵循方向时，保持向下
+      menuStyle.value.top = Math.min(window.innerHeight - h - 8, rect.bottom + 4) + 'px';
+    }
+  });
+}
+
+function toggleDropdown() {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
-    updateDropdownFixedPos();
-    window.addEventListener('scroll', updateDropdownFixedPos, true);
-    window.addEventListener('resize', updateDropdownFixedPos);
-    nextTick(() => computeItemHeight());
-    window.addEventListener('resize', computeItemHeight);
+    nextTick(() => {
+      computePosition();
+      window.addEventListener('scroll', computePosition, true);
+      window.addEventListener('resize', computePosition);
+    });
   } else {
-    window.removeEventListener('scroll', updateDropdownFixedPos, true);
-    window.removeEventListener('resize', updateDropdownFixedPos);
-    window.removeEventListener('resize', computeItemHeight);
+    window.removeEventListener('scroll', computePosition, true);
+    window.removeEventListener('resize', computePosition);
   }
-};
+}
 
-const selectOption = (option: Option) => {
-  emit('update:modelValue', option.value);
+function closeDropdown() {
   isOpen.value = false;
-  window.removeEventListener('scroll', updateDropdownFixedPos, true);
-  window.removeEventListener('resize', updateDropdownFixedPos);
-  window.removeEventListener('resize', computeItemHeight);
-};
+  window.removeEventListener('scroll', computePosition, true);
+  window.removeEventListener('resize', computePosition);
+}
 
-const handleClickOutside = (event: Event) => {
-  const target = event.target as Node;
-  // 如果点击发生在 Teleport 的下拉框内部，不关闭
-  if (dropdownRef.value && dropdownRef.value.contains(target)) {
-    return;
-  }
-  if (selectRef.value && !selectRef.value.contains(target)) {
-    isOpen.value = false;
-    window.removeEventListener('scroll', updateDropdownFixedPos, true);
-    window.removeEventListener('resize', updateDropdownFixedPos);
-    window.removeEventListener('resize', computeItemHeight);
-  }
-};
+function selectOption(val: string) {
+  emit('update:modelValue', val);
+  closeDropdown();
+}
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', computePosition, true);
+  window.removeEventListener('resize', computePosition);
 });
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-  window.removeEventListener('scroll', updateDropdownFixedPos, true);
-  window.removeEventListener('resize', updateDropdownFixedPos);
-  window.removeEventListener('resize', computeItemHeight);
+watch(() => props.modelValue, () => {
+  // 可根据需要添加联动逻辑
 });
 </script>
 
 <style scoped>
-/* 确保CustomSelect组件可以正常交互 */
-.relative {
-  user-select: auto !important;
-  -webkit-user-select: auto !important;
-  -moz-user-select: auto !important;
-  -ms-user-select: auto !important;
-  pointer-events: auto !important;
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
-
-.relative * {
-  user-select: auto !important;
-  -webkit-user-select: auto !important;
-  -moz-user-select: auto !important;
-  -ms-user-select: auto !important;
-  pointer-events: auto !important;
-}
-
-/* 自定义搜索框样式 */
-.custom-select-button {
-  background-color: #f3f4f6;
-  border-color: #dcdcdc;
-  color: #2c3e50;
-}
-
-.custom-select-text {
-  color: #2c3e50;
-}
-
-.custom-select-text::placeholder {
-  color: #7f8c8d;
-}
-
-.custom-select-button:hover {
-  border-color: #a0a0a0;
-}
-
-.custom-select-focused {
-  border-color: #a0a0a0 !important;
-  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.3) !important;
-}
-
-/* 夜间模式样式 */
-.dark .custom-select-button {
-  background-color: #232529;
-  border-color: #383A3F;
-  color: #E1E3E8;
-}
-
-.dark .custom-select-text {
-  color: #E1E3E8;
-}
-
-.dark .custom-select-text::placeholder {
-  color: #969BAD;
-}
-
-.dark .custom-select-button:hover {
-  border-color: #60687A;
-}
-
-.dark .custom-select-focused {
-  border-color: #60687A !important;
-  box-shadow: 0 0 0 3px rgba(120, 130, 150, 0.35) !important;
-}
-
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f8fafc;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
-}
-
-.dark .custom-scrollbar {
-  scrollbar-color: #6b7280 #1f2937;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
 }
 </style>

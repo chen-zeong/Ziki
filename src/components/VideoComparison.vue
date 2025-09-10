@@ -16,8 +16,8 @@
     />
   </div>
   
-  <!-- 帧选择器 -->
-  <div class="my-2">
+  <!-- 帧选择器（仅视频显示） -->
+  <div class="my-2" v-if="videoPath">
     <FrameSelector
       :video-path="videoPath"
       :selected-frame="selectedFrame"
@@ -26,20 +26,31 @@
   </div>
   
   <!-- 设置区域 -->
-  <div class="h-2/5 flex flex-col bg-white dark:bg-[#1e1e1e] rounded-md overflow-hidden mb-6">
-    <VideoSettingsPanel
-      ref="videoSettingsPanelRef"
-      :video-path="videoPath"
-      :is-processing="isProcessing"
-      :task-status="taskStatus"
-      @compress="handleCompress"
-    />
+  <div class="h-2/5 flex flex-col bg-white dark:bg-[#1e1e1e] rounded-md overflow-hidden mb-6" :class="!videoPath ? 'mt-6' : ''">
+    <template v-if="videoPath">
+      <VideoSettingsPanel
+        ref="settingsPanelRef"
+        :video-path="videoPath"
+        :is-processing="isProcessing"
+        :task-status="taskStatus"
+        @compress="handleCompress"
+      />
+    </template>
+    <template v-else>
+      <ImageSettingsPanel
+        ref="settingsPanelRef"
+        :is-processing="isProcessing"
+        :task-status="taskStatus"
+        @compress="handleCompress"
+      />
+    </template>
   </div>
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
 import VideoPreview from './VideoPreview.vue';
 import VideoSettingsPanel from './video-settings/VideoSettingsPanel.vue';
+import ImageSettingsPanel from './image-settings/ImageSettingsPanel.vue';
 import FrameSelector from './FrameSelector.vue';
 
 interface Props {
@@ -71,7 +82,7 @@ const emit = defineEmits<{
 
 // 组件引用
 const videoPreviewRef = ref<InstanceType<typeof VideoPreview> | null>(null);
-const videoSettingsPanelRef = ref<InstanceType<typeof VideoSettingsPanel> | null>(null);
+const settingsPanelRef = ref<any | null>(null);
 
 // 帧选择器状态
 const selectedFrame = ref<number | null>(null);
@@ -96,8 +107,8 @@ const handleCompress = (settings: any) => {
 
 // 触发压缩
 const triggerCompress = () => {
-  if (videoSettingsPanelRef.value) {
-    videoSettingsPanelRef.value.startCompression();
+  if (settingsPanelRef.value && typeof settingsPanelRef.value.startCompression === 'function') {
+    settingsPanelRef.value.startCompression();
   }
 };
 

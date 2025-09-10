@@ -16,7 +16,7 @@
        >
        
        <!-- 压缩后（右侧） -->
-       <div class="after-image">
+       <div v-if="hasAfter" class="after-image">
          <img 
            :src="localAfterImage || afterImage" 
            alt="压缩后" 
@@ -100,7 +100,7 @@
               >
               
               <!-- 压缩后（右侧） -->
-              <div class="after-image">
+              <div v-if="hasAfter" class="after-image">
                 <img 
                   :src="localAfterImage || afterImage" 
                   alt="压缩后" 
@@ -160,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 import { useComparison } from '../composables/useComparison';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -199,6 +199,9 @@ const loadingFrames = ref<Set<number>>(new Set());
 // 本地图片状态
 const localBeforeImage = ref<string>('');
 const localAfterImage = ref<string>('');
+
+// 是否存在右侧图像（用于隐藏图片任务未压缩时的覆盖层）
+const hasAfter = computed(() => !!(localAfterImage.value || props.afterImage));
 
 // 全屏状态
 const isFullscreen = ref<boolean>(false);
@@ -354,17 +357,18 @@ const selectFrame = async (index: number) => {
               frameIndex: index,
               timeRangeStart: props.timeRange.start,
               timeRangeEnd: props.timeRange.end
-            });
+            }) as string;
           } else {
             originalFrame = await invoke('generate_single_frame_with_duration', {
               videoPath: props.videoPath!,
               frameIndex: index,
               duration: originalDuration
-            });
+            }) as string;
           }
           console.log(`[Vue Debug] Rust调用完成，原始帧 ${index}，耗时: ${(performance.now() - rustCallStart).toFixed(2)}ms`);
           console.log(`[Vue Debug] 原始帧 ${index} 生成完成, 总耗时: ${(performance.now() - originalStartTime).toFixed(2)}ms`);
           
+          // Rust 已返回 data URL（data:image/jpeg;base64, ...），无需转换
           const cached = frameCache.value.get(index) || {};
           cached.original = originalFrame;
           frameCache.value.set(index, cached);
@@ -394,11 +398,12 @@ const selectFrame = async (index: number) => {
             videoPath: props.compressedVideoFilePath!,
             frameIndex: index,
             duration: compressedDuration
-          });
+          }) as string;
           
           console.log(`[Vue Debug] Rust调用完成，压缩帧 ${index}，耗时: ${(performance.now() - rustCallStart).toFixed(2)}ms`);
           console.log(`[Vue Debug] 压缩帧 ${index} 生成完成, 总耗时: ${(performance.now() - compressedStartTime).toFixed(2)}ms`);
           
+          // Rust 已返回 data URL（data:image/jpeg;base64, ...），无需转换
           const cached = frameCache.value.get(index) || {};
           cached.compressed = compressedFrame;
           frameCache.value.set(index, cached);
@@ -428,7 +433,7 @@ const selectFrame = async (index: number) => {
       const updateData = {
         beforeImage: originalFrame, // 压缩前
         afterImage: compressedFrame || originalFrame // 压缩后，如果没有压缩帧则显示原始帧
-      };
+      } as { beforeImage?: string; afterImage?: string };
       
       // 直接更新本地的图片状态 - 压缩前在左边，压缩后在右边
       const uiUpdateStart = performance.now();
@@ -484,6 +489,8 @@ watch(() => props.videoPath, (newPath, oldPath) => {
 
 // 监听compressedVideoFilePath变化：压缩完成或路径变化时，刷新当前选中帧（若未选中则取第1帧）
 watch(() => props.compressedVideoFilePath, (newPath, oldPath) => {
+  // 若无视频路径（图片任务），则不进行任何帧操作
+  if (!props.videoPath) return;
   // 每次压缩视频文件路径变化时，清除对应路径（以及旧路径）的时长缓存，
   // 防止由于同名覆盖（如 *_compressed.mp4）导致读取到上一次的缓存时长（例如1分钟）。
   try {
