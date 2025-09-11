@@ -125,16 +125,14 @@
                     
                     <!-- 气泡提示框（显示参数提示，如 -q:v / 色彩位数 / 无损） -->
                     <div 
-                      class="absolute bottom-full mb-2 pointer-events-none transform z-10 transition duration-150 ease-out"
+                      class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-10 transition duration-150 ease-out"
                       :class="{ 
                         'opacity-100 translate-y-0 scale-100': showTooltip, 
-                        'opacity-0 -translate-y-1 scale-95': !showTooltip,
-                        '-translate-x-1/2': qualityValue <= 80,
-                        '-translate-x-full': qualityValue > 80
+                        'opacity-0 -translate-y-1 scale-95': !showTooltip
                       }"
                       :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
                     >
-                      <div class="tooltip-bubble text-left leading-tight max-w-[240px]">
+                      <div class="tooltip-bubble">
                         {{ qualityHintText.paramHint }}
                       </div>
                     </div>
@@ -145,8 +143,8 @@
                     type="range" 
                     id="image-quality-slider" 
                     v-model.number="qualityValue"
-                    min="0" 
-                    max="100" 
+                    min="2" 
+                    max="98" 
                     step="1" 
                     class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
                     @input="updateQualityState"
@@ -522,11 +520,33 @@ const updateQualityState = () => {
 
 <style scoped>
 .tooltip-bubble {
-  background: #111827;
+  position: relative;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
   color: white;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  font-size: 11px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  white-space: nowrap; /* 强制单行显示 */
+}
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(30, 41, 59, 0.96);
+}
+:deep(.dark) .tooltip-bubble {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  border-color: rgba(100, 116, 139, 0.25);
+}
+:deep(.dark) .tooltip-bubble::after {
+  border-top-color: rgba(15, 23, 42, 0.96);
 }
 </style>
