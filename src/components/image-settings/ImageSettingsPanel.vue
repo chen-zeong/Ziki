@@ -12,7 +12,7 @@
             <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full min-h-[220px] flex flex-col">
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">输出格式</label>
+                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">输出格式</label>
                 </div>
                 <CustomSelect
                   :options="formatOptions"
@@ -24,23 +24,23 @@
               <!-- 分辨率区域 -->
               <div class="mt-4">
                 <div class="flex items-center justify-between mb-2">
-                  <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">分辨率</label>
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-600 dark:text-dark-secondary">自定义</span>
-                    <button
-                      type="button"
-                      class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-                      :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
-                      :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
-                      @click="toggleCustomResolution"
-                    >
-                      <span
-                        class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform"
-                        :class="isCustomResolution ? 'translate-x-5' : 'translate-x-1'"
-                      ></span>
-                    </button>
-                  </div>
-                </div>
+                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">分辨率</label>
+                   <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold text-gray-600 dark:text-dark-secondary opacity-80">自定义</span>
+                     <button
+                       type="button"
+                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                       :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
+                       :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
+                       @click="toggleCustomResolution"
+                     >
+                       <span
+                         class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform"
+                         :class="isCustomResolution ? 'translate-x-5' : 'translate-x-1'"
+                       ></span>
+                     </button>
+                   </div>
+                 </div>
 
                 <div class="space-y-2">
                   <div v-if="isCustomResolution" class="flex gap-1 items-center">
@@ -78,7 +78,7 @@
                     v-model="resolutionValue"
                     :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
                     :placeholder="originalResolutionText || '选择分辨率'"
-                    dropdown-direction="up"
+                    dropdown-direction="down"
                     strict-direction
                     :teleport-to-body="true"
                     :max-visible-options="5"
@@ -94,7 +94,7 @@
               <div class="space-y-4">
                 <!-- 标题和质量等级 -->
                 <div class="flex justify-between items-center mb-4">
-                  <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">画质</label>
+                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">画质</label>
                   <div class="text-right">
                     <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded text-xs" style="background-color: #f3f4f6;">{{ qualityText }}</span>
                   </div>
@@ -349,14 +349,14 @@ const resolutionOptions = computed(() => {
     for (const p of presets) {
       if (w >= p.w && h >= p.h) {
         const scaled = scaleToFit(w, h, p.w, p.h);
-        opts.push({ value: `${scaled.width}x${scaled.height}`, label: `${p.name}（${scaled.width}x${scaled.height}）` });
+        opts.push({ value: `${scaled.width}x${scaled.height}`, label: `${scaled.width}x${scaled.height} (${p.name})` });
       }
     }
   } else {
     // 没有原始尺寸时提供通用选项
-    opts.push({ value: '1920x1080', label: '1080p（1920x1080）' });
-    opts.push({ value: '1280x720', label: '720p（1280x720）' });
-    opts.push({ value: '854x480', label: '480p（854x480）' });
+    opts.push({ value: '1920x1080', label: '1920x1080 (1080p)' });
+    opts.push({ value: '1280x720', label: '1280x720 (720p)' });
+    opts.push({ value: '854x480', label: '854x480 (480p)' });
   }
   // 自定义选项
   opts.push({ value: 'custom', label: '自定义' });

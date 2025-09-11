@@ -22,7 +22,7 @@
           class="fixed z-[9999] bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-auto"
           :style="menuStyle"
         >
-          <ul class="py-1 text-sm text-gray-700 dark:text-gray-200 space-y-1">
+          <ul class="py-1 text-xs text-gray-700 dark:text-gray-200 space-y-1">
             <li
               v-for="opt in visibleOptions"
               :key="opt.value"
@@ -32,7 +32,7 @@
               ]"
               @click.stop="selectOption(opt.value)"
             >
-              <span class="truncate">{{ opt.label }}</span>
+              <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
               <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500" />
             </li>
           </ul>
@@ -50,7 +50,7 @@
           class="absolute z-50 w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 max-h-60 overflow-auto"
           :class="dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'"
         >
-          <ul class="py-1 text-sm text-gray-700 dark:text-gray-200 space-y-1">
+          <ul class="py-1 text-xs text-gray-700 dark:text-gray-200 space-y-1">
             <li
               v-for="opt in visibleOptions"
               :key="opt.value"
@@ -60,7 +60,7 @@
               ]"
               @click.stop="selectOption(opt.value)"
             >
-              <span class="truncate">{{ opt.label }}</span>
+              <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
               <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500" />
             </li>
           </ul>
