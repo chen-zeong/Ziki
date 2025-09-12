@@ -53,7 +53,6 @@ pub fn run() {
             compress_video,
             generate_thumbnail,
             generate_video_frames,
-            generate_single_frame,
             get_video_duration,
             generate_single_frame_with_duration,
             generate_single_frame_with_time_range,

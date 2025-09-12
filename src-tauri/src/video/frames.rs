@@ -383,9 +383,12 @@ pub async fn generate_video_frames(video_path: String, app_handle: tauri::AppHan
         println!("Generating frame {} at timestamp {} to path: {}", i, timestamp_str, frame_output_path);
         
         let output = Command::new(&ffmpeg_path)
-            .arg("-i").arg(&video_path)
             .arg("-ss").arg(&timestamp_str)
-            .arg("-vframes").arg("1")
+            .arg("-i").arg(&video_path)
+            .arg("-an")
+            .arg("-frames:v").arg("1")
+            .arg("-q:v").arg("2")
+            .arg("-loglevel").arg("error")
             .arg("-y")
             .arg(&frame_output_path)
             .output()
@@ -432,20 +435,48 @@ pub async fn generate_thumbnail(videoPath: String, app_handle: tauri::AppHandle)
         resource_dir.join("bin").join(get_ffmpeg_binary())
     };
 
-    println!("FFmpeg path for thumbnail: {:?}", ffmpeg_path);
+    println!("[Thumbnail] Creating ffmpeg command for {}", videoPath);
 
     if !ffmpeg_path.exists() {
         return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
     }
 
+    // 首先获取视频时长以计算中间帧位置
+    let duration_result = get_video_duration(videoPath.clone(), app_handle.clone()).await;
+    let middle_timestamp = match duration_result {
+        Ok(duration) => {
+            if duration > 10.0 {
+                // 如果视频超过10秒，使用中间位置
+                duration / 2.0
+            } else {
+                // 如果视频很短，使用1秒位置或视频长度的1/4
+                (duration / 4.0).min(1.0)
+            }
+        }
+        Err(_) => {
+            // 如果无法获取时长，回退到1秒位置
+            1.0
+        }
+    };
+
+    println!("[Thumbnail] Using middle timestamp: {:.2}s", middle_timestamp);
+
     // Spawn a new async task to run the blocking ffmpeg command
     let handle = tauri::async_runtime::spawn(async move {
-        let output_path = format!("{}_thumb.jpg", videoPath.trim_end_matches(|c| c != '.'));
+        let file_stem = std::path::Path::new(&videoPath)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("video");
+        let output_path = std::env::temp_dir().join(format!("{}_thumb.jpg", file_stem));
 
+        let timestamp_str = format!("{:.2}", middle_timestamp);
         let output_result = Command::new(&ffmpeg_path)
+            .arg("-ss").arg(&timestamp_str)
             .arg("-i").arg(&videoPath)
-            .arg("-ss").arg("00:00:01")
-            .arg("-vframes").arg("1")
+            .arg("-an")
+            .arg("-frames:v").arg("1")
+            .arg("-q:v").arg("2")            // 高质量JPEG (1-31, 越小质量越高)
+            .arg("-loglevel").arg("error")
             .arg("-y")
             .arg(&output_path)
             .output();

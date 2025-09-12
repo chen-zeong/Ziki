@@ -97,9 +97,20 @@
               :style="{ '--position': `${sliderPosition}%` }"
               @click.stop
             >
+              <!-- 压缩前（左侧） -->
+              <img 
+                :src="fullscreenBeforeSrc"
+                alt="压缩前" 
+                class="before-image w-full h-full object-contain"
+              >
               
+              <!-- 压缩后（右侧） -->
               <div v-if="hasAfter" class="after-image">
-                
+                <img 
+                  :src="fullscreenAfterSrc"
+                  alt="压缩后" 
+                  class="w-full h-full object-contain"
+                >
               </div>
               
               
@@ -247,6 +258,9 @@ const getVideoDurationCache = () => {
 
 const beforeImgRef = ref<HTMLImageElement | null>(null);
 const afterImgRef = ref<HTMLImageElement | null>(null);
+// 新增：全屏显示所用的帧图片（与非全屏保持一致）
+const fullscreenBeforeSrc = ref<string>('');
+const fullscreenAfterSrc = ref<string>('');
 
 // 是否存在右侧图像（用于隐藏图片任务未压缩时的覆盖层）
 const hasAfter = computed(() => !!props.afterImage);
@@ -322,6 +336,8 @@ const resetFrameData = () => {
   selectedFrameIndex.value = 0;
   if (beforeImgRef.value) beforeImgRef.value.src = '';
   if (afterImgRef.value) afterImgRef.value.src = '';
+  fullscreenBeforeSrc.value = '';
+  fullscreenAfterSrc.value = '';
 };
 
 // 清除指定帧的缓存
@@ -365,7 +381,9 @@ const selectFrame = async (index: number) => {
   if (frameCache.has(index)) {
     const cached = frameCache.get(index)!;
     if (cached.original && beforeImgRef.value) beforeImgRef.value.src = cached.original;
+    if (cached.original) fullscreenBeforeSrc.value = cached.original;
     if (cached.compressed && afterImgRef.value) afterImgRef.value.src = cached.compressed;
+    if (cached.compressed) fullscreenAfterSrc.value = cached.compressed;
     if (cached.original && (cached.compressed || !props.compressedVideoFilePath)) {
       return;
     }
@@ -408,6 +426,7 @@ const selectFrame = async (index: number) => {
        }).then((originalFrame) => {
         if (originalFrame) {
           if (beforeImgRef.value) beforeImgRef.value.src = originalFrame;
+          fullscreenBeforeSrc.value = originalFrame;
           cache.original = originalFrame;
           frameCache.set(index, cache);
         }
@@ -450,6 +469,7 @@ const selectFrame = async (index: number) => {
 
           if (compressedFrame) {
             if (afterImgRef.value) afterImgRef.value.src = compressedFrame;
+            fullscreenAfterSrc.value = compressedFrame;
             cache.compressed = compressedFrame;
             frameCache.set(index, cache);
           }
@@ -478,9 +498,11 @@ onMounted(() => {
     // 图片模式：直接显示传入的图片
     if (props.beforeImage && beforeImgRef.value) {
       beforeImgRef.value.src = props.beforeImage;
+      fullscreenBeforeSrc.value = props.beforeImage;
     }
     if (props.afterImage && afterImgRef.value) {
       afterImgRef.value.src = props.afterImage;
+      fullscreenAfterSrc.value = props.afterImage;
     }
   }
 });
@@ -508,9 +530,11 @@ watch(() => [props.beforeImage, props.afterImage], ([newBefore, newAfter]) => {
     // 图片模式：直接更新图片显示
     if (newBefore && beforeImgRef.value) {
       beforeImgRef.value.src = newBefore;
+      fullscreenBeforeSrc.value = newBefore;
     }
     if (newAfter && afterImgRef.value) {
       afterImgRef.value.src = newAfter;
+      fullscreenAfterSrc.value = newAfter;
     }
   }
 });
@@ -522,9 +546,11 @@ watch(() => props.videoPath, (newPath, oldPath) => {
     // 图片模式：显示传入的图片
     if (props.beforeImage && beforeImgRef.value) {
       beforeImgRef.value.src = props.beforeImage;
+      fullscreenBeforeSrc.value = props.beforeImage;
     }
     if (props.afterImage && afterImgRef.value) {
       afterImgRef.value.src = props.afterImage;
+      fullscreenAfterSrc.value = props.afterImage;
     }
   } else {
     // 当视频源发生变化时，清除该路径对应的时长缓存，避免复用上一个任务的时长

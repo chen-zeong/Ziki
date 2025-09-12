@@ -88,13 +88,24 @@
                        <span>上次检测时间：{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
                      </div>
                      <button
-                       class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#5492dc] hover:bg-[#4a82c6] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                       class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-all duration-200"
+                       :class="{
+                         'bg-[#5492dc] hover:bg-[#4a82c6]': !isDetectingHardwareEncoders,
+                         'bg-[#6ba3e8] cursor-not-allowed': isDetectingHardwareEncoders
+                       }"
                        @click="refreshHardware"
                        :disabled="isDetectingHardwareEncoders"
                      >
-                       <Loader2 v-if="isDetectingHardwareEncoders" class="w-3 h-3 animate-spin" />
-                       <RefreshCw v-else class="w-3 h-3" />
-                       <span>{{ isDetectingHardwareEncoders ? '检测中…' : '重新检测' }}</span>
+                       <RefreshCw v-if="!isDetectingHardwareEncoders" class="w-3 h-3" />
+                       <div v-if="isDetectingHardwareEncoders" class="flex items-center gap-1">
+                         <Loader2 class="w-3 h-3 animate-spin" />
+                         <span class="text-xs font-mono">
+                           {{ detectProgress.current }}/{{ detectProgress.total }}
+                         </span>
+                       </div>
+                       <span class="transition-all duration-200">
+                         {{ isDetectingHardwareEncoders ? '检测中…' : '重新检测' }}
+                       </span>
                      </button>
                    </div>
                 </div>
@@ -175,6 +186,7 @@ const platform = ref<'macos' | 'windows' | 'linux'>('macos');
 const hardwareSupport = ref<HardwareSupport | null>(null);
 const isDetectingHardwareEncoders = ref(false);
 const detectHint = ref('');
+const detectProgress = ref({ current: 0, total: 0 });
 
 const hardwareAcceleration = computed({
   get() {
@@ -222,15 +234,46 @@ const loadHardwareSupport = async () => {
 const refreshHardware = async () => {
   if (isDetectingHardwareEncoders.value) return;
   isDetectingHardwareEncoders.value = true;
-  detectHint.value = '正在重新检测硬件编码器，请稍候...';
+  
+  // 根据平台设置检测总数
+  const encodersToTest = getEncodersToTest();
+  detectProgress.value = { current: 0, total: encodersToTest.length };
+  
+  // 模拟检测进度
+  const progressInterval = setInterval(() => {
+    if (detectProgress.value.current < detectProgress.value.total) {
+      detectProgress.value.current++;
+    }
+  }, 800); // 每800ms更新一次进度
+  
   try {
     const result = await invoke<HardwareSupport>('refresh_hardware_encoder_support');
     hardwareSupport.value = result;
+    // 确保进度完成
+    detectProgress.value.current = detectProgress.value.total;
   } catch (error) {
     console.error('Failed to refresh hardware encoder support:', error);
   } finally {
-    isDetectingHardwareEncoders.value = false;
-    detectHint.value = '';
+    clearInterval(progressInterval);
+    setTimeout(() => {
+      isDetectingHardwareEncoders.value = false;
+      detectProgress.value = { current: 0, total: 0 };
+    }, 500); // 延迟500ms关闭，让用户看到完成状态
+  }
+};
+
+// 获取当前平台需要检测的编码器列表
+const getEncodersToTest = (): string[] => {
+  if (platform.value === 'macos') {
+    return ['h264_videotoolbox', 'hevc_videotoolbox', 'prores_videotoolbox'];
+  } else if (platform.value === 'windows') {
+    return [
+      'h264_nvenc', 'hevc_nvenc', 'av1_nvenc',
+      'h264_qsv', 'hevc_qsv', 'av1_qsv',
+      'h264_amf', 'hevc_amf', 'av1_amf'
+    ];
+  } else {
+    return ['h264_vaapi', 'hevc_vaapi', 'av1_vaapi', 'vp9_vaapi'];
   }
 };
 
@@ -461,4 +504,6 @@ onBeforeUnmount(() => {
   opacity: 1;
   transform: translateY(0);
 }
+
+
 </style>

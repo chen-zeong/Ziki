@@ -332,9 +332,8 @@ export function useFileHandler() {
 
         // Only generate thumbnail for video files
         if (file.type.startsWith('video/')) {
-          invoke<string>('generate_single_frame', {
-            videoPath: filePath,
-            frameIndex: 0
+          invoke<string>('generate_thumbnail', {
+            videoPath: filePath
           }).then(thumbnailUrl => {
             const fileInArray = selectedFiles.value.find(f => f.id === videoFile.id);
             if (fileInArray) {
