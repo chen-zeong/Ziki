@@ -14,6 +14,7 @@
           placeholder="选择输出格式"
           dropdown-direction="down"
           :teleport-to-body="true"
+          strict-direction
           :max-visible-options="4"
         />
       </div>
@@ -91,6 +92,7 @@
             :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
             :placeholder="metadata?.resolution ? `${metadata.resolution} (原始)` : '选择分辨率'"
             dropdown-direction="up"
+            strict-direction
             :teleport-to-body="true"
             :max-visible-options="4"
           />

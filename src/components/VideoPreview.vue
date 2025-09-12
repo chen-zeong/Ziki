@@ -1,18 +1,9 @@
 <template>
   <div class="w-full h-full flex flex-col">
-    <!-- 禁用状态的占位符 -->
-    <div v-if="disabled" class="w-full h-full bg-gray-200 dark:bg-[#1e1e1e] flex items-center justify-center rounded-lg">
-      <div class="text-center text-gray-500 dark:text-gray-400">
-        <div class="text-lg mb-2">📹</div>
-        <div class="text-sm">视频预览已禁用</div>
-      </div>
-    </div>
-
-    <!-- 正常的视频预览功能 -->
+    <!-- 视频预览功能 -->
     <div 
-      v-else
       ref="sliderRef"
-      class="comparison-slider w-full h-full bg-gray-200 dark:bg-[#1e1e1e] relative overflow-hidden"
+      class="comparison-slider w-full h-full bg-gray-200 dark:bg-[#1e1e1e] relative overflow-hidden rounded-2xl border-4 border-blue-300 dark:border-slate-700 bg-clip-padding backdrop-blur-sm"
       :style="{ '--position': `${sliderPosition}%` }"
     >
       <!-- 压缩前（左侧） -->
@@ -68,8 +59,7 @@
     <Transition name="modal" appear>
       <div 
         v-if="isFullscreen" 
-        class="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        style="background-color: #f5f5f5;"
+        class="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4 bg-transparent dark:bg-transparent"
         @click="closeFullscreen"
       >
         
@@ -80,11 +70,10 @@
           
           <button 
             @click="closeFullscreen" 
-            class="absolute top-2 right-2 z-50 w-8 h-8 rounded-full bg-white flex items-center justify-center transition-all duration-300 hover:scale-110"
-            style="box-shadow: 0 0 0 2px rgba(160,160,160,0.2); background-color: #ffffff; background-image: none; border: none; outline: none;"
+            class="absolute top-2 right-2 z-50 w-8 h-8 rounded-full flex items-center justify-center bg-blue-100 dark:bg-gray-900/20 border border-blue-300 dark:border-white/30 backdrop-blur-md transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg-blue-200 dark:hover:bg-white/30"
             title="关闭全屏 (ESC)"
           >
-            <svg class="w-4 h-4 text-orange-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+            <svg class="w-4 h-4 text-blue-500 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -92,10 +81,10 @@
           <div class="relative w-full h-full p-3 flex items-center justify-center">
             
             <div 
-              ref="fullscreenSliderRef"
-              class="comparison-slider fullscreen-slider w-full h-full bg-gray-200 dark:bg-gray-800 relative rounded-lg overflow-hidden"
-              :style="{ '--position': `${sliderPosition}%` }"
-              @click.stop
+               ref="fullscreenSliderRef"
+               class="comparison-slider fullscreen-slider w-full h-full bg-gray-200 dark:bg-gray-900 relative rounded-2xl overflow-hidden border-4 border-blue-300 dark:border-slate-700 bg-clip-padding backdrop-blur-sm"
+               :style="{ '--position': `${sliderPosition}%` }"
+               @click.stop
             >
               <!-- 压缩前（左侧） -->
               <img 
@@ -183,14 +172,12 @@ interface Props {
     start: number;
     end: number;
   };
-  disabled?: boolean;
   deferInitialPreview?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: '视频预览',
   taskStatus: 'pending',
-  disabled: false,
   deferInitialPreview: true
 });
 
@@ -372,7 +359,11 @@ const clearTaskCache = (videoPath?: string) => {
 
 // 新增：选择帧（异步、带缓存、防抖）
 const selectFrame = async (index: number) => {
-  if (loadingFrames.value.has(index) || !props.videoPath) return;
+  // 严格检查：图片模式下不应该调用此函数
+  if (loadingFrames.value.has(index) || !props.videoPath || props.videoPath === undefined || props.videoPath === '') {
+    console.log('selectFrame skipped:', { index, videoPath: props.videoPath, hasVideoPath: !!props.videoPath });
+    return;
+  }
 
   selectedFrameIndex.value = index;
 
@@ -491,10 +482,14 @@ const selectFrame = async (index: number) => {
 
 // 组件挂载时的初始化逻辑
 onMounted(() => {
+  console.log('VideoPreview mounted:', { videoPath: props.videoPath, beforeImage: !!props.beforeImage, afterImage: !!props.afterImage });
+  
   // 初次挂载时，如有视频路径则选中第1帧
   if (props.videoPath) {
+    console.log('Video mode: calling selectFrame(0)');
     selectFrame(0);
   } else {
+    console.log('Image mode: setting images directly');
     // 图片模式：直接显示传入的图片
     if (props.beforeImage && beforeImgRef.value) {
       beforeImgRef.value.src = props.beforeImage;

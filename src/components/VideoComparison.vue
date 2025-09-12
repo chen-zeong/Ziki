@@ -1,6 +1,6 @@
 <template>
   <!-- 预览窗口 -->
-  <div class="h-3/5 bg-black rounded-md flex items-center justify-center relative mt-4">
+  <div class="h-3/5 rounded-md flex items-center justify-center relative mt-4">
     <VideoPreview
       ref="videoPreviewRef"
       :title="title"
@@ -96,8 +96,8 @@ const selectedFrame = ref<number | null>(null);
 // 处理帧选择
 const handleFrameSelected = (frameIndex: number) => {
   selectedFrame.value = frameIndex;
-  if (videoPreviewRef.value) {
-    // 强制清除该帧的缓存，确保重新获取画面
+  if (videoPreviewRef.value && props.videoPath) {
+    // 只在视频模式下处理帧选择，图片模式跳过
     videoPreviewRef.value.clearFrameCache(frameIndex);
     videoPreviewRef.value.selectFrame(frameIndex);
   }
@@ -105,7 +105,8 @@ const handleFrameSelected = (frameIndex: number) => {
 
 // 当自定义时间段变化时，保持当前选中的帧并刷新
 watch(() => props.timeRange, (newTimeRange) => {
-  if (newTimeRange && videoPreviewRef.value) {
+  if (newTimeRange && videoPreviewRef.value && props.videoPath) {
+    // 只在视频模式下处理时间段变化，图片模式跳过
     const index = selectedFrame.value ?? 0;
     videoPreviewRef.value.selectFrame(index);
   }
@@ -130,7 +131,8 @@ const triggerCompress = () => {
 
 // 新增：强制刷新当前预览帧
 const refreshPreview = () => {
-  if (!videoPreviewRef.value) return;
+  if (!videoPreviewRef.value || !props.videoPath) return;
+  // 只在视频模式下刷新帧，图片模式跳过
   const index = selectedFrame.value ?? 0;
   // 尝试清除该帧缓存以确保重新生成
   if (typeof (videoPreviewRef.value as any).clearFrameCache === 'function') {
