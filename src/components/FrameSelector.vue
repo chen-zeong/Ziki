@@ -25,6 +25,12 @@ import { ref, watch } from 'vue';
 interface Props {
   videoPath?: string;
   selectedFrame?: number | null;
+  taskId?: string;
+  compressedVideoPath?: string;
+  timeRange?: {
+    start: number;
+    end: number;
+  };
 }
 
 interface Emits {
@@ -43,6 +49,29 @@ const selectedFrame = ref<number | null>(props.selectedFrame ?? 0);
 // 选择帧
 const selectFrame = (frameIndex: number) => {
   selectedFrame.value = frameIndex;
+  
+  // 计算当前帧对应的时间（假设10帧均匀分布在时间范围内）
+  let frameTime = 0;
+  if (props.timeRange && props.timeRange.start !== null && props.timeRange.end !== null) {
+    const duration = props.timeRange.end - props.timeRange.start;
+    frameTime = props.timeRange.start + (frameIndex / 9) * duration; // 9个间隔分布10帧
+  } else {
+    // 如果没有时间范围，假设视频总长度为100秒，均匀分布
+    frameTime = (frameIndex / 9) * 100;
+  }
+  
+  // 控制台输出调试信息
+  console.log('=== 帧选择器点击信息 ===');
+  console.log('任务ID:', props.taskId || '未知');
+  console.log('原视频路径:', props.videoPath || '未知');
+  console.log('压缩视频路径:', props.compressedVideoPath || '未知');
+  console.log('当前帧索引:', frameIndex);
+  console.log('当前帧时间:', frameTime.toFixed(2) + '秒');
+  if (props.timeRange) {
+    console.log('时间范围:', `${props.timeRange.start}秒 - ${props.timeRange.end}秒`);
+  }
+  console.log('========================');
+  
   emit('frameSelected', frameIndex);
 };
 

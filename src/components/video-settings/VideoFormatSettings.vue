@@ -277,23 +277,31 @@ const resolutionOptions = computed(() => {
 
 const toggleCustomResolution = () => {
   isCustomResolution.value = !isCustomResolution.value;
-  const newSettings = { ...settings.value };
+  const newSettings: Partial<CompressionSettings> = { ...props.modelValue };
+
   if (isCustomResolution.value) {
     newSettings.resolution = 'custom';
-    // 如果有原始分辨率，使用原始比例
     if (props.metadata) {
       const [width, height] = props.metadata.resolution.split('x').map(Number);
       if (width && height) {
         originalAspectRatio.value = width / height;
-        customResolution.value = { width, height };
+        const newRes = { width, height };
+        customResolution.value = newRes;
+        newSettings.customResolution = newRes;
       }
     }
   } else {
-    newSettings.resolution = '1920x1080';
+    newSettings.resolution = (props.metadata?.resolution as any) || '1920x1080';
     customResolution.value = { width: 1920, height: 1080 };
     originalAspectRatio.value = 16/9;
+    delete newSettings.customResolution;
   }
-  settings.value = newSettings;
+
+  if (!newSettings.format) {
+    newSettings.format = format.value;
+  }
+
+  emit('update:modelValue', newSettings);
 };
 
 const toggleAspectRatioLock = () => {
@@ -342,18 +350,7 @@ watch(customResolution, (newResolution, oldResolution) => {
   }
 }, { deep: true });
 
-// 监听分辨率切换，并更新 settings
-watch(isCustomResolution, (isCustom) => {
-  const newSettings = { ...settings.value };
-  if (isCustom) {
-    newSettings.resolution = 'custom';
-    newSettings.customResolution = customResolution.value;
-  } else {
-    newSettings.resolution = '1920x1080'; // 或者其他默认值
-    delete newSettings.customResolution;
-  }
-  settings.value = newSettings;
-});
+
 
 // 格式化视频编码名称
 const formatVideoCodec = (codec: string): string => {

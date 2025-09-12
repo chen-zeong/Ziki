@@ -6,6 +6,7 @@ use tokio::process::{Command, Child};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tauri::{Manager, Emitter};
 use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata};
+use crate::video::utils::get_ffprobe_binary;
 use crate::video::utils::get_hardware_encoder_support;
 use serde_json::json;
 
@@ -130,8 +131,25 @@ pub async fn compress_video(
         .map_err(|e| format!("Failed to get file size: {}", e))?
         .len();
     
-    // 使用ffprobe快速获取视频时长用于进度计算
-    let duration_cmd = Command::new("ffprobe")
+    // 使用ffprobe快速获取视频时长用于进度计算（使用打包的 ffprobe 二进制）
+    let ffprobe_path = if cfg!(debug_assertions) {
+        // Development mode: use bin directory relative to src-tauri
+        let current_exe = std::env::current_exe().unwrap();
+        let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+        src_tauri_dir.join("bin").join(get_ffprobe_binary())
+    } else {
+        // Production mode: use resource directory
+        let resource_dir = app_handle.path().resource_dir().unwrap();
+        resource_dir.join("bin").join(get_ffprobe_binary())
+    };
+    
+    println!("FFprobe path: {:?}", ffprobe_path);
+    
+    if !ffprobe_path.exists() {
+        return Err(format!("FFprobe binary not found at: {:?}", ffprobe_path));
+    }
+    
+    let duration_cmd = Command::new(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",

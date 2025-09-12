@@ -47,16 +47,12 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
     let time_range_duration = timeRangeEnd - timeRangeStart;
     println!("[Rust Debug] 开始生成帧 {} for {}, 时间范围: {}s - {}s (时长: {}s)", frameIndex, videoPath, timeRangeStart, timeRangeEnd, time_range_duration);
     
-    // Get actual video duration to validate time range
-    let actual_duration = get_video_duration(videoPath.clone(), app_handle.clone()).await?;
-    if timeRangeEnd > actual_duration {
-        return Err(format!("Time range end {} exceeds video duration {}", timeRangeEnd, actual_duration));
-    }
-    if timeRangeStart >= actual_duration {
-        return Err(format!("Time range start {} exceeds video duration {}", timeRangeStart, actual_duration));
-    }
+    // 简化验证逻辑，避免重复调用get_video_duration
     if time_range_duration <= 0.0 {
         return Err(format!("Invalid time range: start {} >= end {}", timeRangeStart, timeRangeEnd));
+    }
+    if timeRangeStart < 0.0 {
+        return Err(format!("Time range start {} cannot be negative", timeRangeStart));
     }
     
     let path_check_start = std::time::Instant::now();
@@ -110,17 +106,24 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
     println!("[Rust Debug] 开始执行FFmpeg命令生成帧 {} at timestamp {}", frameIndex, timestamp_str);
     
     let ffmpeg_start = std::time::Instant::now();
-    // 使用管道输出和优化参数来提高跳转性能
+    // 使用优化的FFmpeg参数来提高帧生成速度
+    println!("[Thumbnail] Creating ffmpeg command for {}", videoPath);
     let output = Command::new(&ffmpeg_path)
-        .arg("-ss").arg(&timestamp_str)  // 将-ss放在-i之前，实现输入级别的跳转
+        .arg("-ss").arg(&timestamp_str)  // 输入级别跳转，更快
         .arg("-i").arg(&videoPath)
-        .arg("-vframes").arg("1")
-        .arg("-f").arg("image2pipe")
-        .arg("-vcodec").arg("mjpeg")
+        .arg("-vframes").arg("1")        // 只生成一帧
+        .arg("-q:v").arg("2")            // 高质量JPEG (1-31, 越小质量越高)
+        .arg("-f").arg("image2pipe")     // 管道输出
+        .arg("-vcodec").arg("mjpeg")     // MJPEG编码器
+        .arg("-threads").arg("1")        // 单线程，减少开销
+        .arg("-an")                      // 禁用音频处理
+        .arg("-sn")                      // 禁用字幕处理
+        .arg("-dn")                      // 禁用数据流处理
         .arg("-avoid_negative_ts").arg("make_zero")
         .arg("-")
         .output()
         .map_err(|e| format!("Failed to generate frame {}: {}", frameIndex, e))?;
+    println!("[Frame {}] FFmpeg command executed", frameIndex);
     println!("[Rust Debug] FFmpeg命令执行完成, 帧 {} 耗时: {:?}", frameIndex, ffmpeg_start.elapsed());
     
     if output.status.success() {
@@ -282,6 +285,7 @@ pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handl
     
     println!("Generating frame {} at timestamp {} to path: {}", frameIndex, timestamp_str, frame_output_path);
     
+    println!("[Frame {}] Creating ffmpeg command", frameIndex);
     let ffmpeg_start = std::time::Instant::now();
     let output = Command::new(&ffmpeg_path)
         .arg("-i").arg(&videoPath)
@@ -427,36 +431,45 @@ pub async fn generate_thumbnail(videoPath: String, app_handle: tauri::AppHandle)
         let resource_dir = app_handle.path().resource_dir().unwrap();
         resource_dir.join("bin").join(get_ffmpeg_binary())
     };
-    
+
     println!("FFmpeg path for thumbnail: {:?}", ffmpeg_path);
-    
+
     if !ffmpeg_path.exists() {
         return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
     }
-    
-    let output_path = format!("{}_thumb.jpg", videoPath.trim_end_matches(|c| c != '.'));
-    
-    let output = Command::new(&ffmpeg_path)
-        .arg("-i").arg(&videoPath)
-        .arg("-ss").arg("00:00:01")
-        .arg("-vframes").arg("1")
-        .arg("-y")
-        .arg(&output_path)
-        .output()
-        .map_err(|e| format!("Failed to generate thumbnail: {}", e))?;
-    
-    if output.status.success() {
-        // Read the generated thumbnail file and convert to base64
-        match std::fs::read(&output_path) {
-            Ok(image_data) => {
-                let base64_data = general_purpose::STANDARD.encode(&image_data);
-                // Clean up the temporary file
-                let _ = std::fs::remove_file(&output_path);
-                Ok(format!("data:image/jpeg;base64,{}", base64_data))
+
+    // Spawn a new async task to run the blocking ffmpeg command
+    let handle = tauri::async_runtime::spawn(async move {
+        let output_path = format!("{}_thumb.jpg", videoPath.trim_end_matches(|c| c != '.'));
+
+        let output_result = Command::new(&ffmpeg_path)
+            .arg("-i").arg(&videoPath)
+            .arg("-ss").arg("00:00:01")
+            .arg("-vframes").arg("1")
+            .arg("-y")
+            .arg(&output_path)
+            .output();
+
+        match output_result {
+            Ok(output) => {
+                if output.status.success() {
+                    match std::fs::read(&output_path) {
+                        Ok(image_data) => {
+                            let base64_data = general_purpose::STANDARD.encode(&image_data);
+                            let _ = std::fs::remove_file(&output_path);
+                            Ok(format!("data:image/jpeg;base64,{}", base64_data))
+                        }
+                        Err(e) => Err(format!("Failed to read thumbnail file: {}", e))
+                    }
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    Err(format!("Failed to generate thumbnail: {}", stderr))
+                }
             }
-            Err(e) => Err(format!("Failed to read thumbnail file: {}", e))
+            Err(e) => Err(format!("Failed to execute ffmpeg: {}", e)),
         }
-    } else {
-        Err("Failed to generate thumbnail".to_string())
-    }
+    });
+
+    // Await the result from the spawned task
+    handle.await.unwrap_or_else(|e| Err(format!("Thumbnail generation task failed: {}", e)))
 }

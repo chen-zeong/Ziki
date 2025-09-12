@@ -18,14 +18,26 @@ export function useBatchProcessor() {
 
   // 等待某个任务进入终止状态（completed/failed/paused）
   const waitUntilTaskSettled = async (allTasks: CompressionTask[], taskId: string) => {
-    while (isProcessingBatch.value) {
-      const t = allTasks.find(t => t.id === taskId);
-      const status = t?.status;
-      if (!t || status === 'completed' || status === 'failed' || status === 'paused') {
-        return;
-      }
-      await sleep(150);
-    }
+    return new Promise<void>((resolve) => {
+      const checkStatus = () => {
+        if (!isProcessingBatch.value) {
+          resolve();
+          return;
+        }
+        
+        const t = allTasks.find(t => t.id === taskId);
+        const status = t?.status;
+        if (!t || status === 'completed' || status === 'failed' || status === 'paused') {
+          resolve();
+          return;
+        }
+        
+        // 使用 setTimeout 而不是 while 循环，避免阻塞主线程
+        setTimeout(checkStatus, 150);
+      };
+      
+      checkStatus();
+    });
   };
 
   // 开始批量压缩

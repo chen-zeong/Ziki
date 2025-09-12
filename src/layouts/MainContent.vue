@@ -62,6 +62,12 @@ const currentTaskType = computed(() => {
   return (task as any)?.type || 'video';
 });
 
+// 根据当前文件匹配任务ID
+const currentTaskId = computed(() => {
+  const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
+  return task?.id;
+});
+
 // 时间格式转换：HH:MM:SS 转换为秒数
 const timeToSeconds = (timeStr: string): number | null => {
   if (!timeStr || timeStr === '00:00:00') return null;
@@ -93,8 +99,24 @@ const triggerCompress = () => {
   }
 };
 
+// 清理任务缓存
+const clearTaskCache = (videoPath?: string) => {
+  if (videoComparisonRef.value) {
+    videoComparisonRef.value.clearTaskCache(videoPath);
+  }
+};
+
+// 新增：强制刷新当前预览帧
+const refreshPreview = () => {
+  if (videoComparisonRef.value && (videoComparisonRef.value as any).refreshPreview) {
+    (videoComparisonRef.value as any).refreshPreview();
+  }
+};
+
 defineExpose({
-  triggerCompress
+  triggerCompress,
+  clearTaskCache,
+  refreshPreview
 });
 </script>
 
@@ -144,10 +166,12 @@ defineExpose({
         :after-image="afterImage"
         :is-processing="isProcessing"
         :task-status="currentTaskStatus"
+        :task-id="currentTaskId"
         :video-path="currentTaskType === 'video' ? currentFile?.path : undefined"
         :compressed-video-path="currentTaskType === 'video' ? currentFile?.compressedUrl : undefined"
         :compressed-video-file-path="currentTaskType === 'video' ? currentFile?.compressedPath : undefined"
         :time-range="currentTaskType === 'video' ? computedTimeRange : undefined"
+
         @reset="onReset"
         @compress="emit('compress', $event)"
         @update-images="emit('update-images', $event)"

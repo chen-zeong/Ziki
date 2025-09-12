@@ -17,6 +17,7 @@ interface Props {
   timeRangeSettings: any;
   showOutputFolderPopup: boolean;
   showTimeRangePopup: boolean;
+
 }
 
 const props = defineProps<Props>();
@@ -36,7 +37,7 @@ const emit = defineEmits([
   'output-path-update',
   'time-validation-change',
   'batch-compress',
-  'bottom-compress',
+  'compress',
   'update:timeRangeSettings'
 ]);
 
@@ -50,8 +51,24 @@ const triggerCompress = () => {
   }
 };
 
+// 暴露clearTaskCache方法给父组件
+const clearTaskCache = (videoPath: string) => {
+  if (mainContentRef.value) {
+    mainContentRef.value.clearTaskCache(videoPath);
+  }
+};
+
+// 新增：暴露refreshPreview方法给父组件
+const refreshPreview = () => {
+  if (mainContentRef.value && (mainContentRef.value as any).refreshPreview) {
+    (mainContentRef.value as any).refreshPreview();
+  }
+};
+
 defineExpose({
-  triggerCompress
+  triggerCompress,
+  clearTaskCache,
+  refreshPreview
 });
 </script>
 
@@ -71,6 +88,7 @@ defineExpose({
       :is-processing="isProcessing"
       :selected-task-id="selectedTaskId"
       :time-range-settings="timeRangeSettings"
+
       @files-selected="emit('files-selected', $event)"
       @compress="emit('compress', $event)"
       @reset="emit('reset')"
@@ -97,7 +115,7 @@ defineExpose({
       @output-path-update="emit('output-path-update', $event)"
       @time-validation-change="emit('time-validation-change', $event)"
       @batch-compress="emit('batch-compress')"
-      @bottom-compress="emit('bottom-compress')"
+      @bottom-compress="triggerCompress"
       @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
     />
   </div>

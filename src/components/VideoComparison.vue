@@ -10,7 +10,9 @@
       :compressed-video-path="compressedVideoPath"
       :compressed-video-file-path="compressedVideoFilePath"
       :task-status="taskStatus"
+      :task-id="taskId"
       :time-range="timeRange"
+
       @reset="$emit('reset')"
       @update-images="handleUpdateImages"
     />
@@ -21,6 +23,9 @@
     <FrameSelector
       :video-path="videoPath"
       :selected-frame="selectedFrame"
+      :time-range="timeRange"
+      :task-id="taskId"
+      :compressed-video-path="compressedVideoFilePath"
       @frame-selected="handleFrameSelected"
     />
   </div>
@@ -47,7 +52,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import VideoPreview from './VideoPreview.vue';
 import VideoSettingsPanel from './video-settings/VideoSettingsPanel.vue';
 import ImageSettingsPanel from './image-settings/ImageSettingsPanel.vue';
@@ -62,13 +67,14 @@ interface Props {
   compressedVideoFilePath?: string;
   isProcessing?: boolean;
   taskStatus?: string;
+  taskId?: string;
   timeRange?: {
     start: number;
     end: number;
   };
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   title: '处理与预览',
   isProcessing: false,
   taskStatus: 'pending'
@@ -91,9 +97,19 @@ const selectedFrame = ref<number | null>(null);
 const handleFrameSelected = (frameIndex: number) => {
   selectedFrame.value = frameIndex;
   if (videoPreviewRef.value) {
+    // 强制清除该帧的缓存，确保重新获取画面
+    videoPreviewRef.value.clearFrameCache(frameIndex);
     videoPreviewRef.value.selectFrame(frameIndex);
   }
 };
+
+// 当自定义时间段变化时，保持当前选中的帧并刷新
+watch(() => props.timeRange, (newTimeRange) => {
+  if (newTimeRange && videoPreviewRef.value) {
+    const index = selectedFrame.value ?? 0;
+    videoPreviewRef.value.selectFrame(index);
+  }
+}, { deep: true });
 
 // 处理图片更新
 const handleUpdateImages = (data: { beforeImage?: string; afterImage?: string }) => {
@@ -112,13 +128,32 @@ const triggerCompress = () => {
   }
 };
 
+// 新增：强制刷新当前预览帧
+const refreshPreview = () => {
+  if (!videoPreviewRef.value) return;
+  const index = selectedFrame.value ?? 0;
+  // 尝试清除该帧缓存以确保重新生成
+  if (typeof (videoPreviewRef.value as any).clearFrameCache === 'function') {
+    (videoPreviewRef.value as any).clearFrameCache(index);
+  }
+  if (typeof (videoPreviewRef.value as any).selectFrame === 'function') {
+    (videoPreviewRef.value as any).selectFrame(index);
+  }
+};
+
 // 暴露方法供父组件调用
 defineExpose({
   resetFrameData: () => {
     if (videoPreviewRef.value) {
-      videoPreviewRef.value.resetFrameData();
+      (videoPreviewRef.value as any).resetFrameData();
     }
   },
-  triggerCompress
+  clearTaskCache: (videoPath?: string) => {
+    if (videoPreviewRef.value) {
+      (videoPreviewRef.value as any).clearTaskCache(videoPath);
+    }
+  },
+  triggerCompress,
+  refreshPreview
 });
 </script>

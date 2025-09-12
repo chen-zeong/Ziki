@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, provide, nextTick, watch, onMounted } from 'vue';
+import { ref, computed, provide, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import AppLayout from './layouts/AppLayout.vue';
+
+// 全局缓存清理函数
+const clearAllCaches = () => {
+  // 清理VideoPreview组件的全局缓存
+  if ((window as any).globalTaskCache) {
+    (window as any).globalTaskCache.clear();
+    console.log('All task caches cleared on app close');
+  }
+};
 
 import { useFileHandler } from './composables/useFileHandler';
 import { useBatchProcessor } from './composables/useBatchProcessor';
@@ -18,9 +27,32 @@ const {
   resetUploader,
   startCompression,
   switchToTask,
-  deleteTask,
+  deleteTask: originalDeleteTask,
   resumeCompression
 } = useFileHandler();
+
+// 包装deleteTask方法，添加缓存清理
+const deleteTask = (taskId: string) => {
+  // 获取要删除的任务信息
+  const task = tasks.value.find(t => t.id === taskId);
+  if (task && appLayoutRef.value) {
+    // 清理该任务的缓存（原视频路径）
+    appLayoutRef.value.clearTaskCache(task.file.path);
+    // 同时尝试清理压缩后的视频路径缓存（若存在）
+    const compressedPath = (task as any).file?.compressedPath;
+    if (compressedPath) {
+      appLayoutRef.value.clearTaskCache(compressedPath);
+    }
+  }
+  // 调用原始的deleteTask方法
+  originalDeleteTask(taskId);
+  // 删除后强制刷新当前预览帧，确保 UI 不使用任何残留缓存
+  nextTick(() => {
+    if (appLayoutRef.value && (appLayoutRef.value as any).refreshPreview) {
+      (appLayoutRef.value as any).refreshPreview();
+    }
+  });
+};
 
 // 批量处理器
 const {
@@ -321,8 +353,12 @@ const appLayoutRef = ref<InstanceType<typeof AppLayout> | null>(null);
 
 // 底部按钮的压缩处理
 const handleBottomCompress = () => {
+  console.log('App.vue: handleBottomCompress called');
   if (appLayoutRef.value) {
+    console.log('App.vue: appLayoutRef is present, calling triggerCompress');
     appLayoutRef.value.triggerCompress();
+  } else {
+    console.error('App.vue: appLayoutRef is NOT present');
   }
 };
 
@@ -511,6 +547,17 @@ onMounted(async () => {
   }
   // 预加载硬件编码器支持，避免后续切换视频时卡顿
   await invoke('get_hardware_encoder_support');
+  
+  // 添加应用关闭时的缓存清理
+  window.addEventListener('beforeunload', clearAllCaches);
+});
+
+// 组件卸载时清理
+onUnmounted(() => {
+  // 移除事件监听器
+  window.removeEventListener('beforeunload', clearAllCaches);
+  // 清理缓存
+  clearAllCaches();
 });
 
 // 监听任务变化，确保不超过99个，同时在首次有任务时默认选中第一个
@@ -537,6 +584,10 @@ watch(tasks, (newTasks) => {
 </script>
 
 <template>
+  <!-- Emergency Bypass Toggle Button (always clickable, top-most) -->
+
+
+  <!-- Existing App Layout -->
   <AppLayout
     ref="appLayoutRef"
     :tasks="tasks"
@@ -550,6 +601,7 @@ watch(tasks, (newTasks) => {
     :time-range-settings="timeRangeSettings"
     :show-output-folder-popup="showOutputFolderPopup"
     :show-time-range-popup="showTimeRangePopup"
+
     @files-selected="onFilesSelected"
     @compress="onCompress"
     @reset="onReset"
@@ -567,6 +619,8 @@ watch(tasks, (newTasks) => {
     @bottom-compress="handleBottomCompress"
     @update:timeRangeSettings="handleTimeRangeSettingsUpdate"
   />
+
+
 
 
 

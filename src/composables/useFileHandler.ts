@@ -13,7 +13,14 @@ export function useFileHandler() {
   const isUploaderVisible = ref(true);
   const isProcessing = ref(false);
 
-
+  // Yield to next animation frame (fallback to setTimeout) to let UI/RAF paint
+  const yieldToUI = () => new Promise<void>((resolve) => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -311,25 +318,42 @@ export function useFileHandler() {
             : URL.createObjectURL(file)
         };
         
+        selectedFiles.value.push(videoFile);
+        // Yield after pushing into selectedFiles to avoid synchronous deep watchers blocking UI
+        await yieldToUI();
+
+        // Set current file if it's the first one
+        if (!currentFile.value) {
+          currentFile.value = videoFile;
+          isUploaderVisible.value = false;
+          // Yield to allow UI (HUD/RAF) to update before further work
+          await yieldToUI();
+        }
+
         // Only generate thumbnail for video files
         if (file.type.startsWith('video/')) {
-          try {
-            const thumbnailUrl = await invoke<string>('generate_thumbnail', {
-              videoPath: filePath
-            });
-            videoFile.thumbnailUrl = thumbnailUrl;
-          } catch (error) {
+          invoke<string>('generate_single_frame', {
+            videoPath: filePath,
+            frameIndex: 0
+          }).then(thumbnailUrl => {
+            const fileInArray = selectedFiles.value.find(f => f.id === videoFile.id);
+            if (fileInArray) {
+              fileInArray.thumbnailUrl = thumbnailUrl;
+            }
+          }).catch(error => {
             console.warn('Failed to generate thumbnail for', displayName, ':', error);
-          }
+          });
         }
         
         // Get video metadata for video files
         if (file.type.startsWith('video/')) {
-          try {
-            const metadata = await invoke<VideoMetadata>('get_video_metadata', {
-              videoPath: filePath
-            });
-            videoFile.metadata = metadata;
+          invoke<VideoMetadata>('get_video_metadata', {
+            videoPath: filePath
+          }).then(metadata => {
+            const fileInArray = selectedFiles.value.find(f => f.id === videoFile.id);
+            if (fileInArray) {
+              fileInArray.metadata = metadata;
+            }
             console.log('Video metadata for', displayName, ':', metadata);
             
             // 触发全局metadata更新事件，供其他组件使用
@@ -340,17 +364,9 @@ export function useFileHandler() {
                 metadata: metadata
               }
             }));
-          } catch (error) {
+          }).catch(error => {
             console.warn('Failed to get video metadata for', displayName, ':', error);
-          }
-        }
-        
-        selectedFiles.value.push(videoFile);
-        
-        // Set current file if it's the first one
-        if (!currentFile.value) {
-          currentFile.value = videoFile;
-          isUploaderVisible.value = false;
+          });
         }
         
         // Determine task type and defaults
@@ -402,6 +418,8 @@ export function useFileHandler() {
           createdAt: new Date()
         };
         tasks.value.unshift(task);
+        // Yield after pushing task to avoid long synchronous reactive cascades
+        await yieldToUI();
       }
     }
   };

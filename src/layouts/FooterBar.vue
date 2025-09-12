@@ -66,7 +66,10 @@ const isCompressButtonDisabled = computed(() => {
 });
 
 // 当前任务是否锁定（完成后不可更改设置）
-const isSettingsLocked = computed(() => selectedTask.value?.status === 'completed');
+const isSettingsLocked = computed(() => {
+  const status = selectedTask.value?.status as string | undefined;
+  return status === 'queued' || status === 'processing' || status === 'completed';
+});
 
 // 仅在视频任务显示时间段设置
 const showTimeRangeUI = computed(() => selectedTask.value?.type === 'video');

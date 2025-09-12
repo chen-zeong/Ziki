@@ -729,13 +729,16 @@ fn save_hardware_support_cache(app_handle: &tauri::AppHandle, hs: &HardwareSuppo
 
 #[tauri::command]
 pub fn get_hardware_encoder_support(app_handle: tauri::AppHandle) -> Result<HardwareSupport, String> {
+  println!("[HW Detect] get_hardware_encoder_support called");
   if let Some(cached) = load_hardware_support_cache(&app_handle) {
-    if cfg!(debug_assertions) { println!("[HW Detect] Load cached hardware support"); }
+    println!("[HW Detect] Load cached hardware support");
+    println!("[HW Detect] get_hardware_encoder_support finished (from cache)");
     return Ok(cached);
   }
-  if cfg!(debug_assertions) { println!("[HW Detect] Cache missing, running detection..."); }
+  println!("[HW Detect] Cache missing, running detection...");
   let hs = detect_hardware_support_internal(&app_handle);
   let _ = save_hardware_support_cache(&app_handle, &hs);
+  println!("[HW Detect] get_hardware_encoder_support finished (detection run)");
   Ok(hs)
 }
 
