@@ -165,11 +165,12 @@ const videoCodec = computed({
 
 const resolution = computed({
   get() {
-    // 如果有metadata且没有设置分辨率，默认使用原始分辨率
-    if (!props.modelValue.resolution && props.metadata?.resolution) {
-      return props.metadata.resolution;
+    // 当未设置或为 'original' 时，UI 显示原始分辨率的实际字符串值，确保下拉选中高亮
+    if (!props.modelValue.resolution || props.modelValue.resolution === 'original') {
+      if (props.metadata?.resolution) return props.metadata.resolution as any;
+      return '1920x1080';
     }
-    return props.modelValue.resolution || '1920x1080';
+    return props.modelValue.resolution;
   },
   set(value: 'original' | '1920x1080' | '1280x720' | '854x480' | 'custom') {
     emit('update:modelValue', { ...props.modelValue, resolution: value });
@@ -225,7 +226,7 @@ const calculateScaledResolutions = (originalResolution: string) => {
   if (!width || !height) return [];
   
   const aspectRatio = width / height;
-  const resolutions = [];
+  const resolutions = [] as { value: string; label: string; description?: string }[];
   
   // 定义目标高度（从高到低）
   const targetHeights = [1080, 720, 480, 360, 240];
@@ -293,7 +294,7 @@ const toggleCustomResolution = () => {
       }
     }
   } else {
-    newSettings.resolution = (props.metadata?.resolution as any) || '1920x1080';
+    newSettings.resolution = props.metadata ? 'original' : '1920x1080';
     customResolution.value = { width: 1920, height: 1080 };
     originalAspectRatio.value = 16/9;
     delete newSettings.customResolution;
@@ -390,14 +391,23 @@ watch(format, (newFormat) => {
   emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
 });
 
-// 监听metadata变化，自动调整编码选项
+// 监听metadata变化，自动调整编码选项和分辨率
 watch(() => props.metadata, (newMetadata) => {
   if (newMetadata) {
     const recommendedCodec = getRecommendedCodec();
+    const updates: Partial<CompressionSettings> = { ...props.modelValue };
+
     // 只有当前编码不是推荐编码时才更新
     if (videoCodec.value !== recommendedCodec) {
-      emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
+      updates.videoCodec = recommendedCodec;
     }
+
+    // 如果没有设置分辨率，自动设置为原始分辨率（使用 'original' 哨兵值）
+    if (!props.modelValue.resolution) {
+      updates.resolution = 'original';
+    }
+
+    emit('update:modelValue', updates);
   }
 }, { immediate: true });
 
@@ -410,9 +420,9 @@ const handleMetadataUpdate = (event: CustomEvent) => {
     const recommendedCodec = metadata.colorDepth && 
       (metadata.colorDepth.includes('10') || metadata.colorDepth.includes('12') || metadata.colorDepth.includes('16'))
       ? 'H.265' : 'H.264';
-    
-    // 自动设置分辨率为原始分辨率
-    if (metadata.resolution && !props.modelValue.resolution) {
+
+    // 自动设置分辨率为原始分辨率（使用 'original' 哨兵值）
+    if (!props.modelValue.resolution) {
       emit('update:modelValue', { 
         ...props.modelValue, 
         videoCodec: recommendedCodec,
@@ -424,6 +434,16 @@ const handleMetadataUpdate = (event: CustomEvent) => {
 
 onMounted(() => {
   window.addEventListener('video-metadata-updated', handleMetadataUpdate as EventListener);
+  
+  // 初始化时如果有metadata且没有设置分辨率，自动设置为原始分辨率（使用 'original' 哨兵值）
+  if (props.metadata?.resolution && !props.modelValue.resolution) {
+    const recommendedCodec = getRecommendedCodec();
+    emit('update:modelValue', {
+      ...props.modelValue,
+      resolution: 'original',
+      videoCodec: recommendedCodec
+    });
+  }
 });
 
 onUnmounted(() => {
