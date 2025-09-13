@@ -54,20 +54,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { switchLanguage, getCurrentLocale } from '../i18n';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
+import type { Language } from '../stores/useGlobalSettingsStore';
 
 const { locale } = useI18n();
+const globalSettings = useGlobalSettingsStore();
 
 const showDropdown = ref(false);
 
 const languages = [
-  { code: 'zh', name: '中文' },
-  { code: 'en', name: 'English' }
+  { code: 'zh' as Language, name: '中文' },
+  { code: 'en' as Language, name: 'English' }
 ];
 
-const currentLocale = computed(() => getCurrentLocale());
+const currentLocale = computed(() => globalSettings.language);
 
 const currentLanguageName = computed(() => {
   const lang = languages.find(l => l.code === currentLocale.value);
@@ -78,12 +81,19 @@ const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;
 };
 
-const switchLang = (langCode: string) => {
-  if (langCode === 'zh' || langCode === 'en') {
-    switchLanguage(langCode as 'zh' | 'en');
-  }
+const switchLang = (langCode: Language) => {
+  globalSettings.setLanguage(langCode);
+  switchLanguage(langCode);
   showDropdown.value = false;
 };
+
+// 监听全局设置中的语言变化，同步到i18n
+watch(
+  () => globalSettings.language,
+  (newLang) => {
+    switchLanguage(newLang);
+  }
+);
 
 // 点击外部关闭下拉菜单
 const handleClickOutside = (event: MouseEvent) => {
@@ -93,7 +103,8 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
+  await globalSettings.initialize();
   document.addEventListener('click', handleClickOutside);
 });
 

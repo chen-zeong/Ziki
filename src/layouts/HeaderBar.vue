@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Sun, Moon, Minus, Square, X } from 'lucide-vue-next';
 import LanguageSwitcher from '../components/LanguageSwitcher.vue';
-import { useTheme } from '../composables/useTheme';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { onMounted, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { Window as TauriWindow } from '@tauri-apps/api/window';
 
-const { isDark, toggleTheme } = useTheme();
+const globalSettings = useGlobalSettingsStore();
 
 const isWindows = ref(false);
 let appWindow: TauriWindow | null = null;
@@ -99,10 +99,10 @@ const handleClose = async () => {
       <!-- Theme Toggle -->
       <button 
         class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
-        @click="toggleTheme"
+        @click="globalSettings.toggleTheme"
         :data-tauri-drag-region="false"
       >
-        <Sun v-if="!isDark" class="w-4 h-4" />
+        <Sun v-if="!globalSettings.isDarkMode" class="w-4 h-4" />
         <Moon v-else class="w-4 h-4" />
       </button>
     </div>

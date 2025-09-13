@@ -5,49 +5,67 @@
       name="slide-down"
       enter-active-class="transition-all duration-200 ease-out"
       enter-from-class="opacity-0 max-h-0"
-      enter-to-class="opacity-100 max-h-32"
+      enter-to-class="opacity-100 max-h-48"
       leave-active-class="transition-all duration-200 ease-in"
-      leave-from-class="opacity-100 max-h-32"
+      leave-from-class="opacity-100 max-h-48"
       leave-to-class="opacity-0 max-h-0"
     >
       <div 
         v-if="showOutputFolder"
         class="bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4 mb-3 overflow-hidden"
       >
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center space-x-2">
-              <div class="p-2 rounded-lg shadow-sm bg-gray-800 dark:bg-gray-200">
-                <Folder class="w-4 h-4 text-white dark:text-gray-800" />
-              </div>
-              <div>
-                <label class="text-sm font-bold text-gray-800 dark:text-gray-100">
-                  输出文件夹
-                </label>
-                <p class="text-xs mt-0.5 font-medium text-gray-600 dark:text-gray-400">
-                  设置保存视频的路径
-                </p>
-              </div>
+        <div class="space-y-4">
+
+          
+          <!-- 输出文件名格式 -->
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+              输出文件名格式
+            </label>
+            <div class="flex space-x-2">
+              <button
+                v-for="option in globalSettings.fileNameFormatOptions"
+                :key="option.value"
+                @click="globalSettings.setOutputFileNameFormat(option.value)"
+                :class="[
+                  'flex-1 px-3 py-2 text-xs font-medium rounded-md border transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] whitespace-pre-line text-center',
+                  globalSettings.outputFileNameFormat === option.value
+                    ? 'bg-[#558ee1] text-white border-[#558ee1] shadow-md shadow-[#558ee1]/25'
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                ]"
+                :title="option.description"
+              >
+                {{ option.label }}
+              </button>
             </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {{ currentFormatDescription }}
+            </p>
           </div>
           
-          <div class="flex items-center space-x-2">
-            <div class="flex-1 relative">
-              <input 
-                v-model="outputPath"
-                type="text" 
-                 class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                 placeholder="选择输出路径..."
-                 readonly
-               />
-               <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
-                 <button 
-                   class="p-2 rounded-md transition-colors group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                   @click="selectOutputFolder"
-                   title="选择文件夹"
-                 >
-                   <FolderPen class="w-4 h-4 group-hover:animate-pulse" />
-                 </button>
+          <!-- 输出文件夹路径 -->
+          <div>
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+              输出文件夹
+            </label>
+            <div class="flex items-center space-x-2">
+              <div class="flex-1 relative">
+                <input 
+                  v-model="globalSettings.outputPath"
+                  type="text" 
+                   class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                   placeholder="选择输出路径..."
+                   readonly
+                 />
+                 <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                   <button 
+                     class="p-2 rounded-md transition-colors group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                     @click="selectOutputFolder"
+                     title="选择文件夹"
+                   >
+                     <FolderPen class="w-4 h-4 group-hover:animate-pulse" />
+                   </button>
+                 </div>
                </div>
              </div>
            </div>
@@ -58,10 +76,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
+import { computed, onMounted, watch } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
-import { FolderPen, FolderCog, Folder } from 'lucide-vue-next';
+import { FolderPen, Folder } from 'lucide-vue-next';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 
 // Props
 interface Props {
@@ -78,28 +96,18 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// Reactive data
-const outputPath = ref('');
-const defaultOutputPath = ref('');
-// 初始化默认输出路径
-const initializeOutputPath = async () => {
-  let path = '';
-  try {
-    path = await invoke<string>('get_desktop_path');
-  } catch (error) {
-    console.error('Failed to get default output path:', error);
-  } finally {
-    outputPath.value = path;
-    defaultOutputPath.value = path;
-    emit('update:outputPath', path);
-  }
-};
+// 使用全局设置store
+const globalSettings = useGlobalSettingsStore();
 
-// 检查是否使用自定义路径
-// const isCustomPath = computed(() => {
-//   return outputPath.value !== defaultOutputPath.value;
-// });
+// 当前格式描述
+const currentFormatDescription = computed(() => {
+  const option = globalSettings.fileNameFormatOptions.find(
+    opt => opt.value === globalSettings.outputFileNameFormat
+  );
+  return option?.description || '';
+});
 
+// 选择输出文件夹
 const selectOutputFolder = async () => {
   try {
     const selected = await open({
@@ -109,7 +117,7 @@ const selectOutputFolder = async () => {
     });
     
     if (selected && typeof selected === 'string') {
-      outputPath.value = selected;
+      globalSettings.setOutputPath(selected);
       emit('update:outputPath', selected);
     }
   } catch (error) {
@@ -117,12 +125,19 @@ const selectOutputFolder = async () => {
   }
 };
 
-// Watch for Tauri to be ready
-onMounted(async () => {
-  // 只在Tauri环境中初始化输出路径
-  if (window.__TAURI__) {
-    await initializeOutputPath();
+// 监听输出路径变化，同步给父组件
+watch(
+  () => globalSettings.outputPath,
+  (newPath) => {
+    emit('update:outputPath', newPath);
   }
+);
+
+// 初始化
+onMounted(async () => {
+  await globalSettings.initialize();
+  // 初始化后立即同步路径给父组件
+  emit('update:outputPath', globalSettings.outputPath);
 });
 </script>
 

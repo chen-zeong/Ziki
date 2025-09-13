@@ -5,6 +5,7 @@ import { confirm } from '@tauri-apps/plugin-dialog';
 import AppLayout from './layouts/AppLayout.vue';
 import { useTaskStore } from './stores/useTaskStore';
 import { useTaskSettingsStore } from './stores/useTaskSettingsStore';
+import { useGlobalSettingsStore } from './stores/useGlobalSettingsStore';
 
 // 全局缓存清理函数
 const clearAllCaches = () => {
@@ -28,6 +29,9 @@ const taskStore = useTaskStore();
 
 // 使用任务设置store
 const taskSettingsStore = useTaskSettingsStore();
+
+// 使用全局设置store
+const globalSettingsStore = useGlobalSettingsStore();
 
 const {
   currentFile,
@@ -558,6 +562,9 @@ const handleClearAllTasks = async () => {
 
 // 组件挂载时初始化
 onMounted(async () => {
+  // 初始化全局设置
+  await globalSettingsStore.initialize();
+  
   // 只在Tauri环境中初始化输出路径
   if (window.__TAURI__) {
     await initializeOutputPath();

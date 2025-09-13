@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, defineExpose, computed } from 'vue';
-import { useTheme } from '../composables/useTheme';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../stores/useTaskStore';
 import HeaderBar from './HeaderBar.vue';
 import MainContent from './MainContent.vue';
@@ -47,7 +47,7 @@ const emit = defineEmits([
   'update:timeRangeSettings'
 ]);
 
-const { isDark } = useTheme();
+const globalSettings = useGlobalSettingsStore();
 const mainContentRef = ref<InstanceType<typeof MainContent> | null>(null);
 
 // 暴露triggerCompress方法给父组件

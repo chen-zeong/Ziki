@@ -1,0 +1,197 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+
+// 输出文件名格式类型
+export type OutputFileNameFormat = 'original' | 'with-time' | 'with-random'
+
+// 语言类型
+export type Language = 'zh' | 'en'
+
+// 主题类型
+export type Theme = 'light' | 'dark' | 'auto'
+
+export const useGlobalSettingsStore = defineStore('globalSettings', () => {
+  // 状态
+  const outputPath = ref('')
+  const outputFileNameFormat = ref<OutputFileNameFormat>('original')
+  const theme = ref<Theme>('auto')
+  const language = ref<Language>('zh')
+  const isInitialized = ref(false)
+
+  // 计算属性
+  const isDarkMode = computed(() => {
+    if (theme.value === 'auto') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return theme.value === 'dark'
+  })
+
+  // 文件名格式选项
+  const fileNameFormatOptions = computed(() => [
+    { value: 'original', label: '原文件名', description: '保持原始文件名' },
+    { value: 'with-time', label: '原文件名\n+时间', description: '文件名_20240101_120000' },
+    { value: 'with-random', label: '原文件名\n+随机编号', description: '文件名_abc123' }
+  ])
+
+  // 动作
+  const setOutputPath = (path: string) => {
+    outputPath.value = path
+    saveSettings()
+  }
+
+  const setOutputFileNameFormat = (format: OutputFileNameFormat) => {
+    outputFileNameFormat.value = format
+    saveSettings()
+  }
+
+  const setTheme = (newTheme: Theme) => {
+    theme.value = newTheme
+    updateThemeClass()
+    saveSettings()
+  }
+
+  const setLanguage = (lang: Language) => {
+    language.value = lang
+    saveSettings()
+  }
+
+  const toggleTheme = () => {
+    const themes: Theme[] = ['light', 'dark', 'auto']
+    const currentIndex = themes.indexOf(theme.value)
+    const nextIndex = (currentIndex + 1) % themes.length
+    setTheme(themes[nextIndex])
+  }
+
+  // 更新主题类名
+  const updateThemeClass = () => {
+    const html = document.documentElement
+    if (isDarkMode.value) {
+      html.classList.add('dark')
+    } else {
+      html.classList.remove('dark')
+    }
+  }
+
+  // 生成输出文件名
+  const generateOutputFileName = (originalName: string, extension: string): string => {
+    const baseName = originalName.replace(/\.[^/.]+$/, '') // 移除扩展名
+    
+    switch (outputFileNameFormat.value) {
+      case 'with-time': {
+        const now = new Date()
+        const timeStr = now.toISOString()
+          .replace(/[-:]/g, '')
+          .replace(/T/, '_')
+          .replace(/\.\d{3}Z$/, '')
+        return `${baseName}_${timeStr}.${extension}`
+      }
+      case 'with-random': {
+        const randomStr = Math.random().toString(36).substring(2, 8)
+        return `${baseName}_${randomStr}.${extension}`
+      }
+      case 'original':
+      default:
+        return `${baseName}.${extension}`
+    }
+  }
+
+  // 初始化默认输出路径
+  const initializeOutputPath = async () => {
+    if (outputPath.value) return // 已有路径则不重新初始化
+    
+    try {
+      if (window.__TAURI__) {
+        const desktopPath = await invoke<string>('get_desktop_path')
+        outputPath.value = desktopPath
+      } else {
+        // 非Tauri环境的默认路径
+        outputPath.value = '~/Desktop'
+      }
+    } catch (error) {
+      console.error('Failed to get default output path:', error)
+      outputPath.value = '~/Desktop'
+    }
+  }
+
+  // 保存设置到localStorage
+  const saveSettings = () => {
+    const settings = {
+      outputPath: outputPath.value,
+      outputFileNameFormat: outputFileNameFormat.value,
+      theme: theme.value,
+      language: language.value
+    }
+    localStorage.setItem('globalSettings', JSON.stringify(settings))
+  }
+
+  // 从localStorage加载设置
+  const loadSettings = () => {
+    try {
+      const saved = localStorage.getItem('globalSettings')
+      if (saved) {
+        const settings = JSON.parse(saved)
+        outputPath.value = settings.outputPath || ''
+        outputFileNameFormat.value = settings.outputFileNameFormat || 'original'
+        theme.value = settings.theme || 'auto'
+        language.value = settings.language || 'zh'
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+    }
+  }
+
+  // 初始化设置
+  const initialize = async () => {
+    if (isInitialized.value) return
+    
+    loadSettings()
+    await initializeOutputPath()
+    updateThemeClass()
+    
+    // 监听系统主题变化
+    if (window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      mediaQuery.addEventListener('change', () => {
+        if (theme.value === 'auto') {
+          updateThemeClass()
+        }
+      })
+    }
+    
+    isInitialized.value = true
+  }
+
+  // 重置所有设置
+  const resetSettings = async () => {
+    outputFileNameFormat.value = 'original'
+    theme.value = 'auto'
+    language.value = 'zh'
+    await initializeOutputPath()
+    updateThemeClass()
+    saveSettings()
+  }
+
+  return {
+    // 状态
+    outputPath,
+    outputFileNameFormat,
+    theme,
+    language,
+    isInitialized,
+    
+    // 计算属性
+    isDarkMode,
+    fileNameFormatOptions,
+    
+    // 动作
+    setOutputPath,
+    setOutputFileNameFormat,
+    setTheme,
+    setLanguage,
+    toggleTheme,
+    generateOutputFileName,
+    initialize,
+    resetSettings
+  }
+})

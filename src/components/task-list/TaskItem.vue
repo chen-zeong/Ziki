@@ -2,10 +2,10 @@
   <div 
     class="rounded-lg transition-colors duration-200 cursor-pointer"
     :class="{
-      'bg-[#e6e6e6] dark:bg-[#3a3a3a]': isSelected,
+      'bg-[#e6e6e6] dark:bg-[#3a3a3a] border border-gray-200 dark:border-transparent shadow-md': isSelected,
       'bg-white dark:bg-[#1e1e1e] hover:bg-gray-50 border border-gray-200 dark:border-transparent': !isSelected
     }"
-    :style="!isSelected && isDark ? 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);' : ''"
+    :style="!isSelected && globalSettings.isDarkMode ? 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);' : ''"
     @click="$emit('select', task.id)"
   >
     <!-- 主要任务信息 -->
@@ -65,7 +65,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
-import { useTheme } from '../../composables/useTheme';
+import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../../stores/useTaskStore';
 import TaskStatusDisplay from './TaskStatusDisplay.vue';
 import TaskDetails from './TaskDetails.vue';
@@ -89,7 +89,7 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
-const { isDark } = useTheme();
+const globalSettings = useGlobalSettingsStore();
 const taskStore = useTaskStore();
 
 const formatFileSize = (bytes: number): string => {

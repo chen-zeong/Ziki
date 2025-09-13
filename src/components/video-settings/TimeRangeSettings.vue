@@ -102,7 +102,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { useTheme } from '../../composables/useTheme';
+import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 
 interface TimeRangeData {
   start: string;
@@ -128,7 +128,7 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const { isDark } = useTheme();
+const globalSettings = useGlobalSettingsStore();
 // 移除弹出框相关代码，改为一级页面设置
 const selectedQuickOption = ref<string | null>(null);
 

@@ -3,12 +3,14 @@ import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useTaskStore } from '../stores/useTaskStore';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 
 
 
 export function useFileHandler() {
   const taskStore = useTaskStore();
+  const globalSettings = useGlobalSettingsStore();
   const selectedFiles = ref<VideoFile[]>([]);
   const tasks = computed(() => taskStore.tasks);
   const currentFile = ref<VideoFile | null>(null);
@@ -240,14 +242,14 @@ export function useFileHandler() {
           // 边界处理：如果进程在完成时被中断，但输出文件已生成，则判定为完成
           try {
             // 推断输出路径
-            const baseName = task.file.name.replace(/\.[^/.]+$/i, '');
-            const fileExtension = `.${task.settings.format}`;
+            const fileExtension = task.settings.format;
+            const outputFileName = globalSettings.generateOutputFileName(task.file.name, fileExtension);
             let outDir = task.outputDirectory;
             if (!outDir) {
               try { outDir = await invoke<string>('get_desktop_path'); } catch {}
             }
             if (outDir) {
-              const expectedPath = `${outDir}/${baseName}_compressed${fileExtension}`;
+              const expectedPath = `${outDir}/${outputFileName}`;
               const size = await invoke<number>('get_file_size', { filePath: expectedPath });
               if (size && size > 0) {
                 let compressedMetadata: VideoMetadata | undefined = undefined;
@@ -494,10 +496,10 @@ export function useFileHandler() {
       // 记录输出目录，便于后续恢复/校验
       task.outputDirectory = outputDir;
       
-      // Generate output filename
-      const fileExtension = `.${settings.format}`;
-      const baseName = task.file.name.replace(/\.[^/.]+$/i, '');
-      const outputPath = `${outputDir}/${baseName}_compressed${fileExtension}`;
+      // Generate output filename using global settings
+      const fileExtension = settings.format;
+      const outputFileName = globalSettings.generateOutputFileName(task.file.name, fileExtension);
+      const outputPath = `${outputDir}/${outputFileName}`;
       
       // Update progress
       task.progress = 10;

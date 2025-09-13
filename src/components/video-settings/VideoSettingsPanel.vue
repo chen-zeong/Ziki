@@ -37,12 +37,12 @@ import { invoke } from '@tauri-apps/api/core';
 import VideoFormatSettings from './VideoFormatSettings.vue';
 import HardwareAccelerationSettings from './HardwareAccelerationSettings.vue';
 import QualitySettings from './QualitySettings.vue';
-import { useTheme } from '../../composables/useTheme';
+import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskSettingsStore } from '../../stores/useTaskSettingsStore';
 import type { CompressionSettings, VideoFile } from '../../types';
 
 // 主题
-const { isDark } = useTheme();
+const globalSettings = useGlobalSettingsStore();
 
 // 使用任务设置store
 const taskSettingsStore = useTaskSettingsStore();
