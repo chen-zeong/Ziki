@@ -3,6 +3,8 @@ import { ref, computed, provide, nextTick, watch, onMounted, onUnmounted } from 
 import { invoke } from '@tauri-apps/api/core';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import AppLayout from './layouts/AppLayout.vue';
+import { useTaskStore } from './stores/useTaskStore';
+import { useTaskSettingsStore } from './stores/useTaskSettingsStore';
 
 // 全局缓存清理函数
 const clearAllCaches = () => {
@@ -11,14 +13,23 @@ const clearAllCaches = () => {
     (window as any).globalTaskCache.clear();
     console.log('All task caches cleared on app close');
   }
+  
+  // 清理任务设置store
+  taskSettingsStore.clearAllSettings();
+  console.log('Task settings cache cleared');
 };
 
 import { useFileHandler } from './composables/useFileHandler';
 import { useBatchProcessor } from './composables/useBatchProcessor';
 import type { CompressionSettings, CompressionTask } from './types';
 
+// 使用任务store
+const taskStore = useTaskStore();
+
+// 使用任务设置store
+const taskSettingsStore = useTaskSettingsStore();
+
 const {
-  tasks,
   currentFile,
   isUploaderVisible,
   selectedFiles,
@@ -30,6 +41,9 @@ const {
   deleteTask: originalDeleteTask,
   resumeCompression
 } = useFileHandler();
+
+// 从store获取任务相关状态
+const tasks = computed(() => taskStore.tasks);
 
 // 包装deleteTask方法，添加缓存清理
 const deleteTask = (taskId: string) => {
@@ -63,22 +77,25 @@ const {
   getBatchStats
 } = useBatchProcessor();
 
-// 选中的任务ID
-const selectedTaskId = ref<string | null>(null);
-
 // 当前选中任务
 const selectedTask = computed<CompressionTask | null>(() => {
-  return tasks.value.find(t => t.id === selectedTaskId.value) || null;
+  return taskStore.selectedTask;
 });
 
 // 提供当前文件信息给子组件
 provide('currentFile', currentFile);
+provide('currentTaskId', computed(() => currentFile.value?.id || null));
 
 // 提供“当前任务的设置”和“更新方法”给右侧设置面板
 const currentTaskSettings = computed<CompressionSettings | null>(() => selectedTask.value ? selectedTask.value.settings : null);
 provide('currentTaskSettings', currentTaskSettings);
 provide('updateCurrentTaskSettings', (updates: Partial<CompressionSettings>) => {
   if (!selectedTask.value) return;
+  
+  // 更新任务设置store
+  taskSettingsStore.updateTaskSettings(selectedTask.value.id, updates);
+  
+  // 保持原有逻辑，更新任务store中的设置
   const idx = tasks.value.findIndex(t => t.id === selectedTask.value!.id);
   if (idx !== -1) {
     tasks.value[idx] = {
@@ -374,7 +391,7 @@ const updateTask = (updatedTask: CompressionTask) => {
 
 // 处理任务选中
 const selectTask = (taskId: string) => {
-  selectedTaskId.value = taskId;
+  taskStore.selectTask(taskId);
   switchToTask(taskId);
   // 将该任务的时间段设置应用到右下角时间段UI
   const t = tasks.value.find(t => t.id === taskId) || null;
@@ -430,7 +447,7 @@ const handleResumeCompression = async (taskId: string) => {
 
       console.log('开始处理排队/等待中的任务:', taskId);
       // 切到该任务以确保 startCompression 针对正确的 currentFile
-      selectedTaskId.value = taskId;
+      taskStore.selectTask(taskId);
       switchToTask(taskId);
       applyTaskTimeRangeToUI(task);
 
@@ -534,7 +551,7 @@ const handleClearAllTasks = async () => {
   }
   
   // 重置选中状态
-  selectedTaskId.value = null;
+  taskStore.selectedTaskId = null;
   
   console.log('All tasks cleared successfully');
 };
@@ -573,8 +590,8 @@ watch(tasks, (newTasks) => {
   }
 
   // 如果当前没有选中任务且有任务，则默认选中第一个
-  if (!selectedTaskId.value && newTasks.length > 0) {
-    selectedTaskId.value = newTasks[0].id;
+  if (!taskStore.selectedTaskId && newTasks.length > 0) {
+    taskStore.selectTask(newTasks[0].id);
     switchToTask(newTasks[0].id);
     applyTaskTimeRangeToUI(newTasks[0]);
   }
@@ -584,19 +601,13 @@ watch(tasks, (newTasks) => {
 </script>
 
 <template>
-  <!-- Emergency Bypass Toggle Button (always clickable, top-most) -->
-
-
-  <!-- Existing App Layout -->
   <AppLayout
     ref="appLayoutRef"
-    :tasks="tasks"
     :current-file="currentFile"
     :is-uploader-visible="isUploaderVisible"
     :selected-files="selectedFiles"
     :is-processing="isProcessing"
     :is-processing-batch="isProcessingBatch"
-    :selected-task-id="selectedTaskId"
     :output-path="outputPath"
     :time-range-settings="timeRangeSettings"
     :show-output-folder-popup="showOutputFolderPopup"
@@ -619,10 +630,4 @@ watch(tasks, (newTasks) => {
     @bottom-compress="handleBottomCompress"
     @update:timeRangeSettings="handleTimeRangeSettingsUpdate"
   />
-
-
-
-
-
-
 </template>

@@ -3,10 +3,11 @@ import { computed } from 'vue';
 import { Archive, FolderCog } from 'lucide-vue-next';
 import OutputFolder from '../components/OutputFolder.vue';
 import TimeRangeSettings from '../components/video-settings/TimeRangeSettings.vue';
+import { useTaskStore } from '../stores/useTaskStore';
 import type { CompressionTask } from '../types';
 
 interface Props {
-  tasks: CompressionTask[];
+  tasks?: CompressionTask[];
   currentFile: any;
   isProcessing: boolean;
   isProcessingBatch?: boolean;
@@ -17,6 +18,10 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const taskStore = useTaskStore();
+
+// 从store或props获取数据
+const tasks = computed(() => props.tasks || taskStore.tasks);
 
 const emit = defineEmits([
   'toggle-output-folder-popup',
@@ -31,14 +36,14 @@ const emit = defineEmits([
 // 获取当前选中任务（与 MainContent 保持一致，按 file.id 匹配）
 const selectedTask = computed(() => {
   if (!props.currentFile) return null;
-  return props.tasks.find(t => t.file?.id === props.currentFile.id) || null;
+  return tasks.value.find(t => t.file?.id === props.currentFile.id) || null;
 });
 
-// 仅统计“等待中/排队中”的任务数量，并且仅限于当前选中的任务类型
+// 仅统计"等待中/排队中"的任务数量，并且仅限于当前选中的任务类型
 const pendingTasksCount = computed(() => {
   const type = selectedTask.value?.type;
   if (!type) return 0;
-  return props.tasks.filter(t => (t.status === 'pending' || t.status === 'queued') && t.type === type).length;
+  return tasks.value.filter(t => (t.status === 'pending' || t.status === 'queued') && t.type === type).length;
 });
 
 // 当且仅当没有等待/排队中的任务时禁用批量按钮

@@ -26,7 +26,7 @@
           :key="task.id"
           :task="task"
           :is-expanded="expandedTasks.has(task.id)"
-          :is-selected="props.selectedTaskId === task.id"
+          :is-selected="selectedTaskId === task.id"
           @delete="deleteTask"
           @toggle-expand="toggleTaskExpansion"
           @pause="pauseTask"
@@ -42,12 +42,17 @@
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
+import { useTaskStore } from '../../stores/useTaskStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
 import type { CompressionTask } from '../../types';
 
+// 使用任务store
+const taskStore = useTaskStore();
+
 interface Props {
-  tasks: CompressionTask[];
+  // 保持props接口兼容性，但内部使用store
+  tasks?: CompressionTask[];
   selectedTaskId?: string | null;
 }
 
@@ -62,6 +67,10 @@ interface Emits {
 }
 
 const props = defineProps<Props>();
+
+// 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
+const tasks = computed(() => props.tasks || taskStore.tasks);
+const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
 
@@ -73,9 +82,9 @@ const selectedTasks = ref(new Set<string>());
 // 计算属性
 const filteredTasks = computed(() => {
   if (selectedStatuses.value.size === 0) {
-    return props.tasks;
+    return tasks.value;
   }
-  return props.tasks.filter(task => selectedStatuses.value.has(task.status));
+  return tasks.value.filter(task => selectedStatuses.value.has(task.status));
 });
 
 // 方法
@@ -104,7 +113,7 @@ const toggleTaskExpansion = (taskId: string) => {
 
 const deleteTask = async (taskId: string) => {
   try {
-    const task = props.tasks.find(t => t.id === taskId);
+    const task = tasks.value.find(t => t.id === taskId);
     if (!task) {
       console.error('Task not found:', taskId);
       return;
@@ -144,7 +153,7 @@ const deleteTask = async (taskId: string) => {
 
 const pauseTask = async (taskId: string) => {
   try {
-    const task = props.tasks.find(t => t.id === taskId);
+    const task = tasks.value.find(t => t.id === taskId);
     console.log('Pause task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
     if (task && task.status === 'processing') {
       console.log('Calling pause_task for:', taskId);
@@ -173,7 +182,7 @@ const pauseTask = async (taskId: string) => {
 
 const resumeTask = async (taskId: string) => {
   try {
-    const task = props.tasks.find(t => t.id === taskId);
+    const task = tasks.value.find(t => t.id === taskId);
     console.log('Resume task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
     if (task && (task.status === 'paused' || task.status === 'queued')) {
       console.log('Resuming task by restarting compression:', taskId);
@@ -192,7 +201,7 @@ const handleClearAllTasks = () => {
 };
 
 // 监听任务变化，自动清理已删除任务的展开状态
-watch(() => props.tasks, (newTasks) => {
+watch(tasks, (newTasks) => {
   const taskIds = new Set(newTasks.map(task => task.id));
   
   // 清理已删除任务的展开状态

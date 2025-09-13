@@ -66,6 +66,7 @@
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { useTheme } from '../../composables/useTheme';
+import { useTaskStore } from '../../stores/useTaskStore';
 import TaskStatusDisplay from './TaskStatusDisplay.vue';
 import TaskDetails from './TaskDetails.vue';
 import { Video } from 'lucide-vue-next';
@@ -89,6 +90,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
 const { isDark } = useTheme();
+const taskStore = useTaskStore();
 
 const formatFileSize = (bytes: number): string => {
   if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';

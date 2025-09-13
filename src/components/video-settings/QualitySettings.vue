@@ -125,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, withDefaults, onMounted, inject } from 'vue';
+import { ref, computed, watch, withDefaults, onMounted, inject, nextTick } from 'vue';
 import type { CompressionSettings } from '../../types';
 import { 
   getQualityLevelIndex, 
@@ -155,6 +155,9 @@ const emit = defineEmits<Emits>();
 
 // 质量滑动条值 (0-100)
 const qualityValue = ref(80);
+
+// 由滑块驱动更新的标志，避免循环
+const isUpdatingFromSlider = ref(false);
 
 // 气泡提示框显示状态
 const showTooltip = ref(false);
@@ -263,13 +266,58 @@ const initializeSettings = () => {
 
 const settings = ref<Partial<CompressionSettings>>(initializeSettings());
 
-// 初始化滑动条值
+// 从现有设置推导滑块值（记忆与回填）
+const deriveSliderFromModel = (): number => {
+  const codec = props.currentVideoCodec || 'h264';
+  const isHW = props.isHardwareAccelerated || false;
+  const type = (props.modelValue.qualityType ?? getDefaultQualityParam(codec, isHW).paramType) as 'crf' | 'qv' | 'profile';
+
+  // 取目标参数值
+  let target: number | string | undefined;
+  if (type === 'crf') target = props.modelValue.crfValue;
+  else if (type === 'qv') target = props.modelValue.qvValue;
+  else target = props.modelValue.profileValue;
+
+  // 若无目标值，返回默认滑块
+  if (target === undefined || target === null) {
+    const d = getDefaultQualityParam(codec, isHW);
+    return d.sliderValue;
+  }
+
+  // profile 离散映射
+  if (type === 'profile') {
+    const idx = ['proxy', 'lt', 'standard', 'hq', '4444'].indexOf(String(target).toLowerCase());
+    const clamped = idx >= 0 ? idx : 3;
+    const level = QUALITY_LEVELS[clamped];
+    return Math.round((level.range[0] + level.range[1]) / 2);
+  }
+
+  // 数值型：遍历寻找最接近的滑块位置
+  const targetNum = Number(target);
+  if (Number.isNaN(targetNum)) {
+    const d = getDefaultQualityParam(codec, isHW);
+    return d.sliderValue;
+  }
+
+  let bestSlider = 60;
+  let bestDelta = Number.POSITIVE_INFINITY;
+  for (let s = 2; s <= 98; s++) {
+    const p = getEncoderQualityParam(codec, isHW, s);
+    if (p.paramType !== type) continue;
+    const v = Number(p.value);
+    const delta = Math.abs(v - targetNum);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestSlider = s;
+      if (delta === 0) break;
+    }
+  }
+  return bestSlider;
+};
+
+// 初始化滑动条值（优先根据已存在的modelValue推导）
 const initializeQualityValue = () => {
-  const defaultParam = getDefaultQualityParam(
-    props.currentVideoCodec || 'h264',
-    props.isHardwareAccelerated || false
-  );
-  qualityValue.value = defaultParam.sliderValue;
+  qualityValue.value = deriveSliderFromModel();
 };
 
 // 初始化
@@ -310,6 +358,7 @@ const currentParamDisplay = computed(() => {
 
 // 更新质量状态
 const updateQualityState = () => {
+  isUpdatingFromSlider.value = true;
   // 更新滑动条填充百分比
   const percentage = qualityValue.value;
   const slider = document.getElementById('quality-slider') as HTMLInputElement;
@@ -350,14 +399,25 @@ const updateQualityState = () => {
   
   // 发送更新事件
   emit('update:modelValue', settings.value);
+
+  // 下一帧再清除标志，避免本轮 props 回流触发二次推导
+  nextTick(() => { isUpdatingFromSlider.value = false; });
 };
 
 // 监听外部modelValue变化
 watch(() => props.modelValue, (newVal) => {
+  // 合并到内部设置
   settings.value = { ...settings.value, ...newVal };
   // 更新bit深度状态
   if (newVal.bitDepth !== undefined) {
-    selectedBitDepth.value = newVal.bitDepth;
+    selectedBitDepth.value = newVal.bitDepth as 8 | 10 | 12;
+  }
+  // 若不是滑块主动触发的更新，则根据新的模型值推导滑块位置，实现“记忆”
+  if (!isUpdatingFromSlider.value) {
+    const derived = deriveSliderFromModel();
+    if (derived !== qualityValue.value) {
+      qualityValue.value = derived;
+    }
   }
 }, { deep: true, immediate: true });
 
@@ -375,9 +435,12 @@ watch(() => currentFile?.value?.metadata?.colorDepth, () => {
 
 // 监听编码器和硬件加速变化，重新初始化参数
 watch([() => props.currentVideoCodec, () => props.isHardwareAccelerated], () => {
-  // 重新初始化设置和滑动条值
+  // 重新初始化设置
   settings.value = initializeSettings();
-  initializeQualityValue();
+  // 根据最新的（可能来自外部记忆的）值推导滑块
+  const derived = deriveSliderFromModel();
+  qualityValue.value = derived;
+  // 同步一次状态
   updateQualityState();
 }, { immediate: false });
 

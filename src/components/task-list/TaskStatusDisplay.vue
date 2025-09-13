@@ -259,6 +259,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { CheckCircle, ArrowDown, ArrowUp, Folder, Trash, Info, Pause, Play, ChevronDown, Clock, X, Zap } from 'lucide-vue-next';
+import { useTaskStore } from '../../stores/useTaskStore';
 import type { CompressionTask } from '../../types';
 
 interface Props {
@@ -266,6 +267,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const taskStore = useTaskStore();
 
 defineEmits<{
   'delete': [id: string];

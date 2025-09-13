@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { ref, defineExpose } from 'vue';
+import { ref, defineExpose, computed } from 'vue';
 import { useTheme } from '../composables/useTheme';
+import { useTaskStore } from '../stores/useTaskStore';
 import HeaderBar from './HeaderBar.vue';
 import MainContent from './MainContent.vue';
 import FooterBar from './FooterBar.vue';
 
 interface Props {
-  tasks: any[];
+  tasks?: any[];
   currentFile: any;
   isUploaderVisible: boolean;
   selectedFiles: any[];
   isProcessing: boolean;
   isProcessingBatch?: boolean;
-  selectedTaskId: string | null;
+  selectedTaskId?: string | null;
   outputPath: string;
   timeRangeSettings: any;
   showOutputFolderPopup: boolean;
@@ -21,6 +22,11 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const taskStore = useTaskStore();
+
+// 从store或props获取数据
+const tasks = computed(() => props.tasks || taskStore.tasks);
+const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
 
 const emit = defineEmits([
   'files-selected',
@@ -82,12 +88,12 @@ defineExpose({
     <MainContent
       ref="mainContentRef"
       :tasks="tasks"
-      :current-file="currentFile"
-      :is-uploader-visible="isUploaderVisible"
-      :selected-files="selectedFiles"
-      :is-processing="isProcessing"
+      :current-file="props.currentFile"
+      :is-uploader-visible="props.isUploaderVisible"
+      :selected-files="props.selectedFiles"
+      :is-processing="props.isProcessing"
       :selected-task-id="selectedTaskId"
-      :time-range-settings="timeRangeSettings"
+      :time-range-settings="props.timeRangeSettings"
 
       @files-selected="emit('files-selected', $event)"
       @compress="emit('compress', $event)"
@@ -103,13 +109,13 @@ defineExpose({
     <!-- 底部状态栏 -->
     <FooterBar
       :tasks="tasks"
-      :current-file="currentFile"
-      :is-processing="isProcessing"
-      :is-processing-batch="isProcessingBatch"
-      :output-path="outputPath"
-      :time-range-settings="timeRangeSettings"
-      :show-output-folder-popup="showOutputFolderPopup"
-      :show-time-range-popup="showTimeRangePopup"
+      :current-file="props.currentFile"
+      :is-processing="props.isProcessing"
+      :is-processing-batch="props.isProcessingBatch"
+      :output-path="props.outputPath"
+      :time-range-settings="props.timeRangeSettings"
+      :show-output-folder-popup="props.showOutputFolderPopup"
+      :show-time-range-popup="props.showTimeRangePopup"
       @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
       @toggle-time-range-popup="emit('toggle-time-range-popup')"
       @output-path-update="emit('output-path-update', $event)"

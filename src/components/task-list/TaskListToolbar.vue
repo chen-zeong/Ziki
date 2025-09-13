@@ -60,16 +60,22 @@ import { Plus, BrushCleaning } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
+import { useTaskStore } from '../../stores/useTaskStore';
 import type { CompressionTask } from '../../types';
 
 const { t } = useI18n();
+const taskStore = useTaskStore();
 
 interface Props {
-  tasks: CompressionTask[];
+  // 保持props接口兼容性，但内部使用store
+  tasks?: CompressionTask[];
   selectedStatuses: Set<string>;
 }
 
 const props = defineProps<Props>();
+
+// 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
+const tasks = computed(() => props.tasks || taskStore.tasks);
 
 const emit = defineEmits<{
   addFiles: [];

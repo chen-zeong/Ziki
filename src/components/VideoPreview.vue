@@ -157,6 +157,7 @@
 import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { useComparison } from '../composables/useComparison';
 import { invoke } from '@tauri-apps/api/core';
+import { useVideoPreviewStore } from '../stores/useVideoPreviewStore';
 
 
 interface Props {
@@ -187,75 +188,50 @@ const emit = defineEmits<{
 }>();
 
 const { sliderPosition, sliderRef, startDragging } = useComparison();
+const videoPreviewStore = useVideoPreviewStore();
 
-// 帧画面相关数据
-const selectedFrameIndex = ref<number | null>(null);
-// 修改：使用taskId作为键来隔离不同任务的缓存，包含任务参数
-interface TaskCacheData {
-  frameCache: Map<number, { original?: string; compressed?: string }>;
-  videoDurationCache: Map<string, number>; // videoPath -> duration
-  taskParams?: {
-    timeRange?: { start: number; end: number };
-    videoPath?: string;
-    compressedVideoPath?: string;
-  };
-}
-const globalTaskCache: Map<string, TaskCacheData> = new Map();
+// 从store获取状态
+const selectedFrameIndex = computed(() => videoPreviewStore.selectedFrameIndex);
+const loadingFrames = computed(() => videoPreviewStore.loadingFrames);
 
-// 将缓存暴露到全局，供应用关闭时清理
-(window as any).globalTaskCache = globalTaskCache;
-const loadingFrames = ref<Set<number>>(new Set());
-
-// 获取当前任务的缓存数据
-const getTaskCache = (): TaskCacheData => {
-  const taskId = props.taskId || props.videoPath || 'default';
-  
-  if (!globalTaskCache.has(taskId)) {
-    globalTaskCache.set(taskId, {
-      frameCache: new Map(),
-      videoDurationCache: new Map(),
-      taskParams: {
-        timeRange: props.timeRange,
-        videoPath: props.videoPath,
-        compressedVideoPath: props.compressedVideoFilePath
-      }
-    });
-  }
-  
-  // 更新任务参数（可能发生变化）
-  const cache = globalTaskCache.get(taskId)!;
-  cache.taskParams = {
-    timeRange: props.timeRange,
-    videoPath: props.videoPath,
-    compressedVideoPath: props.compressedVideoFilePath
-  };
-  
-  return cache;
+// 获取当前任务ID
+const getCurrentTaskId = () => {
+  return props.taskId || props.videoPath || 'default';
 };
 
 // 获取当前任务的帧缓存
 const getFrameCache = () => {
-  return getTaskCache().frameCache;
+  return videoPreviewStore.getFrameCache(
+    getCurrentTaskId(),
+    props.timeRange,
+    props.videoPath,
+    props.compressedVideoFilePath
+  );
 };
 
 // 获取当前任务的视频时长缓存
 const getVideoDurationCache = () => {
-  return getTaskCache().videoDurationCache;
+  return videoPreviewStore.getVideoDurationCache(
+    getCurrentTaskId(),
+    props.timeRange,
+    props.videoPath,
+    props.compressedVideoFilePath
+  );
 };
 
 const beforeImgRef = ref<HTMLImageElement | null>(null);
 const afterImgRef = ref<HTMLImageElement | null>(null);
-// 新增：全屏显示所用的帧图片（与非全屏保持一致）
-const fullscreenBeforeSrc = ref<string>('');
-const fullscreenAfterSrc = ref<string>('');
+
+// 从store获取全屏相关状态
+const fullscreenBeforeSrc = computed(() => videoPreviewStore.fullscreenBeforeSrc);
+const fullscreenAfterSrc = computed(() => videoPreviewStore.fullscreenAfterSrc);
+const isFullscreen = computed(() => videoPreviewStore.isFullscreen);
+const isDraggingFullscreen = computed(() => videoPreviewStore.isDraggingFullscreen);
 
 // 是否存在右侧图像（用于隐藏图片任务未压缩时的覆盖层）
 const hasAfter = computed(() => !!props.afterImage);
 
-// 全屏状态
-const isFullscreen = ref<boolean>(false);
 const fullscreenSliderRef = ref<HTMLElement | null>(null);
-const isDraggingFullscreen = ref(false);
 
 // requestIdleCallback 兼容封装与任务ID
 const requestIdle = (cb: () => void, timeout = 500) => {
@@ -272,11 +248,11 @@ let selectFrameDebounceTimer: number | null = null;
 
 // 新增：全屏和滑块交互相关方法
 const toggleFullscreen = () => {
-  isFullscreen.value = !isFullscreen.value;
+  videoPreviewStore.toggleFullscreen();
 };
 
 const closeFullscreen = () => {
-  isFullscreen.value = false;
+  videoPreviewStore.closeFullscreen();
 };
 
 const updateFullscreenSliderPosition = (e: MouseEvent) => {
@@ -289,7 +265,7 @@ const updateFullscreenSliderPosition = (e: MouseEvent) => {
 };
 
 const startFullscreenDragging = (e: MouseEvent) => {
-  isDraggingFullscreen.value = true;
+  videoPreviewStore.setFullscreenDragging(true);
   updateFullscreenSliderPosition(e);
 };
 
@@ -299,7 +275,7 @@ const handleFullscreenMouseMove = (e: MouseEvent) => {
 };
 
 const stopFullscreenDragging = () => {
-  isDraggingFullscreen.value = false;
+  videoPreviewStore.setFullscreenDragging(false);
 };
 
 const handleKeydown = (e: KeyboardEvent) => {
@@ -318,69 +294,60 @@ const handleKeydown = (e: KeyboardEvent) => {
 
 // 新增：复位帧相关本地状态，供父组件和监听器调用
 const resetFrameData = () => {
-  getFrameCache().clear();
-  getVideoDurationCache().clear();
-  selectedFrameIndex.value = 0;
+  videoPreviewStore.resetFrameData(
+    getCurrentTaskId(),
+    props.timeRange,
+    props.videoPath,
+    props.compressedVideoFilePath
+  );
   if (beforeImgRef.value) beforeImgRef.value.src = '';
   if (afterImgRef.value) afterImgRef.value.src = '';
-  fullscreenBeforeSrc.value = '';
-  fullscreenAfterSrc.value = '';
 };
 
 // 清除指定帧的缓存
 const clearFrameCache = (frameIndex: number) => {
-  getFrameCache().delete(frameIndex);
+  videoPreviewStore.clearFrameCache(
+    getCurrentTaskId(),
+    frameIndex,
+    props.timeRange,
+    props.videoPath,
+    props.compressedVideoFilePath
+  );
 };
 
 // 清除指定任务的所有缓存
 const clearTaskCache = (videoPath?: string) => {
-  if (videoPath) {
-    // 根据传入的视频路径匹配对应的任务缓存并清理（支持原视频或压缩视频路径）
-    const toDelete: string[] = [];
-    for (const [id, cache] of globalTaskCache.entries()) {
-      const params = cache.taskParams;
-      if (params?.videoPath === videoPath || params?.compressedVideoPath === videoPath) {
-        toDelete.push(id);
-      }
-    }
-    toDelete.forEach(id => globalTaskCache.delete(id));
-    if (toDelete.length > 0) {
-      console.log('Cleared cache by videoPath for tasks:', toDelete.join(', '));
-    }
-    return;
-  }
-  // 未提供路径则清理当前组件任务的缓存
-  const currentId = props.taskId || props.videoPath || 'default';
-  if (globalTaskCache.has(currentId)) {
-    globalTaskCache.delete(currentId);
-    console.log('Cleared cache for task:', currentId);
-  }
+  videoPreviewStore.clearTaskCache(videoPath);
 };
 
 // 新增：选择帧（异步、带缓存、防抖）
 const selectFrame = async (index: number) => {
   // 严格检查：图片模式下不应该调用此函数
-  if (loadingFrames.value.has(index) || !props.videoPath || props.videoPath === undefined || props.videoPath === '') {
+  if (videoPreviewStore.isFrameLoading(index) || !props.videoPath || props.videoPath === undefined || props.videoPath === '') {
     console.log('selectFrame skipped:', { index, videoPath: props.videoPath, hasVideoPath: !!props.videoPath });
     return;
   }
 
-  selectedFrameIndex.value = index;
+  videoPreviewStore.setSelectedFrameIndex(index);
 
   // 优先从缓存读取
-  const frameCache = getFrameCache();
-  if (frameCache.has(index)) {
-    const cached = frameCache.get(index)!;
+  const cached = videoPreviewStore.getFrameCacheData(
+    getCurrentTaskId(),
+    index,
+    props.timeRange,
+    props.videoPath,
+    props.compressedVideoFilePath
+  );
+  if (cached) {
     if (cached.original && beforeImgRef.value) beforeImgRef.value.src = cached.original;
-    if (cached.original) fullscreenBeforeSrc.value = cached.original;
     if (cached.compressed && afterImgRef.value) afterImgRef.value.src = cached.compressed;
-    if (cached.compressed) fullscreenAfterSrc.value = cached.compressed;
+    videoPreviewStore.setFullscreenImages(cached.original || '', cached.compressed || '');
     if (cached.original && (cached.compressed || !props.compressedVideoFilePath)) {
       return;
     }
   }
 
-  loadingFrames.value.add(index);
+  videoPreviewStore.addLoadingFrame(index);
 
   try {
     const videoPath = props.videoPath;
@@ -404,7 +371,14 @@ const selectFrame = async (index: number) => {
     const originalEnd = Math.max(originalStart + 0.1, Math.min(end, duration));
 
     // 并行生成原始帧和压缩帧以提升性能
-    const cache = frameCache.get(index) || {};
+    const existingCache = videoPreviewStore.getFrameCacheData(
+      getCurrentTaskId(),
+      index,
+      props.timeRange,
+      props.videoPath,
+      props.compressedVideoFilePath
+    );
+    const cache = existingCache || {};
     const promises: Promise<void>[] = [];
 
     // --- 生成原始视频的帧（按时间段第 index 帧） ---
@@ -417,9 +391,16 @@ const selectFrame = async (index: number) => {
        }).then((originalFrame) => {
         if (originalFrame) {
           if (beforeImgRef.value) beforeImgRef.value.src = originalFrame;
-          fullscreenBeforeSrc.value = originalFrame;
           cache.original = originalFrame;
-          frameCache.set(index, cache);
+          videoPreviewStore.setFrameCache(
+            getCurrentTaskId(),
+            index,
+            cache,
+            props.timeRange,
+            props.videoPath,
+            props.compressedVideoFilePath
+          );
+          videoPreviewStore.setFullscreenImages(originalFrame, fullscreenAfterSrc.value);
         }
       }).catch(error => {
         console.error(`生成原始帧 ${index} 失败:`, error);
@@ -460,9 +441,16 @@ const selectFrame = async (index: number) => {
 
           if (compressedFrame) {
             if (afterImgRef.value) afterImgRef.value.src = compressedFrame;
-            fullscreenAfterSrc.value = compressedFrame;
             cache.compressed = compressedFrame;
-            frameCache.set(index, cache);
+            videoPreviewStore.setFrameCache(
+              getCurrentTaskId(),
+              index,
+              cache,
+              props.timeRange,
+              props.videoPath,
+              props.compressedVideoFilePath
+            );
+            videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, compressedFrame);
           }
         } catch (error) {
           console.error(`生成压缩帧 ${index} 失败:`, error);
@@ -493,11 +481,11 @@ onMounted(() => {
     // 图片模式：直接显示传入的图片
     if (props.beforeImage && beforeImgRef.value) {
       beforeImgRef.value.src = props.beforeImage;
-      fullscreenBeforeSrc.value = props.beforeImage;
+      videoPreviewStore.setFullscreenImages(props.beforeImage, fullscreenAfterSrc.value);
     }
     if (props.afterImage && afterImgRef.value) {
       afterImgRef.value.src = props.afterImage;
-      fullscreenAfterSrc.value = props.afterImage;
+      videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, props.afterImage);
     }
   }
 });
@@ -515,7 +503,7 @@ watch(isFullscreen, (val) => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
     document.removeEventListener('keydown', onKey);
-    isDraggingFullscreen.value = false;
+    videoPreviewStore.setFullscreenDragging(false);
   }
 });
 
@@ -525,11 +513,11 @@ watch(() => [props.beforeImage, props.afterImage], ([newBefore, newAfter]) => {
     // 图片模式：直接更新图片显示
     if (newBefore && beforeImgRef.value) {
       beforeImgRef.value.src = newBefore;
-      fullscreenBeforeSrc.value = newBefore;
+      videoPreviewStore.setFullscreenImages(newBefore, fullscreenAfterSrc.value);
     }
     if (newAfter && afterImgRef.value) {
       afterImgRef.value.src = newAfter;
-      fullscreenAfterSrc.value = newAfter;
+      videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, newAfter);
     }
   }
 });
@@ -541,11 +529,11 @@ watch(() => props.videoPath, (newPath, oldPath) => {
     // 图片模式：显示传入的图片
     if (props.beforeImage && beforeImgRef.value) {
       beforeImgRef.value.src = props.beforeImage;
-      fullscreenBeforeSrc.value = props.beforeImage;
+      videoPreviewStore.setFullscreenImages(props.beforeImage, fullscreenAfterSrc.value);
     }
     if (props.afterImage && afterImgRef.value) {
       afterImgRef.value.src = props.afterImage;
-      fullscreenAfterSrc.value = props.afterImage;
+      videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, props.afterImage);
     }
   } else {
     // 当视频源发生变化时，清除该路径对应的时长缓存，避免复用上一个任务的时长
@@ -555,9 +543,13 @@ watch(() => props.videoPath, (newPath, oldPath) => {
       if (newPath) videoDurationCache.delete(newPath);
     } catch {}
     // 清理缓存并自动选择第一帧
-    getFrameCache().clear();
-    loadingFrames.value.clear();
-    selectedFrameIndex.value = 0;
+    videoPreviewStore.resetFrameData(
+      getCurrentTaskId(),
+      props.timeRange,
+      newPath,
+      props.compressedVideoFilePath
+    );
+    videoPreviewStore.setSelectedFrameIndex(0);
     // 延迟执行首帧选择，优先让UI可交互
     if (props.deferInitialPreview) {
       if (initialPreviewIdleId) {

@@ -1,14 +1,16 @@
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { useTaskStore } from '../stores/useTaskStore';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 
 
 
 export function useFileHandler() {
+  const taskStore = useTaskStore();
   const selectedFiles = ref<VideoFile[]>([]);
-  const tasks = ref<CompressionTask[]>([]);
+  const tasks = computed(() => taskStore.tasks);
   const currentFile = ref<VideoFile | null>(null);
   const isUploaderVisible = ref(true);
   const isProcessing = ref(false);
@@ -56,14 +58,15 @@ export function useFileHandler() {
     if (task) {
       currentFile.value = task.file;
       isUploaderVisible.value = false;
+      taskStore.selectTask(taskId);
       console.log('Switched to task:', taskId);
     }
   };
 
   // 删除任务
   const deleteTask = (taskId: string) => {
-    const taskIndex = tasks.value.findIndex(t => t.id === taskId);
-    if (taskIndex !== -1) {
+    const task = tasks.value.find(t => t.id === taskId);
+    if (task) {
       // 清理该任务可能存在的进度监听器
       const unlisten = activeProgressListeners.get(taskId);
       if (unlisten) {
@@ -77,16 +80,18 @@ export function useFileHandler() {
       }
       cancelledTasks.delete(taskId);
 
-      tasks.value[taskIndex]; // 获取要删除的任务
-      tasks.value.splice(taskIndex, 1);
+      // 使用store删除任务
+      taskStore.removeTask(taskId);
       
       // 如果删除的是当前任务，切换到第一个可用任务
       if (currentFile.value?.id === taskId) {
         if (tasks.value.length > 0) {
           currentFile.value = tasks.value[0].file;
+          taskStore.selectTask(tasks.value[0].id);
         } else {
           currentFile.value = null;
           isUploaderVisible.value = true;
+          taskStore.selectedTaskId = null;
         }
       }
       
@@ -142,7 +147,7 @@ export function useFileHandler() {
     }
 
     console.log('Resuming compression for task:', taskId);
-    task.status = 'processing';
+    taskStore.updateTaskStatus(task.id, 'processing');
     isProcessing.value = true;
 
     // 若该任务已有遗留监听器，先清理
@@ -157,7 +162,7 @@ export function useFileHandler() {
       if (cancelledTasks.has(task.id)) return;
       console.log('[CANCEL] Received cancel event during resume:', task.id);
       cancelledTasks.add(task.id);
-      task.status = 'cancelled';
+      taskStore.updateTaskStatus(task.id, 'cancelled');
       isProcessing.value = false;
       // 清理进度监听器
       const unlistenProg = activeProgressListeners.get(task.id);
@@ -172,8 +177,9 @@ export function useFileHandler() {
     const unlisten = await listen(`compression-progress-${task.id}`, (event: any) => {
       const { taskId, progress } = event.payload;
       if (taskId === task.id) {
-        task.progress = Math.min(100, Math.max(0, Math.round(progress)));
-        console.log(`Compression progress for ${task.file.name}: ${task.progress}%`);
+        const progressValue = Math.min(100, Math.max(0, Math.round(progress)));
+        taskStore.updateTaskProgress(task.id, progressValue);
+        console.log(`Compression progress for ${task.file.name}: ${progressValue}%`);
       }
     });
     // 记录监听器
@@ -383,7 +389,7 @@ export function useFileHandler() {
           settings: isVideo
             ? {
                 format: 'mp4',
-                videoCodec: 'libx264',
+                videoCodec: 'H.264',
                 resolution: 'original',
                 qualityType: 'crf',
                 crfValue: 23

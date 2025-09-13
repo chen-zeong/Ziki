@@ -89,7 +89,7 @@
           <CustomSelect 
             v-if="!isCustomResolution"
             v-model="resolution"
-            :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
+            :options="resolutionOptions.filter((opt: { value: string; label: string; description?: string }) => opt.value !== 'custom')"
             :placeholder="metadata?.resolution ? `${metadata.resolution} (原始)` : '选择分辨率'"
             dropdown-direction="up"
             strict-direction
@@ -386,9 +386,13 @@ const getRecommendedCodec = () => {
 // 监听格式变化，自动调整编码选项
 watch(format, (newFormat) => {
   setFormat(newFormat);
-  // 根据色彩深度自动选择编码格式
-  const recommendedCodec = getRecommendedCodec();
-  emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
+  // 仅当当前编码不存在或与当前格式不兼容时，才使用推荐编码
+  const current = videoCodec.value;
+  const supported = supportedVideoCodecs.value;
+  if (!current || !supported.includes(current)) {
+    const recommendedCodec = getRecommendedCodec();
+    emit('update:modelValue', { ...props.modelValue, videoCodec: recommendedCodec });
+  }
 });
 
 // 监听metadata变化，自动调整编码选项和分辨率
@@ -397,8 +401,10 @@ watch(() => props.metadata, (newMetadata) => {
     const recommendedCodec = getRecommendedCodec();
     const updates: Partial<CompressionSettings> = { ...props.modelValue };
 
-    // 只有当前编码不是推荐编码时才更新
-    if (videoCodec.value !== recommendedCodec) {
+    const current = videoCodec.value;
+    const supported = supportedVideoCodecs.value;
+    // 只有在未设置或与当前格式不兼容时，才更新编码为推荐值
+    if (!current || !supported.includes(current)) {
       updates.videoCodec = recommendedCodec;
     }
 
@@ -416,19 +422,25 @@ const handleMetadataUpdate = (event: CustomEvent) => {
   const { metadata } = event.detail;
   if (metadata) {
     console.log('VideoFormatSettings: 收到metadata更新事件', metadata);
-    // 自动设置推荐的编码格式
+    // 自动设置推荐的编码格式（仅在未设置或不兼容时）
     const recommendedCodec = metadata.colorDepth && 
       (metadata.colorDepth.includes('10') || metadata.colorDepth.includes('12') || metadata.colorDepth.includes('16'))
       ? 'H.265' : 'H.264';
 
+    const current = videoCodec.value;
+    const supported = supportedVideoCodecs.value;
+
     // 自动设置分辨率为原始分辨率（使用 'original' 哨兵值）
-    if (!props.modelValue.resolution) {
-      emit('update:modelValue', { 
-        ...props.modelValue, 
-        videoCodec: recommendedCodec,
-        resolution: 'original'
-      });
+    const payload: Partial<CompressionSettings> = { 
+      ...props.modelValue,
+      ...( !props.modelValue.resolution ? { resolution: 'original' } : {} )
+    };
+
+    if (!current || !supported.includes(current)) {
+      payload.videoCodec = recommendedCodec;
     }
+
+    emit('update:modelValue', payload);
   }
 };
 

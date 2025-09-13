@@ -76,7 +76,7 @@
                   <CustomSelect 
                     v-else
                     v-model="resolutionValue"
-                    :options="resolutionOptions.filter(opt => opt.value !== 'custom')"
+                    :options="resolutionOptions.filter((opt: any) => opt.value !== 'custom')"
                     :placeholder="originalResolutionText || '选择分辨率'"
                     dropdown-direction="down"
                     strict-direction
@@ -178,9 +178,10 @@
 </template>
 
 <script setup lang="ts">
-import { shallowRef, computed, inject, watch, nextTick, ref, onMounted } from 'vue';
+import { computed, inject, watch, nextTick, ref, onMounted } from 'vue';
 import CustomSelect from '../common/CustomSelect.vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
+import { useTaskSettingsStore } from '../../stores/useTaskSettingsStore';
 import type { CompressionSettings } from '../../types';
 
 interface Props {
@@ -199,10 +200,16 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-// 注入来自父组件的"当前任务设置"和"更新方法"
+// 使用任务设置store
+const taskSettingsStore = useTaskSettingsStore();
+
+// 注入来自父组件的"当前任务设置"和"更新方法"（保持兼容性）
 const injectedTaskSettings = inject<{ value: CompressionSettings | null }>('currentTaskSettings');
 const updateCurrentTaskSettings = inject<((updates: Partial<CompressionSettings>) => void) | null>('updateCurrentTaskSettings', null);
 const currentFile = inject<{ value: any }>('currentFile');
+
+// 注入当前任务ID
+const currentTaskId = inject<{ value: string | null }>('currentTaskId', { value: null });
 
 // 是否锁定设置（任务已完成时）
 const isSettingsLocked = computed(() => props.taskStatus === 'completed');
@@ -210,12 +217,18 @@ const isSettingsLocked = computed(() => props.taskStatus === 'completed');
 // 气泡提示框显示状态
 const showTooltip = ref(false);
 
+// 防止递归/交叉覆盖的标志（对齐视频面板行为）
+const isUpdatingFromTask = ref(false);
+
 // 选项
 const formatOptions = [
   { value: 'jpeg', label: 'JPEG（体积中等）' },
   { value: 'png', label: 'PNG（体积最大）' },
   { value: 'webp', label: 'WebP（体积最小）' }
 ];
+
+// 提前派生当前格式，避免在其他计算属性中访问尚未初始化的 formatValue
+const currentFormat = computed(() => (formatSettings.value.format ?? 'jpeg'));
 
 // 原始分辨率（从图片自然尺寸读取）
 const originalWidth = ref<number | null>(null);
@@ -227,14 +240,22 @@ const originalResolutionText = computed(() => {
   return '';
 });
 
-// 使用shallowRef避免深度响应式导致的循环更新
-const formatSettings = shallowRef<Partial<CompressionSettings>>({
+// 获取当前任务设置
+const getCurrentSettings = (): CompressionSettings => {
+  if (currentTaskId.value) {
+    return taskSettingsStore.getTaskSettings(currentTaskId.value, 'image');
+  }
+  return taskSettingsStore.getDefaultImageSettings();
+};
+
+// 使用 ref（而非 shallowRef）以确保嵌套属性变更能触发响应式更新
+const formatSettings = ref<Partial<CompressionSettings>>({
   format: 'jpeg',
   resolution: 'original',
   customResolution: undefined
 });
 
-const qualitySettings = shallowRef<Partial<CompressionSettings>>({
+const qualitySettings = ref<Partial<CompressionSettings>>({
   qualityType: 'crf',
   crfValue: 80
 });
@@ -256,13 +277,14 @@ const toggleCustomResolution = () => {
     const fallback = originalWidth.value ? 'original' : (options[0]?.value || '1920x1080');
     formatSettings.value = { ...formatSettings.value, resolution: fallback as any };
   } else {
-    formatSettings.value = { ...formatSettings.value, resolution: 'custom' as any };
-    // 初始化为原始尺寸或常规1080p比例
+    // 开启自定义时，同步设置 resolution 与 customResolution，整体替换对象，确保更新
+    const next: Partial<CompressionSettings> = { ...formatSettings.value, resolution: 'custom' as any };
     if (originalWidth.value && originalHeight.value) {
-      formatSettings.value.customResolution = { width: makeEven(originalWidth.value), height: makeEven(originalHeight.value) };
+      next.customResolution = { width: makeEven(originalWidth.value), height: makeEven(originalHeight.value) };
     } else {
-      formatSettings.value.customResolution = { width: 1920, height: 1080 };
+      next.customResolution = { width: 1920, height: 1080 };
     }
+    formatSettings.value = next;
   }
 };
 
@@ -282,7 +304,7 @@ const qualityValue = computed({
 // 质量文本（按新文案：极高画质、高画质、中等画质、低画质、极低画质 + 无损）
 const qualityText = computed(() => {
   const v = qualityValue.value;
-  const format = formatValue.value;
+  const format = currentFormat.value;
   
   if (v === 100) {
     if (format === 'png') {
@@ -301,7 +323,7 @@ const qualityText = computed(() => {
 // 质量提示信息（含参数和色彩警告）
 const qualityHintText = computed(() => {
   const v = qualityValue.value;
-  const format = formatValue.value;
+  const format = currentFormat.value;
   
   let paramHint = '';
   let colorWarning = '';
@@ -376,14 +398,15 @@ const resolutionValue = computed({
   get: () => formatSettings.value.resolution as any,
   set: (v: string) => {
     if (v === 'custom') {
-      formatSettings.value = { ...formatSettings.value, resolution: 'custom' as any };
-      if (!formatSettings.value.customResolution) {
+      const next: Partial<CompressionSettings> = { ...formatSettings.value, resolution: 'custom' as any };
+      if (!next.customResolution) {
         if (originalWidth.value && originalHeight.value) {
-          formatSettings.value.customResolution = { width: makeEven(originalWidth.value), height: makeEven(originalHeight.value) };
+          next.customResolution = { width: makeEven(originalWidth.value), height: makeEven(originalHeight.value) };
         } else {
-          formatSettings.value.customResolution = { width: 1920, height: 1080 };
+          next.customResolution = { width: 1920, height: 1080 };
         }
       }
+      formatSettings.value = next;
     } else if (v === 'original') {
       formatSettings.value = { ...formatSettings.value, resolution: 'original' as any, customResolution: undefined };
     } else {
@@ -400,15 +423,13 @@ const resolutionValue = computed({
 const customWidth = computed({
   get: () => formatSettings.value.customResolution?.width ?? undefined,
   set: (w: number | undefined) => {
-    if (!formatSettings.value.customResolution) {
-      formatSettings.value.customResolution = { width: 1920, height: 1080 };
-    }
     const width = makeEven((w ?? 0));
     if (isAspectRatioLocked.value && aspectRatio.value > 0) {
       const height = makeEven(Math.round(width / aspectRatio.value));
-      formatSettings.value.customResolution = { width, height };
+      formatSettings.value = { ...formatSettings.value, customResolution: { width, height } };
     } else {
-      formatSettings.value.customResolution = { ...formatSettings.value.customResolution, width };
+      const prev = formatSettings.value.customResolution || { width: 1920, height: 1080 };
+      formatSettings.value = { ...formatSettings.value, customResolution: { ...prev, width } };
     }
     emitSettings();
   }
@@ -417,15 +438,13 @@ const customWidth = computed({
 const customHeight = computed({
   get: () => formatSettings.value.customResolution?.height ?? undefined,
   set: (h: number | undefined) => {
-    if (!formatSettings.value.customResolution) {
-      formatSettings.value.customResolution = { width: 1920, height: 1080 };
-    }
     const height = makeEven((h ?? 0));
     if (isAspectRatioLocked.value && aspectRatio.value > 0) {
       const width = makeEven(Math.round(height * aspectRatio.value));
-      formatSettings.value.customResolution = { width, height };
+      formatSettings.value = { ...formatSettings.value, customResolution: { width, height } };
     } else {
-      formatSettings.value.customResolution = { ...formatSettings.value.customResolution, height };
+      const prev = formatSettings.value.customResolution || { width: 1920, height: 1080 };
+      formatSettings.value = { ...formatSettings.value, customResolution: { ...prev, height } };
     }
     emitSettings();
   }
@@ -446,34 +465,104 @@ const emitSettings = () => {
     ...formatSettings.value,
     ...qualitySettings.value,
     // 图片任务无时间段
-    timeRange: undefined
+    timeRange: undefined,
+    videoCodec: 'image'
   } as CompressionSettings;
-  // 不自动开始压缩，仅同步设置到父级
+  
+  // 更新到store
+  if (currentTaskId.value) {
+    taskSettingsStore.updateTaskSettings(currentTaskId.value, s);
+  }
+  
+  // 保持与父组件的兼容性
   updateCurrentTaskSettings?.(s);
 };
 
-// 从注入的任务设置恢复（图片任务切换时）
+// 初始化设置从store加载
+const initializeSettings = () => {
+  if (currentTaskId.value) {
+    const settings = taskSettingsStore.getTaskSettings(currentTaskId.value, 'image');
+    isUpdatingFromTask.value = true;
+    applySettingsFromTask(settings);
+    nextTick(() => {
+      isUpdatingFromTask.value = false;
+    });
+  } else {
+    resetAllSettings();
+  }
+};
+
+// 监听任务ID变化，重新加载设置
+watch(() => currentTaskId.value, () => {
+  initializeSettings();
+}, { immediate: true });
+
+// 从注入的任务设置恢复（当没有taskId时用于兼容，否则优先使用store，避免跨任务覆盖）
 watch(() => injectedTaskSettings?.value, (s) => {
   if (!s) return;
-  // 格式
-  if (s.format) formatSettings.value = { ...formatSettings.value, format: s.format };
-  // 分辨率
-  if (s.resolution) {
-    formatSettings.value = { ...formatSettings.value, resolution: s.resolution } as any;
-    if (s.resolution === 'custom' && s.customResolution) {
-      formatSettings.value.customResolution = { ...s.customResolution };
-    }
-  }
-  // 质量
-  if (s.crfValue != null) qualitySettings.value.crfValue = Number(s.crfValue);
+  if (currentTaskId.value) return; // 有 taskId 时以 store 为准，避免覆盖
+  isUpdatingFromTask.value = true;
+  applySettingsFromTask(s);
+  nextTick(() => {
+    isUpdatingFromTask.value = false;
+  });
 }, { deep: true });
 
 // 读取原始图片尺寸：监听 currentFile.originalUrl
 onMounted(async () => {
   await nextTick();
   tryLoadOriginalDimensions();
+  // 初次挂载时根据当前质量值刷新滑条UI
+  updateQualitySliderUI();
+  // 确保首次导入时格式有选中默认值
+  if (!formatSettings.value.format) {
+    formatSettings.value = { ...formatSettings.value, format: 'jpeg' };
+    emitSettings();
+  }
 });
 
+// 将面板中的更改持久化到当前任务设置（通过 emitSettings 已处理，此处仅防止意外程序化更新漏写）
+watch([formatSettings, qualitySettings], () => {
+  if (isUpdatingFromTask.value) return;
+  emitSettings();
+}, { deep: true });
+
+// 应用设置到UI
+function applySettingsFromTask(s: CompressionSettings) {
+  // 格式
+  if (s.format) formatSettings.value = { ...formatSettings.value, format: s.format };
+  // 分辨率
+  if (s.resolution) {
+    if (s.resolution === 'custom' && s.customResolution) {
+      formatSettings.value = { ...formatSettings.value, resolution: 'custom' as any, customResolution: { ...s.customResolution } };
+    } else {
+      formatSettings.value = { ...formatSettings.value, resolution: s.resolution as any, customResolution: undefined };
+    }
+  }
+  // 质量（使用整体替换，避免浅响应导致的UI不同步）
+  if (s.crfValue != null) {
+    qualitySettings.value = { ...qualitySettings.value, crfValue: Number(s.crfValue) };
+  }
+  // 应用到滑条UI（确保首次加载或任务切换时UI正确）
+  nextTick(() => updateQualitySliderUI());
+}
+
+// 重置所有设置为默认值
+const resetAllSettings = () => {
+  const defaults = taskSettingsStore.getDefaultImageSettings();
+  formatSettings.value = {
+    format: defaults.format,
+    resolution: defaults.resolution,
+    customResolution: defaults.customResolution
+  };
+  qualitySettings.value = {
+    qualityType: defaults.qualityType,
+    crfValue: defaults.crfValue
+  };
+  nextTick(() => updateQualitySliderUI());
+};
+
+// 读取原始图片尺寸：监听 currentFile.originalUrl（保持在此处）
 watch(() => currentFile?.value?.originalUrl, () => {
   tryLoadOriginalDimensions();
 });
@@ -507,14 +596,27 @@ const startCompression = () => {
 // 暴露方法供父组件调用
 defineExpose({ startCompression });
 
-// 更新质量状态（更新样式并同步值）
-const updateQualityState = () => {
-  const percentage = qualityValue.value;
+// 辅助：仅更新滑条UI样式（不改变状态）
+const updateQualitySliderUI = (val?: number) => {
+  const percentage = typeof val === 'number' ? val : Number(qualitySettings.value.crfValue ?? 80);
   const slider = document.getElementById('image-quality-slider') as HTMLInputElement | null;
   if (slider) {
     slider.style.setProperty('--value-percent', `${percentage}%`);
   }
+};
+
+// 监听 quality 值变化，保持UI同步（包括从store回填的场景）
+watch(() => qualitySettings.value.crfValue, (v) => {
+  nextTick(() => updateQualitySliderUI(typeof v === 'number' ? v : undefined));
+});
+
+// 更新质量状态（更新样式并同步值+持久化）
+const updateQualityState = () => {
+  const percentage = qualityValue.value;
+  updateQualitySliderUI(percentage);
   qualitySettings.value = { ...qualitySettings.value, crfValue: percentage };
+  // 将更改持久化到store/父组件，开启记忆
+  emitSettings();
 };
 </script>
 

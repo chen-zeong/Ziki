@@ -4,19 +4,25 @@ import FileUploader from '../components/FileUploader.vue';
 import VideoComparison from '../components/VideoComparison.vue';
 import TaskList from '../components/TaskList.vue';
 import OutputFolder from '../components/OutputFolder.vue';
+import { useTaskStore } from '../stores/useTaskStore';
 import type { CompressionTask } from '../types';
 
 interface Props {
-  tasks: CompressionTask[];
+  tasks?: CompressionTask[];
   currentFile: any;
   isUploaderVisible: boolean;
   selectedFiles: any[];
   isProcessing: boolean;
-  selectedTaskId: string | null;
+  selectedTaskId?: string | null;
   timeRangeSettings: any;
 }
 
 const props = defineProps<Props>();
+const taskStore = useTaskStore();
+
+// 从store或props获取数据
+const tasks = computed(() => props.tasks || taskStore.tasks);
+const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
 
 const emit = defineEmits([
   'files-selected',
@@ -52,19 +58,19 @@ const computedTimeRange = computed(() => {
 
 // 根据当前文件匹配任务状态
 const currentTaskStatus = computed(() => {
-  const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
+  const task = tasks.value.find(t => t.file.id === props.currentFile?.id);
   return task?.status || 'pending';
 });
 
 // 根据当前文件匹配任务类型（video/image）
 const currentTaskType = computed(() => {
-  const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
+  const task = tasks.value.find(t => t.file.id === props.currentFile?.id);
   return (task as any)?.type || 'video';
 });
 
 // 根据当前文件匹配任务ID
 const currentTaskId = computed(() => {
-  const task = props.tasks.find(t => t.file.id === props.currentFile?.id);
+  const task = tasks.value.find(t => t.file.id === props.currentFile?.id);
   return task?.id;
 });
 

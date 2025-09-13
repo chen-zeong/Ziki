@@ -38,17 +38,24 @@ import VideoFormatSettings from './VideoFormatSettings.vue';
 import HardwareAccelerationSettings from './HardwareAccelerationSettings.vue';
 import QualitySettings from './QualitySettings.vue';
 import { useTheme } from '../../composables/useTheme';
+import { useTaskSettingsStore } from '../../stores/useTaskSettingsStore';
 import type { CompressionSettings, VideoFile } from '../../types';
 
 // 主题
 const { isDark } = useTheme();
 
-// 注入来自父组件的“当前任务设置”和“更新方法”
+// 使用任务设置store
+const taskSettingsStore = useTaskSettingsStore();
+
+// 注入来自父组件的"当前任务设置"和"更新方法"（保持兼容性）
 const injectedTaskSettings = inject<{ value: CompressionSettings | null }>('currentTaskSettings');
 const updateCurrentTaskSettings = inject<((updates: Partial<CompressionSettings>) => void) | null>('updateCurrentTaskSettings', null);
 
 // 注入当前文件信息
 const currentFile = inject<{ value: VideoFile | null }>('currentFile');
+
+// 注入当前任务ID
+const currentTaskId = inject<{ value: string | null }>('currentTaskId', { value: null });
 
 // 计算当前视频的元数据
 const currentVideoMetadata = computed(() => {
@@ -75,11 +82,20 @@ const emit = defineEmits<Emits>();
 // 是否锁定设置（任务已完成时）
 const isSettingsLocked = computed(() => props.taskStatus === 'completed');
 
+// 获取当前任务设置
+const getCurrentSettings = (): CompressionSettings => {
+  if (currentTaskId.value) {
+    return taskSettingsStore.getTaskSettings(currentTaskId.value, 'video');
+  }
+  return taskSettingsStore.getDefaultVideoSettings();
+};
+
 // 使用shallowRef避免深度响应式导致的循环更新
 const formatSettings = shallowRef<Partial<CompressionSettings>>({
   format: 'mp4',
-  videoCodec: 'libx264',
-  resolution: 'original'
+  videoCodec: 'H.264',
+  resolution: 'original' as any,
+  customResolution: undefined as any
 });
 
 const qualitySettings = shallowRef<Partial<CompressionSettings>>({
@@ -122,7 +138,7 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
   // 基础格式相关
   formatSettings.value = {
     format: s.format ?? 'mp4',
-    videoCodec: s.videoCodec ?? 'libx264',
+    videoCodec: s.videoCodec ?? 'H.264',
     resolution: s.resolution ?? undefined as any,
     customResolution: s.customResolution
   };
@@ -143,47 +159,68 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
 
 // 重置所有设置
 const resetAllSettings = () => {
+  const defaults = taskSettingsStore.getDefaultVideoSettings();
   formatSettings.value = {
-    format: 'mp4',
-    videoCodec: 'libx264',
-    resolution: undefined as any
+    format: defaults.format,
+    videoCodec: defaults.videoCodec,
+    resolution: defaults.resolution,
+    customResolution: defaults.customResolution
   };
   qualitySettings.value = {
-    qualityType: 'crf',
-    crfValue: 23,
-    bitDepth: qualitySettings.value?.bitDepth
+    qualityType: defaults.qualityType,
+    crfValue: defaults.crfValue,
+    qvValue: defaults.qvValue,
+    profileValue: defaults.profileValue,
+    bitDepth: defaults.bitDepth
   };
-
-  // macOS下默认开启硬件加速，其他平台默认CPU编码
-  if (platform.value === 'macos') {
-    hardwareSettings.value = {
-      value: 'gpu',
-      name: '显卡加速'
-    };
-  } else {
-    hardwareSettings.value = {
-      value: 'cpu',
-      name: 'CPU编码'
-    };
-  }
+  hardwareSettings.value = {
+    value: defaults.hardwareAcceleration || 'cpu',
+    name: defaults.hardwareAcceleration === 'gpu' ? 'GPU编码' : 'CPU编码'
+  };
 };
 
 // 防止递归更新的标志
 const isUpdatingFromTask = ref(false);
 
-// 当 videoPath 或任务设置变化时，同步面板UI
-watch(
-  [() => props.videoPath, () => injectedTaskSettings?.value],
-  ([, newSettings]) => {
-    // 当切换到不同文件时或任务设置变更时，优先使用任务设置；没有则使用默认
+// 初始化设置从store加载
+const initializeSettings = () => {
+  if (currentTaskId.value) {
+    const settings = taskSettingsStore.getTaskSettings(currentTaskId.value, 'video');
     isUpdatingFromTask.value = true;
-    applySettingsFromTask(newSettings as CompressionSettings | null | undefined);
-    // 使用nextTick确保更新完成后再重置标志
+    applySettingsFromTask(settings);
     nextTick(() => {
       isUpdatingFromTask.value = false;
     });
-  },
-  { immediate: true, deep: true }
+  } else {
+    resetAllSettings();
+  }
+};
+
+// 监听任务ID变化，重新加载设置
+watch(() => currentTaskId.value, () => {
+  initializeSettings();
+}, { immediate: true });
+
+// 监听注入的任务设置变化，应用到本地UI（保持兼容性）
+watch(() => injectedTaskSettings?.value, (newSettings) => {
+  if (!newSettings) {
+    resetAllSettings();
+    return;
+  }
+  isUpdatingFromTask.value = true;
+  applySettingsFromTask(newSettings);
+  nextTick(() => {
+    isUpdatingFromTask.value = false;
+  });
+}, { deep: true });
+
+// 当 videoPath 变化时，同步面板UI
+watch(
+  () => props.videoPath,
+  () => {
+    // 当切换到不同文件时，重新初始化设置
+    initializeSettings();
+  }
 );
 
 // 将面板中的更改持久化到当前任务设置
@@ -191,12 +228,23 @@ watch(
   [formatSettings, qualitySettings, hardwareSettings],
   () => {
     // 如果正在从任务设置更新UI，则跳过
-    if (isUpdatingFromTask.value || !updateCurrentTaskSettings) return;
-    updateCurrentTaskSettings({
+    if (isUpdatingFromTask.value) return;
+    
+    const updates = {
       ...(formatSettings.value as Partial<CompressionSettings>),
       ...(qualitySettings.value as Partial<CompressionSettings>),
       hardwareAcceleration: hardwareSettings.value.value as 'cpu' | 'gpu'
-    });
+    };
+    
+    // 更新到store
+    if (currentTaskId.value) {
+      taskSettingsStore.updateTaskSettings(currentTaskId.value, updates);
+    }
+    
+    // 保持与父组件的兼容性
+    if (updateCurrentTaskSettings) {
+      updateCurrentTaskSettings(updates);
+    }
   },
   { deep: true }
 );
