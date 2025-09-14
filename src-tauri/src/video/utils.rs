@@ -351,13 +351,15 @@ fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
     let audio_stream = streams.iter()
         .find(|stream| stream["codec_type"].as_str() == Some("audio"));
     
-    // 获取格式信息
-    let format_name = format["format_name"].as_str()
+    // 获取格式信息（容错：键缺失时不崩溃）
+    let format_name = format.get("format_name")
+        .and_then(|v| v.as_str())
         .unwrap_or("unknown")
         .split(',').next().unwrap_or("unknown");
     
-    // 根据文件扩展名和格式名称确定正确的容器格式
-    let file_extension = format["filename"].as_str()
+    // 根据文件扩展名和格式名称确定正确的容器格式（容错：filename 可能缺失）
+    let file_extension = format.get("filename")
+        .and_then(|v| v.as_str())
         .and_then(|path| std::path::Path::new(path).extension())
         .and_then(|ext| ext.to_str())
         .unwrap_or("");
@@ -406,8 +408,9 @@ fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
     let height = video_stream["height"].as_u64().unwrap_or(0);
     let resolution = format!("{}x{}", width, height);
     
-    // 获取码率
-    let bitrate = format["bit_rate"].as_str()
+    // 获取码率（容错：bit_rate 可能缺失或非数字）
+    let bitrate = format.get("bit_rate")
+        .and_then(|v| v.as_str())
         .and_then(|br| br.parse::<u64>().ok())
         .map(|br| format!("{} kbps", br / 1000))
         .unwrap_or("unknown".to_string());
@@ -421,8 +424,9 @@ fn parse_ffprobe_json(json_str: &str) -> Result<VideoMetadata, String> {
         "none".to_string()
     };
     
-    // 获取时长
-    let duration = format["duration"].as_str()
+    // 获取时长（容错：duration 可能缺失或不可解析）
+    let duration = format.get("duration")
+        .and_then(|v| v.as_str())
         .and_then(|d| d.parse::<f64>().ok())
         .unwrap_or(0.0);
     

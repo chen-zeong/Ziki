@@ -109,7 +109,7 @@ export function useVideoFormats() {
   // 为每种格式生成标签（克制、简洁）
   const getFormatTags = (key: string): string[] => {
     switch (key) {
-      case 'mp4': return ['兼容性强'];
+      case 'mp4': return ['主流','兼容性强'];
       case 'mov': return ['Apple生态'];
       case 'mkv': return ['开源','多音轨字幕'];
       case 'avi': return ['老牌格式','体积大'];

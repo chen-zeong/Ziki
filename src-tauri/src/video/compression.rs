@@ -363,6 +363,10 @@ pub async fn compress_video(
                 cmd.arg("-b:v").arg(bitrate);
             }
         }
+        "qv" => {
+            let q = settings.qv_value.unwrap_or(80).min(100);
+            cmd.arg("-q:v").arg(q.to_string());
+        }
         _ => {}
     }
     

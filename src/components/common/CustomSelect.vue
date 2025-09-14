@@ -141,94 +141,83 @@ const isPlaceholder = computed(() => !selectedLabel.value);
 // 不再截断 options，使用 maxHeight 控制可视数量
 const visibleOptions = computed(() => props.options);
 
-let positionTimeout: number | null = null;
+// 使用 rAF 防抖，避免多层 setTimeout/nextTick 竞态
+let rafId: number | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 function computePosition() {
-  // 防抖机制，避免频繁计算
-  if (positionTimeout) {
-    clearTimeout(positionTimeout);
-  }
-  
-  positionTimeout = setTimeout(() => {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
     const el = triggerRef.value;
     const menu = dropdownRef.value;
     if (!el || !menu) return;
-    
-    // 等待DOM更新完成后再计算位置，避免切换任务时位置计算错误
-    nextTick(() => {
-      const rect = el.getBoundingClientRect();
-      
-      // 检查元素是否已正确渲染（避免获取到过时的位置信息）
-      if (rect.width === 0 || rect.height === 0) {
-        // 如果元素尺寸为0，延迟重新计算
-        setTimeout(() => computePosition(), 100);
-        return;
-      }
 
-      // 先设置最小宽度和稳定的默认位置，避免换行引发尺寸抖动
-      menuStyle.value.minWidth = rect.width + 'px';
-      menuStyle.value.width = rect.width + 'px';
-      menuStyle.value.left = rect.left + 'px';
-      // 设置稳定的默认向下展开位置
-      menuStyle.value.top = rect.bottom + 4 + 'px';
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
 
-      nextTick(() => {
-        // 再次获取最新的位置信息，确保准确性
-        const updatedRect = el.getBoundingClientRect();
-        
-        // 量测单项高度，计算所需 maxHeight，确保第 N 项完整可见
-        const firstItem = menu.querySelector('li') as HTMLElement | null;
-        const itemH = firstItem ? firstItem.getBoundingClientRect().height : 36; // 兜底 36px
-        const spacing = Math.max(0, (props.maxVisibleOptions - 1)) * 4; // space-y-1 => 4px * (N-1)
-        const padding = 8; // ul: py-1 => 8px
-        const border = 2; // 上下边框约 2px
-        const desiredMax = itemH * props.maxVisibleOptions + spacing + padding + border + 2; // +2 余量防裁剪
+    // 固定行高，避免因选中项/图标导致高度抖动
+    const itemH = 36; // px
+    const spacing = Math.max(0, (props.maxVisibleOptions - 1)) * 4; // space-y-1 => 4px * (N-1)
+    const padding = 8; // ul: py-1 => 8px
+    const border = 2; // 上下边框约 2px
+    const desiredMax = itemH * props.maxVisibleOptions + spacing + padding + border;
 
-        const viewportMax = window.innerHeight - 24; // 距离视窗边缘预留
-        menuStyle.value.maxHeight = Math.min(desiredMax, viewportMax) + 'px';
+    // 统一边距与触发器间距
+    const EDGE = 8; // 视窗边距
+    const GAP = 6; // 与触发器间距（确保不是接近0）
 
-        // 使用最新的位置信息重新计算
-        menuStyle.value.left = updatedRect.left + 'px';
-        
-        // 根据是否溢出决定向上展开；当 strictDirection=true 时，忽略自动翻转
-        const menuRect = menu.getBoundingClientRect();
-        const h = menuRect.height || desiredMax;
-        const wantUp = props.dropdownDirection === 'up';
-        const overflowDown = updatedRect.bottom + 4 + h > window.innerHeight - 8;
-        if (wantUp || (!props.strictDirection && overflowDown)) {
-          const top = Math.max(8, updatedRect.top - h - 4);
-          menuStyle.value.top = top + 'px';
-        } else {
-          // 明确向下且严格遵循方向时，保持向下
-          menuStyle.value.top = Math.min(window.innerHeight - h - 8, updatedRect.bottom + 4) + 'px';
-        }
-      });
-    });
-  }, 10); // 10ms 防抖延迟
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - EDGE);
+    const spaceAbove = Math.max(0, rect.top - EDGE);
+
+    // 方向选择
+    let useUp = false;
+    if (props.strictDirection) {
+      useUp = props.dropdownDirection === 'up';
+    } else {
+      // 非严格：优先选择可用空间更大的方向
+      useUp = spaceAbove > spaceBelow;
+    }
+
+    // 按方向计算可用高度，并裁剪 maxHeight
+    const available = useUp ? spaceAbove : spaceBelow;
+    const maxH = Math.max(0, Math.min(desiredMax, available));
+
+    const top = useUp
+      ? (rect.top - maxH - GAP)
+      : (rect.bottom + GAP);
+
+    menuStyle.value = {
+      minWidth: rect.width + 'px',
+      width: rect.width + 'px',
+      left: rect.left + 'px',
+      top: Math.round(top) + 'px',
+      maxHeight: Math.round(maxH) + 'px'
+    };
+  });
 }
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
-    // 先进行一次快速计算
     nextTick(() => {
       computePosition();
       window.addEventListener('scroll', computePosition, true);
       window.addEventListener('resize', computePosition);
+
+      // 仅在打开时观察下拉内容尺寸变化
+      if (!resizeObserver && 'ResizeObserver' in window) {
+        resizeObserver = new ResizeObserver(() => computePosition());
+      }
+      if (resizeObserver && dropdownRef.value) {
+        resizeObserver.observe(dropdownRef.value);
+      }
     });
-    
-    // 延迟重新计算，确保DOM完全渲染
-    setTimeout(() => {
-      computePosition();
-    }, 50);
-    
-    // 再次延迟计算，处理首次导入视频时的位置问题
-    setTimeout(() => {
-      computePosition();
-    }, 200);
   } else {
     window.removeEventListener('scroll', computePosition, true);
     window.removeEventListener('resize', computePosition);
+    if (resizeObserver && dropdownRef.value) {
+      resizeObserver.unobserve(dropdownRef.value);
+    }
   }
 }
 
@@ -236,6 +225,9 @@ function closeDropdown() {
   isOpen.value = false;
   window.removeEventListener('scroll', computePosition, true);
   window.removeEventListener('resize', computePosition);
+  if (resizeObserver && dropdownRef.value) {
+    resizeObserver.unobserve(dropdownRef.value);
+  }
 }
 
 function selectOption(val: string) {
@@ -244,32 +236,13 @@ function selectOption(val: string) {
 }
 
 onBeforeUnmount(() => {
-  if (positionTimeout) {
-    clearTimeout(positionTimeout);
-  }
+  if (rafId) cancelAnimationFrame(rafId);
+  if (resizeObserver) resizeObserver.disconnect();
   window.removeEventListener('scroll', computePosition, true);
   window.removeEventListener('resize', computePosition);
 });
 
-// 监听modelValue变化，在下拉框打开时重新计算位置
-watch(() => props.modelValue, () => {
-  if (isOpen.value) {
-    // 延迟重新计算位置，确保DOM已更新
-    setTimeout(() => {
-      computePosition();
-    }, 50);
-  }
-});
-
-// 监听options变化，在下拉框打开时重新计算位置
-watch(() => props.options, () => {
-  if (isOpen.value) {
-    // 延迟重新计算位置，确保DOM已更新
-    setTimeout(() => {
-      computePosition();
-    }, 50);
-  }
-}, { deep: true });
+// 移除对 modelValue/options 的多处监听，交由 ResizeObserver + 打开时初始化来保证稳定定位
 </script>
 
 <style scoped>

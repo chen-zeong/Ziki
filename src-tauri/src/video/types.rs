@@ -12,8 +12,9 @@ pub struct CompressionSettings {
     pub codec: String,
     pub resolution: String,
     pub custom_resolution: Option<CustomResolution>,
-    pub quality_type: String, // "crf" or "bitrate"
+    pub quality_type: String, // "crf" or "bitrate" or "qv"
     pub crf_value: Option<u8>,
+    pub qv_value: Option<u8>,
     pub bitrate: Option<String>,
     pub time_range: Option<TimeRange>,
     #[serde(rename = "hardwareAcceleration")]

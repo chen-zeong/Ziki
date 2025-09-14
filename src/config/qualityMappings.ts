@@ -29,6 +29,8 @@ function normalizeCodecName(codec: string): string {
   if (cleaned.includes('prores')) return 'prores';
   if (cleaned.includes('av1')) return 'av1';
   if (cleaned.includes('vp9')) return 'vp9';
+  // WMV9：兼容 wmv9/wmv2/含 wmv 的名称
+  if (cleaned.includes('wmv9') || cleaned.includes('wmv2') || cleaned.includes('wmv')) return 'wmv9';
   return cleaned;
 }
 
@@ -101,6 +103,15 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     software: {
       paramType: 'crf',
       values: [40, 35, 28, 23, 18],
+      defaultIndex: 3
+    }
+  },
+
+  // WMV9 编码器（-q:v 0-100，100最高，默认80）
+  'wmv9': {
+    software: {
+      paramType: 'qv',
+      values: [0, 25, 50, 80, 100], // 连续映射范围 0-100，默认高质量 80
       defaultIndex: 3
     }
   }

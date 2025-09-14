@@ -235,11 +235,17 @@ const handleTauriFileDrop = async (filePaths: string[]) => {
       const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
       const extension = fileName.split('.').pop()?.toLowerCase() || '';
       let mimeType = 'application/octet-stream';
-      if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
-        mimeType = `video/${extension === 'mov' ? 'quicktime' : extension}`;
-      } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+  
+      // 对齐 FileUploader 的扩展名与 MIME 映射，确保拖拽与点击选择一致
+      const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'];
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl'];
+  
+      if (videoExts.includes(extension)) {
+        mimeType = `video/${extension === 'mov' ? 'quicktime' : extension === 'wmv' ? 'x-ms-wmv' : extension === 'avi' ? 'x-msvideo' : extension === '3gp' ? '3gpp' : extension === 'ogv' ? 'ogg' : extension}`;
+      } else if (imageExts.includes(extension)) {
         mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
       }
+  
       let fileSize = 0;
       try {
         fileSize = await invoke<number>('get_file_size', { filePath });
@@ -256,7 +262,7 @@ const handleTauriFileDrop = async (filePaths: string[]) => {
       });
       files.push(mockFile);
     }
-
+  
     if (files.length > 0) {
       const fileList = {
         length: files.length,

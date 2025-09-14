@@ -373,6 +373,16 @@ export function useFileHandler() {
             }));
           }).catch(error => {
             console.warn('Failed to get video metadata for', displayName, ':', error);
+            // 新增：用户提示，避免静默失败
+            try {
+              const msg = `导入失败：无法解析视频元数据。\n文件：${displayName}\n原因：${typeof error === 'string' ? error : (error?.message || '未知错误')}`;
+              // 在桌面端以最简单方式提示
+              if (typeof window !== 'undefined' && window?.alert) {
+                window.alert(msg);
+              }
+            } catch (_) {
+              // ignore
+            }
           });
         }
         
@@ -515,6 +525,7 @@ export function useFileHandler() {
         } : null,
         quality_type: settings.qualityType,
         crf_value: settings.crfValue,
+        qv_value: settings.qvValue,
         time_range: settings.timeRange ? {
           start: settings.timeRange.start,
           end: settings.timeRange.end
