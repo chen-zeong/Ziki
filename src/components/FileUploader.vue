@@ -15,7 +15,7 @@
       <p class="mt-4 text-gray-600 dark:text-gray-300">
         <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $t('fileUpload.selectFiles') }}</span> {{ $t('fileUpload.subtitle') }}
       </p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">{{ $t('fileUpload.supportedFormats') }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 whitespace-pre-line max-w-md leading-relaxed">{{ $t('fileUpload.supportedFormats') }}</p>
       <input 
         ref="fileInputRef"
         type="file" 
@@ -54,7 +54,7 @@ const triggerFileInput = async () => {
       multiple: true,
       filters: [{
         name: 'Video and Image Files',
-        extensions: ['mp4', 'mov', 'avi', 'mkv', 'jpg', 'jpeg', 'png', 'gif']
+        extensions: ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl']
       }]
     });
     
@@ -67,9 +67,9 @@ const triggerFileInput = async () => {
         // Determine file type based on extension
         const extension = fileName.split('.').pop()?.toLowerCase() || '';
         let mimeType = 'application/octet-stream';
-        if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
-          mimeType = `video/${extension === 'mov' ? 'quicktime' : extension}`;
-        } else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+        if (['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'].includes(extension)) {
+          mimeType = `video/${extension === 'mov' ? 'quicktime' : extension === 'wmv' ? 'x-ms-wmv' : extension === 'avi' ? 'x-msvideo' : extension === '3gp' ? '3gpp' : extension === 'ogv' ? 'ogg' : extension}`;
+        } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl'].includes(extension)) {
           mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
         }
         

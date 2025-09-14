@@ -26,7 +26,10 @@ export default {
   fileUpload: {
     title: '拖拽视频文件到此处',
     subtitle: '或点击选择文件',
-    supportedFormats: '支持格式：MP4, AVI, MOV, MKV, WMV, FLV, WEBM',
+    supportedFormats: `
+MP4, AVI, MOV, MKV, WMV, FLV, WEBM
+M4V, M4S, MPG, MTS, 3GP, ASF, VOB, OGV, RM, F4V,
+JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     selectFiles: '选择文件',
     dragHere: '拖拽文件到此处'
   },

@@ -96,7 +96,7 @@
                 <div class="flex justify-between items-center mb-4">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">画质</label>
                   <div class="text-right">
-                    <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded text-xs" style="background-color: #f3f4f6;">{{ qualityText }}</span>
+                    <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
                   </div>
                 </div>
 

@@ -394,11 +394,17 @@ pub async fn compress_video(
         cmd.arg("-vf").arg(scale_filter);
     }
     
-    // Set audio codec to copy (no audio processing)
-    cmd.arg("-c:a").arg("copy");
-    
-    // Copy subtitle streams
-    cmd.arg("-c:s").arg("copy");
+    // Set audio codec based on output format
+    if outputPath.to_lowercase().ends_with(".webm") {
+        // For WebM format, use specific audio encoding parameters
+        cmd.arg("-c:a").arg("libopus");
+        cmd.arg("-b:a").arg("128k");
+        cmd.arg("-c:s").arg("webvtt");
+    } else {
+        // For other formats, copy audio and subtitle streams
+        cmd.arg("-c:a").arg("copy");
+        cmd.arg("-c:s").arg("copy");
+    }
     
     cmd.arg("-y").arg(&outputPath);
     

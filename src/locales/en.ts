@@ -26,7 +26,9 @@ export default {
   fileUpload: {
     title: 'Drag video files here',
     subtitle: 'or click to select files',
-    supportedFormats: 'Supported formats: MP4, AVI, MOV, MKV, WMV, FLV, WEBM',
+    supportedFormats: `MP4, AVI, MOV, MKV, WMV, FLV, WEBM
+M4V, M4S, MPG, 3GP, ASF, VOB, OGV, RM, F4V,
+JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     selectFiles: 'Select Files',
     dragHere: 'Drag files here'
   },

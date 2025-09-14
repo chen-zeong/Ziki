@@ -8,6 +8,15 @@
       "description": "最常用的视频格式，兼容性最好",
       "recommended": true
     },
+
+    "mov": {
+      "name": "MOV",
+      "extension": ".mov",
+      "videoCodecs": ["H.264", "H.265", "ProRes"],
+      "audioCodecs": ["AAC", "MP3", "PCM"],
+      "description": "Apple开发，Mac系统原生支持",
+      "recommended": true
+    },
     "mkv": {
       "name": "MKV",
       "extension": ".mkv",
@@ -19,23 +28,15 @@
     "avi": {
       "name": "AVI",
       "extension": ".avi",
-      "videoCodecs": ["H.264", "Xvid", "DivX"],
+      "videoCodecs": ["H.264"],
       "audioCodecs": ["MP3", "PCM"],
       "description": "老牌格式，兼容性好但文件较大",
       "recommended": false
     },
-    "mov": {
-      "name": "MOV",
-      "extension": ".mov",
-      "videoCodecs": ["H.264", "H.265", "ProRes"],
-      "audioCodecs": ["AAC", "MP3", "PCM"],
-      "description": "Apple开发，Mac系统原生支持",
-      "recommended": true
-    },
     "wmv": {
       "name": "WMV",
       "extension": ".wmv",
-      "videoCodecs": ["WMV9", "VC-1"],
+      "videoCodecs": ["WMV9"],
       "audioCodecs": ["WMA", "MP3"],
       "description": "Microsoft格式，Windows系统优化",
       "recommended": false
@@ -43,7 +44,7 @@
     "webm": {
       "name": "WebM",
       "extension": ".webm",
-      "videoCodecs": ["VP8", "VP9", "AV1"],
+      "videoCodecs": ["VP9", "AV1"],
       "audioCodecs": ["Vorbis", "Opus"],
       "description": "Google开发，专为网络优化",
       "recommended": true
@@ -51,7 +52,7 @@
     "flv": {
       "name": "FLV",
       "extension": ".flv",
-      "videoCodecs": ["H.264", "VP6"],
+      "videoCodecs": ["H.264"],
       "audioCodecs": ["AAC", "MP3"],
       "description": "Flash视频格式，逐渐被淘汰",
       "recommended": false

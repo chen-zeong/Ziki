@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.format') }}</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.format.toUpperCase() }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600">{{ metadata.format.toUpperCase() }}</span>
           </div>
         </div>
         <CustomSelect 
@@ -24,7 +24,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.videoCodec') }}</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span class="font-medium text-gray-600 dark:text-dark-primary px-1.5 py-0.5 rounded" style="background-color: #f3f4f6;">{{ metadata.videoCodec?.toUpperCase() || 'UNKNOWN' }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600">{{ metadata.videoCodec?.toUpperCase() || 'UNKNOWN' }}</span>
           </div>
         </div>
         <CustomSelect 

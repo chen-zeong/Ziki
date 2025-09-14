@@ -1,3 +1,38 @@
+<template>
+  <AppLayout
+    ref="appLayoutRef"
+    :current-file="currentFile"
+    :is-uploader-visible="isUploaderVisible"
+    :selected-files="selectedFiles"
+    :is-processing="isProcessing"
+    :is-processing-batch="isProcessingBatch"
+    :output-path="outputPath"
+    :time-range-settings="timeRangeSettings"
+    :show-output-folder-popup="showOutputFolderPopup"
+    :show-time-range-popup="showTimeRangePopup"
+
+    @files-selected="onFilesSelected"
+    @compress="onCompress"
+    @reset="onReset"
+    @update-images="onUpdateImages"
+    @update-task="updateTask"
+    @delete-task="deleteTask"
+    @resume-compression="handleResumeCompression"
+    @select-task="selectTask"
+    @clear-all-tasks="handleClearAllTasks"
+    @toggle-output-folder-popup="toggleOutputFolderPopup"
+    @toggle-time-range-popup="toggleTimeRangePopup"
+    @output-path-update="handleOutputPathUpdate"
+    @time-validation-change="handleTimeValidationChange"
+    @batch-compress="handleBatchCompress"
+    @bottom-compress="handleBottomCompress"
+    @update:timeRangeSettings="handleTimeRangeSettingsUpdate"
+  />
+</template>
+
+
+
+
 <script setup lang="ts">
 import { ref, computed, provide, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -6,31 +41,23 @@ import AppLayout from './layouts/AppLayout.vue';
 import { useTaskStore } from './stores/useTaskStore';
 import { useTaskSettingsStore } from './stores/useTaskSettingsStore';
 import { useGlobalSettingsStore } from './stores/useGlobalSettingsStore';
+import { useFileHandler } from './composables/useFileHandler';
+import { useBatchProcessor } from './composables/useBatchProcessor';
+import type { CompressionSettings, CompressionTask } from './types';
 
 // 全局缓存清理函数
 const clearAllCaches = () => {
   // 清理VideoPreview组件的全局缓存
   if ((window as any).globalTaskCache) {
     (window as any).globalTaskCache.clear();
-    console.log('All task caches cleared on app close');
   }
   
-  // 清理任务设置store
   taskSettingsStore.clearAllSettings();
-  console.log('Task settings cache cleared');
 };
 
-import { useFileHandler } from './composables/useFileHandler';
-import { useBatchProcessor } from './composables/useBatchProcessor';
-import type { CompressionSettings, CompressionTask } from './types';
 
-// 使用任务store
 const taskStore = useTaskStore();
-
-// 使用任务设置store
 const taskSettingsStore = useTaskSettingsStore();
-
-// 使用全局设置store
 const globalSettingsStore = useGlobalSettingsStore();
 
 const {
@@ -46,15 +73,13 @@ const {
   resumeCompression
 } = useFileHandler();
 
-// 从store获取任务相关状态
+
 const tasks = computed(() => taskStore.tasks);
 
 // 包装deleteTask方法，添加缓存清理
 const deleteTask = (taskId: string) => {
-  // 获取要删除的任务信息
   const task = tasks.value.find(t => t.id === taskId);
   if (task && appLayoutRef.value) {
-    // 清理该任务的缓存（原视频路径）
     appLayoutRef.value.clearTaskCache(task.file.path);
     // 同时尝试清理压缩后的视频路径缓存（若存在）
     const compressedPath = (task as any).file?.compressedPath;
@@ -77,8 +102,7 @@ const {
   isProcessingBatch,
   startBatchCompression,
   stopBatchCompression,
-  resumeBatchCompression,
-  getBatchStats
+  resumeBatchCompression
 } = useBatchProcessor();
 
 // 当前选中任务
@@ -112,7 +136,6 @@ provide('updateCurrentTaskSettings', (updates: Partial<CompressionSettings>) => 
   }
 });
 
-const showOutputFolder = ref(false);
 const showOutputFolderPopup = ref(false);
 const outputPath = ref('');
 const showTimeRangePopup = ref(false);
@@ -136,7 +159,6 @@ const toggleTimeRangePopup = () => {
 
 const handleTimeValidationChange = (isValid: boolean) => {
   // 处理时间验证状态变化
-  console.log('Time validation changed:', isValid);
 };
 
 const handleTimeRangeSettingsUpdate = (newSettings: any) => {
@@ -166,27 +188,6 @@ const handleOutputPathUpdate = (path: string) => {
   outputPath.value = path;
 };
 
-const handleOutputFolderClose = () => {
-  showOutputFolder.value = false;
-};
-
-const beforeImage = computed(() => {
-  return currentFile.value?.originalUrl || '';
-});
-
-const afterImage = computed(() => {
-  return currentFile.value?.compressedUrl || '';
-});
-
-const computedTimeRange = computed(() => {
-  if (!timeRangeSettings.value.enabled) {
-    return undefined;
-  }
-  const start = timeToSeconds(timeRangeSettings.value.timeRange.start) || 0;
-  const end = timeToSeconds(timeRangeSettings.value.timeRange.end) || 0;
-  return { start, end };
-});
-
 const onFilesSelected = async (files: FileList) => {
   await handleFiles(files);
 };
@@ -195,12 +196,6 @@ const onCompress = async (settings: CompressionSettings) => {
   if (!currentFile.value) {
     return;
   }
-  
-  console.log('Starting compression with output path:', outputPath.value);
-  console.log('Time range settings:', timeRangeSettings.value);
-
-  // 优先使用“当前选中任务”的持久化时间段（由 handleTimeRangeSettingsUpdate 写入），
-  // 若该任务未设置时间段，则不要从全局 UI 继承上一任务的时间段，避免污染。
   const taskTimeRange = selectedTask.value?.settings?.timeRange;
 
   const compressionSettings = {
@@ -211,7 +206,7 @@ const onCompress = async (settings: CompressionSettings) => {
   try {
     await startCompression(compressionSettings, outputPath.value);
   } catch (error) {
-    console.error('Compression failed in App.vue:', error);
+    // Compression failed
   }
 };
 
@@ -313,13 +308,8 @@ const onReset = () => {
 
 // 批量压缩处理函数
 const handleBatchCompress = async () => {
-  console.log('🔥 handleBatchCompress called!');
-  console.log('Current isProcessingBatch:', isProcessingBatch.value);
-  console.log('Current tasks:', tasks.value.map(t => ({ name: t.file.name, status: t.status })));
-  
   if (isProcessingBatch.value) {
     // 如果正在批量处理，则停止
-    console.log('Stopping batch compression');
     stopBatchCompression();
     return;
   }
@@ -329,22 +319,15 @@ const handleBatchCompress = async () => {
   const selectedTaskType = selectedTask?.type || null;
   
   if (!selectedTaskType) {
-    console.log('没有选中的任务或任务类型未知，跳过批量压缩');
     return;
   }
-  
-  console.log('选中任务类型:', selectedTaskType);
   
   // 检查是否有排队中的任务需要恢复（仅该类型）
   const queuedTasks = tasks.value.filter(t => t.status === 'queued' && t.type === selectedTaskType);
   const pendingTasks = tasks.value.filter(t => t.status === 'pending' && t.type === selectedTaskType);
   
-  console.log(`${selectedTaskType} 类型 - Queued tasks:`, queuedTasks.length);
-  console.log(`${selectedTaskType} 类型 - Pending tasks:`, pendingTasks.length);
-  
   if (queuedTasks.length > 0 && pendingTasks.length === 0) {
     // 只有排队任务，恢复批量处理
-    console.log(`Resuming batch compression for queued ${selectedTaskType} tasks`);
     // 创建仅包含该类型任务的临时数组
     const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
     await resumeBatchCompression(
@@ -356,7 +339,6 @@ const handleBatchCompress = async () => {
     );
   } else {
     // 开始新的批量压缩
-    console.log(`Starting new batch compression for ${selectedTaskType} tasks`);
     // 创建仅包含该类型任务的临时数组
     const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
     await startBatchCompression(
@@ -374,12 +356,8 @@ const appLayoutRef = ref<InstanceType<typeof AppLayout> | null>(null);
 
 // 底部按钮的压缩处理
 const handleBottomCompress = () => {
-  console.log('App.vue: handleBottomCompress called');
   if (appLayoutRef.value) {
-    console.log('App.vue: appLayoutRef is present, calling triggerCompress');
     appLayoutRef.value.triggerCompress();
-  } else {
-    console.error('App.vue: appLayoutRef is NOT present');
   }
 };
 
@@ -404,18 +382,13 @@ const selectTask = (taskId: string) => {
 
 // 处理恢复单个任务（支持 paused 与 queued）
 const handleResumeCompression = async (taskId: string) => {
-  console.log('handleResumeCompression 被调用，taskId:', taskId);
   const task = tasks.value.find(t => t.id === taskId);
   if (!task) {
-    console.log('未找到任务:', taskId);
     return;
   }
 
-  console.log('任务状态:', task.status, '批量处理状态:', isProcessingBatch.value);
-
   try {
     if (task.status === 'paused') {
-      console.log('恢复暂停的任务:', taskId);
       // 直接调用已有的恢复逻辑
       await resumeCompression(taskId);
       return;
@@ -424,20 +397,16 @@ const handleResumeCompression = async (taskId: string) => {
     if (task.status === 'queued' || task.status === 'pending') {
       // 如果正在批量处理，则优先处理该任务：先暂停当前任务并停止批量队列，防止并发压缩/重复监听
       if (isProcessingBatch.value) {
-        console.log('批量处理中，准备优先处理该任务：', taskId, '先暂停当前任务并停止批量队列');
 
         // 尝试暂停当前正在处理的任务
         const processingTask = tasks.value.find(t => t.status === 'processing');
         if (processingTask) {
           try {
             await invoke('pause_task', { taskId: processingTask.id });
-            console.log('已暂停当前任务:', processingTask.id);
           } catch (pauseError) {
             const errorMessage = String(pauseError);
             if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
-              console.log('当前任务进程已中断/不存在，视为已暂停:', processingTask.id);
-            } else {
-              console.error('暂停当前任务失败:', pauseError);
+              // 当前任务进程已中断/不存在，视为已暂停
             }
           }
           // 同步前端状态为 paused
@@ -449,22 +418,18 @@ const handleResumeCompression = async (taskId: string) => {
         stopBatchCompression();
       }
 
-      console.log('开始处理排队/等待中的任务:', taskId);
       // 切到该任务以确保 startCompression 针对正确的 currentFile
       taskStore.selectTask(taskId);
       switchToTask(taskId);
       applyTaskTimeRangeToUI(task);
 
       // 使用该任务自身的设置启动压缩，传入 isBatchMode=false 来允许重新启动
-      console.log('调用 startCompression，设置:', task.settings);
       await startCompression(task.settings, outputPath.value, false);
-      console.log('startCompression 调用完成');
 
       // 自动恢复批量处理：当该任务完成或暂停后，如仍有排队/待处理任务且当前未处于批量模式，则自动继续批量
       const remainingQueuedOrPending = tasks.value.filter(t => t.status === 'queued' || t.status === 'pending');
       const hasProcessing = tasks.value.some(t => t.status === 'processing');
       if (remainingQueuedOrPending.length > 0 && !hasProcessing && !isProcessingBatch.value) {
-        console.log('检测到仍有排队/待处理任务，且未在批量模式，自动恢复批量处理');
         await startBatchCompression(
           tasks.value,
           startCompression,
@@ -475,7 +440,7 @@ const handleResumeCompression = async (taskId: string) => {
       }
     }
   } catch (e) {
-    console.error('handleResumeCompression error:', e);
+    // handleResumeCompression error
   }
 };
 
@@ -485,13 +450,12 @@ const initializeOutputPath = async () => {
     const path = await invoke<string>('get_desktop_path');
     outputPath.value = path;
   } catch (error) {
-    console.error('Failed to initialize output path:', error);
+    // Failed to initialize output path
   }
 };
 
 // 清空所有任务
 const handleClearAllTasks = async () => {
-  console.log('App.vue handleClearAllTasks 被调用');
   const activeTasks = tasks.value.filter(task => 
     task.status === 'processing' || task.status === 'queued' || task.status === 'paused'
   );
@@ -531,14 +495,11 @@ const handleClearAllTasks = async () => {
     try {
       if (task.status === 'processing' || task.status === 'paused') {
         await invoke('pause_task', { taskId: task.id });
-        console.log('Stopped task before clearing:', task.id);
       }
     } catch (error) {
       const errorMessage = String(error);
       if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
-        console.log('Task already stopped:', task.id);
-      } else {
-        console.warn('Failed to stop task:', task.id, error);
+        // Task already stopped
       }
     }
   }
@@ -550,14 +511,12 @@ const handleClearAllTasks = async () => {
       await invoke('delete_task', { taskId });
       deleteTask(taskId);
     } catch (error) {
-      console.error('Failed to delete task during clear all:', taskId, error);
+      // Failed to delete task during clear all
     }
   }
   
   // 重置选中状态
   taskStore.selectedTaskId = null;
-  
-  console.log('All tasks cleared successfully');
 };
 
 // 组件挂载时初始化
@@ -607,34 +566,3 @@ watch(tasks, (newTasks) => {
 
 </script>
 
-<template>
-  <AppLayout
-    ref="appLayoutRef"
-    :current-file="currentFile"
-    :is-uploader-visible="isUploaderVisible"
-    :selected-files="selectedFiles"
-    :is-processing="isProcessing"
-    :is-processing-batch="isProcessingBatch"
-    :output-path="outputPath"
-    :time-range-settings="timeRangeSettings"
-    :show-output-folder-popup="showOutputFolderPopup"
-    :show-time-range-popup="showTimeRangePopup"
-
-    @files-selected="onFilesSelected"
-    @compress="onCompress"
-    @reset="onReset"
-    @update-images="onUpdateImages"
-    @update-task="updateTask"
-    @delete-task="deleteTask"
-    @resume-compression="handleResumeCompression"
-    @select-task="selectTask"
-    @clear-all-tasks="handleClearAllTasks"
-    @toggle-output-folder-popup="toggleOutputFolderPopup"
-    @toggle-time-range-popup="toggleTimeRangePopup"
-    @output-path-update="handleOutputPathUpdate"
-    @time-validation-change="handleTimeValidationChange"
-    @batch-compress="handleBatchCompress"
-    @bottom-compress="handleBottomCompress"
-    @update:timeRangeSettings="handleTimeRangeSettingsUpdate"
-  />
-</template>
