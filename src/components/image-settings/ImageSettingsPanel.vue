@@ -222,9 +222,9 @@ const isUpdatingFromTask = ref(false);
 
 // 选项
 const formatOptions = [
-  { value: 'jpeg', label: 'JPEG（体积中等）' },
-  { value: 'png', label: 'PNG（体积最大）' },
-  { value: 'webp', label: 'WebP（体积最小）' }
+  { value: 'jpeg', label: 'JPEG', tags: ['体积中等'] },
+  { value: 'png', label: 'PNG', tags: ['体积最大'] },
+  { value: 'webp', label: 'WebP', tags: ['谷歌开发','体积最小'] }
 ];
 
 // 提前派生当前格式，避免在其他计算属性中访问尚未初始化的 formatValue
@@ -235,7 +235,7 @@ const originalWidth = ref<number | null>(null);
 const originalHeight = ref<number | null>(null);
 const originalResolutionText = computed(() => {
   if (originalWidth.value && originalHeight.value) {
-    return `${originalWidth.value}x${originalHeight.value} (原始)`;
+    return `${originalWidth.value}x${originalHeight.value}`;
   }
   return '';
 });
@@ -356,13 +356,12 @@ const qualityHintText = computed(() => {
 
 // 分辨率下拉选项（根据原始分辨率自动生成 1080p/720p/480p）
 const resolutionOptions = computed(() => {
-  const opts: { value: string; label: string }[] = [];
+  const opts: { value: string; label: string; tags?: string[] }[] = [];
   if (originalWidth.value && originalHeight.value) {
     const w = originalWidth.value;
     const h = originalHeight.value;
-    opts.push({ value: 'original', label: `${w}x${h} (原始)` });
+    opts.push({ value: 'original', label: `${w}x${h}`, tags: ['原始'] });
 
-    // 常见等比例选项
     const presets = [
       { w: 1920, h: 1080, name: '1080p' },
       { w: 1280, h: 720, name: '720p' },
@@ -371,16 +370,14 @@ const resolutionOptions = computed(() => {
     for (const p of presets) {
       if (w >= p.w && h >= p.h) {
         const scaled = scaleToFit(w, h, p.w, p.h);
-        opts.push({ value: `${scaled.width}x${scaled.height}`, label: `${scaled.width}x${scaled.height} (${p.name})` });
+        opts.push({ value: `${scaled.width}x${scaled.height}`, label: `${scaled.width}x${scaled.height}`, tags: [p.name] });
       }
     }
   } else {
-    // 没有原始尺寸时提供通用选项
-    opts.push({ value: '1920x1080', label: '1920x1080 (1080p)' });
-    opts.push({ value: '1280x720', label: '1280x720 (720p)' });
-    opts.push({ value: '854x480', label: '854x480 (480p)' });
+    opts.push({ value: '1920x1080', label: '1920x1080', tags: ['1080p'] });
+    opts.push({ value: '1280x720', label: '1280x720', tags: ['720p'] });
+    opts.push({ value: '854x480', label: '854x480', tags: ['480p'] });
   }
-  // 自定义选项
   opts.push({ value: 'custom', label: '自定义' });
   return opts;
 });

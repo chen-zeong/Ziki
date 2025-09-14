@@ -27,13 +27,27 @@
               v-for="opt in visibleOptions"
               :key="opt.value"
               :class="[
-                'px-3 py-2 flex items-center justify-between cursor-pointer rounded-md mx-1',
+                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-md mx-1',
                 opt.value === props.modelValue ? 'bg-amber-50 dark:bg-[#1a1405] text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-[#1c1c1c]'
               ]"
               @click.stop="selectOption(opt.value)"
             >
-              <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
-              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500" />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
+                  <div v-if="opt.tags && opt.tags.length" class="flex flex-wrap gap-1 ml-1.5">
+                    <span
+                      v-for="(tag, idx) in opt.tags.slice(0, 2)"
+                      :key="tag + idx"
+                      class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-gray-300/60 dark:ring-white/15 bg-transparent"
+                    >
+                      {{ tag }}
+                    </span>
+                    <span v-if="opt.tags.length > 2" class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300/50 dark:ring-white/10 bg-transparent">+{{ opt.tags.length - 2 }}</span>
+                  </div>
+                </div>
+              </div>
+              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             </li>
           </ul>
         </div>
@@ -55,13 +69,27 @@
               v-for="opt in visibleOptions"
               :key="opt.value"
               :class="[
-                'px-3 py-2 flex items-center justify-between cursor-pointer rounded-md mx-1',
+                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-md mx-1',
                 opt.value === props.modelValue ? 'bg-amber-50 dark:bg-[#1a1405] text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-[#1c1c1c]'
               ]"
               @click.stop="selectOption(opt.value)"
             >
-              <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
-              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500" />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
+                  <div v-if="opt.tags && opt.tags.length" class="flex flex-wrap gap-1 ml-1.5">
+                    <span
+                      v-for="(tag, idx) in opt.tags.slice(0, 2)"
+                      :key="tag + idx"
+                      class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-gray-300/60 dark:ring-white/15 bg-transparent"
+                    >
+                      {{ tag }}
+                    </span>
+                    <span v-if="opt.tags.length > 2" class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300/50 dark:ring-white/10 bg-transparent">+{{ opt.tags.length - 2 }}</span>
+                  </div>
+                </div>
+              </div>
+              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             </li>
           </ul>
         </div>
@@ -74,7 +102,7 @@
 import { ref, computed, watch, nextTick, onBeforeUnmount, type CSSProperties } from 'vue';
 import { ChevronDown, Check } from 'lucide-vue-next';
 
-interface Option { value: string; label: string }
+interface Option { value: string; label: string; description?: string; tags?: string[] }
 
 interface Props {
   options: Option[];

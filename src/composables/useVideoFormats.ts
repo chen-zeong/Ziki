@@ -106,13 +106,30 @@ export function useVideoFormats() {
     };
   };
 
+  // 为每种格式生成标签（克制、简洁）
+  const getFormatTags = (key: string): string[] => {
+    switch (key) {
+      case 'mp4': return ['兼容性强'];
+      case 'mov': return ['Apple生态'];
+      case 'mkv': return ['开源','多音轨字幕'];
+      case 'avi': return ['老牌格式','体积大'];
+      case 'wmv': return ['Windows优化'];
+      case 'webm': return ['谷歌开发','Web优化'];
+      case 'flv': return ['Flash开发','过时'];
+      case 'avif': return ['高质量动态图片'];
+      default: return [];
+    }
+  };
+
   // 获取格式列表（用于下拉选择）
   const formatOptions = computed(() => {
     return Object.entries(config.videoFormats).map(([key, format]) => ({
       value: key,
-      label: format.name,
-      description: format.description,
-      recommended: format.recommended
+      label: (format as any).name || key.toUpperCase(),
+      description: (format as any).description || '',
+      recommended: !!(format as any).recommended,
+      // 新增：小标签，突出优势
+      tags: getFormatTags(key)
     }));
   });
 

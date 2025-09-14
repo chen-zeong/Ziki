@@ -89,8 +89,8 @@
           <CustomSelect 
             v-if="!isCustomResolution"
             v-model="resolution"
-            :options="resolutionOptions.filter((opt: { value: string; label: string; description?: string }) => opt.value !== 'custom')"
-            :placeholder="metadata?.resolution ? `${metadata.resolution} (原始)` : '选择分辨率'"
+            :options="resolutionOptions.filter((opt: { value: string; label: string; tags?: string[] }) => opt.value !== 'custom')"
+            :placeholder="metadata?.resolution ? `${metadata.resolution}` : '选择分辨率'"
             dropdown-direction="up"
             strict-direction
             :teleport-to-body="true"
@@ -216,9 +216,39 @@ const videoCodecOptions = computed(() => {
   setFormat(format.value);
   return supportedVideoCodecs.value.map(codec => ({
     value: codec,
-    label: codec
+    label: codec,
+    tags: getVideoCodecTags(codec)
   }));
 });
+
+// 获取视频编码标签
+const getVideoCodecTags = (codec: string): string[] => {
+  const c = (codec || '').toUpperCase();
+  if (c.includes('H.264') || c === 'H264') return ['高兼容性', '主流'];
+  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return ['高效压缩', '10bit支持'];
+  if (c.includes('AV1')) return ['更高效压缩', '编码复杂'];
+  if (c.includes('VP9')) return ['Web', '谷歌开发'];
+  if (c.includes('VP8')) return ['Web', '旧'];
+  if (c.includes('PRORES')) return ['专业', 'Apple'];
+  if (c.includes('MPEG-4') || c.includes('MPEG4') || c.includes('XVID')) return ['旧'];
+  if (c.includes('MPEG-2') || c.includes('MPEG2')) return ['旧'];
+  if (c.includes('WMV')) return ['Windows'];
+  if (c.includes('THEORA')) return ['开源', '旧'];
+  return [];
+};
+
+// 获取分辨率标签
+const getResolutionTags = (resolution: string): string[] => {
+  if (resolution.includes('1080')) return ['1080p'];
+  if (resolution.includes('720')) return ['720p'];
+  if (resolution.includes('480')) return ['480p'];
+  if (resolution.includes('360')) return ['360p'];
+  if (resolution.includes('240')) return ['240p'];
+  if (resolution.includes('2160')) return ['4K'];
+  if (resolution.includes('1440')) return ['2K'];
+  if (resolution === 'original' || resolution.includes('原始')) return ['原始'];
+  return [];
+};
 
 // 计算等比例缩放分辨率
 const calculateScaledResolutions = (originalResolution: string) => {
@@ -226,7 +256,7 @@ const calculateScaledResolutions = (originalResolution: string) => {
   if (!width || !height) return [];
   
   const aspectRatio = width / height;
-  const resolutions = [] as { value: string; label: string; description?: string }[];
+  const resolutions = [] as { value: string; label: string; tags?: string[] }[];
   
   // 定义目标高度（从高到低）
   const targetHeights = [1080, 720, 480, 360, 240];
@@ -241,7 +271,7 @@ const calculateScaledResolutions = (originalResolution: string) => {
     resolutions.push({
       value: `${evenWidth}x${targetHeight}`,
       label: `${evenWidth}x${targetHeight}`,
-      description: `等比例缩放至${targetHeight}p`
+      tags: getResolutionTags(`${evenWidth}x${targetHeight}`)
     });
   }
   
@@ -256,8 +286,8 @@ const resolutionOptions = computed(() => {
     // 添加原始分辨率选项
     options.push({
       value: props.metadata.resolution,
-      label: `${props.metadata.resolution} (原始)`,
-      description: '保持原始分辨率'
+      label: props.metadata.resolution,
+      tags: ['原始']
     });
     
     // 添加等比例缩放的分辨率选项
@@ -266,9 +296,9 @@ const resolutionOptions = computed(() => {
   } else {
     // 没有metadata时，添加常规分辨率选项
     options.push(
-      { value: '1920x1080', label: '1920x1080 (1080p)' },
-      { value: '1280x720', label: '1280x720 (720p)' },
-      { value: '854x480', label: '854x480 (480p)' }
+      { value: '1920x1080', label: '1920x1080', tags: ['1080p'] },
+      { value: '1280x720', label: '1280x720', tags: ['720p'] },
+      { value: '854x480', label: '854x480', tags: ['480p'] }
     );
   }
   
