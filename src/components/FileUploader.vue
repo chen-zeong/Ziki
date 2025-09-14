@@ -41,10 +41,11 @@ const emit = defineEmits<{
 
 const isDragOver = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
-let unlistenDragDrop: UnlistenFn | null = null;
-let unlistenDragEnter: UnlistenFn | null = null;
-let unlistenDragLeave: UnlistenFn | null = null;
-let unlistenDragOver: UnlistenFn | null = null;
+// Replace UnlistenFn-typed vars with any to avoid dependency on event API here
+let unlistenDragDrop: any = null;
+let unlistenDragEnter: any = null;
+let unlistenDragLeave: any = null;
+let unlistenDragOver: any = null;
 
 const triggerFileInput = async () => {
   try {
@@ -130,136 +131,13 @@ const handleDrop = async (event: DragEvent) => {
   event.stopPropagation();
 };
 
-// Handle Tauri file drop events
-const handleTauriFileDrop = async (filePaths: string[]) => {
-  console.log('🎯 Processing dropped files:', filePaths);
-  
-  if (filePaths && Array.isArray(filePaths)) {
-    console.log('📁 Processing', filePaths.length, 'dropped files');
-    
-    const files: File[] = [];
-    
-    for (const filePath of filePaths) {
-      console.log('🔍 Processing file path:', filePath);
-      
-      // Extract file name from path
-      const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
-      console.log('📝 File name extracted:', fileName);
-      
-      // Determine MIME type based on file extension
-      const extension = fileName.split('.').pop()?.toLowerCase() || '';
-      let mimeType = 'application/octet-stream';
-      
-      if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
-        mimeType = `video/${extension === 'mov' ? 'quicktime' : extension}`;
-      } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-        mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-      }
-      
-      console.log('🏷️ MIME type determined:', mimeType);
-      
-      // Get file size using Tauri API
-      let fileSize = 0;
-      try {
-        console.log('📏 Getting file size for:', filePath);
-        fileSize = await invoke<number>('get_file_size', { filePath });
-        console.log('📏 File size retrieved:', fileSize, 'bytes');
-      } catch (error) {
-        console.warn('⚠️ Failed to get file size for:', filePath, error);
-      }
-      
-      // Create a mock File object with the real path and size
-      console.log('🔨 Creating File object for:', fileName);
-      const mockFile = new File([], fileName, { type: mimeType });
-      (mockFile as any).path = filePath; // Add the real path
-      
-      // Override the size property
-      Object.defineProperty(mockFile, 'size', {
-        value: fileSize,
-        writable: false,
-        enumerable: true,
-        configurable: false
-      });
-      
-      files.push(mockFile);
-      console.log('✅ File object created successfully for:', fileName);
-    }
-    
-    if (files.length > 0) {
-      console.log('🚀 Emitting filesSelected event with', files.length, 'files');
-      const fileList = {
-        length: files.length,
-        item: (index: number) => files[index] || null,
-        [Symbol.iterator]: function* () {
-          for (let i = 0; i < files.length; i++) {
-            yield files[i];
-          }
-        }
-      } as FileList;
-      
-      // Add array-like access
-      files.forEach((file, index) => {
-        (fileList as any)[index] = file;
-      });
-      
-      emit('filesSelected', fileList);
-      console.log('✅ filesSelected event emitted successfully');
-    } else {
-      console.warn('⚠️ No valid files to emit');
-    }
-  }
-};
-
-// Setup Tauri event listeners
+// Neutralize previous Tauri drag-drop listener registration here; now handled in TaskList
 onMounted(async () => {
-  console.log('FileUploader mounted, registering file drop listeners...');
-  
-  // 检查是否在 Tauri 环境中
-  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-    try {
-      console.log('✅ Tauri environment detected, registering drag drop listeners...');
-      
-      // 监听拖拽进入事件
-      unlistenDragEnter = await listen('tauri://drag-enter', (event) => {
-        console.log('🎯 Tauri drag enter event:', event);
-        isDragOver.value = true;
-      });
-      
-      // 监听拖拽悬停事件
-      unlistenDragOver = await listen('tauri://drag-over', (event) => {
-        console.log('🎯 Tauri drag over event:', event);
-        isDragOver.value = true;
-      });
-      
-      // 监听拖拽离开事件
-      unlistenDragLeave = await listen('tauri://drag-leave', (event) => {
-        console.log('🎯 Tauri drag leave event:', event);
-        isDragOver.value = false;
-      });
-      
-      // 监听文件拖放事件
-      unlistenDragDrop = await listen('tauri://drag-drop', (event: any) => {
-        console.log('🎯 Tauri drag drop event received:', event);
-        isDragOver.value = false;
-        
-        if (event.payload && event.payload.paths) {
-          console.log('🎯 User dropped files:', event.payload.paths);
-          handleTauriFileDrop(event.payload.paths);
-        }
-      });
-      
-      console.log('✅ Tauri file drop listeners registered successfully');
-    } catch (error) {
-      console.error('❌ Failed to register Tauri file drop listeners:', error);
-    }
-  } else {
-    console.log('ℹ️ Not in Tauri environment, skipping file drop listeners registration');
-  }
+  console.log('FileUploader mounted - drag & drop handled globally by TaskList.');
 });
 
-// Cleanup event listeners
+// Cleanup (kept for safety; no-ops if listeners not set)
 onUnmounted(() => {
-  // 清理所有 Tauri 事件监听器
   if (unlistenDragDrop) {
     unlistenDragDrop();
   }

@@ -1,5 +1,11 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50 dark:bg-[#2d2d2d]">
+  <div
+    class="h-full flex flex-col bg-gray-50 dark:bg-[#2d2d2d]"
+    :class="isDragOver ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent' : ''"
+    @dragover.prevent="handleDragOver"
+    @dragleave.prevent="handleDragLeave"
+    @drop.prevent="handleDrop"
+  >
     <!-- 工具栏 -->
     <TaskListToolbar
       :tasks="tasks"
@@ -39,9 +45,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useTaskStore } from '../../stores/useTaskStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
@@ -78,6 +85,13 @@ const { t } = useI18n();
 const selectedStatuses = ref(new Set<string>());
 const expandedTasks = ref(new Set<string>());
 const selectedTasks = ref(new Set<string>());
+const isDragOver = ref(false);
+
+// Tauri drag-drop listeners
+let unlistenDragDrop: UnlistenFn | null = null;
+let unlistenDragEnter: UnlistenFn | null = null;
+let unlistenDragLeave: UnlistenFn | null = null;
+let unlistenDragOver: UnlistenFn | null = null;
 
 // 计算属性
 const filteredTasks = computed(() => {
@@ -199,6 +213,99 @@ const resumeTask = async (taskId: string) => {
 const handleClearAllTasks = () => {
   emit('clear-all-tasks');
 };
+
+// DOM drag handlers for visual feedback
+const handleDragOver = () => {
+  isDragOver.value = true;
+};
+const handleDragLeave = () => {
+  isDragOver.value = false;
+};
+const handleDrop = (event: DragEvent) => {
+  isDragOver.value = false;
+  event.preventDefault();
+  event.stopPropagation();
+};
+
+// Handle Tauri file drop events (global)
+const handleTauriFileDrop = async (filePaths: string[]) => {
+  if (filePaths && Array.isArray(filePaths)) {
+    const files: File[] = [];
+    for (const filePath of filePaths) {
+      const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
+      const extension = fileName.split('.').pop()?.toLowerCase() || '';
+      let mimeType = 'application/octet-stream';
+      if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(extension)) {
+        mimeType = `video/${extension === 'mov' ? 'quicktime' : extension}`;
+      } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+        mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      }
+      let fileSize = 0;
+      try {
+        fileSize = await invoke<number>('get_file_size', { filePath });
+      } catch (error) {
+        console.warn('Failed to get file size:', error);
+      }
+      const mockFile = new File([], fileName, { type: mimeType });
+      (mockFile as any).path = filePath;
+      Object.defineProperty(mockFile, 'size', {
+        value: fileSize,
+        writable: false,
+        enumerable: true,
+        configurable: false
+      });
+      files.push(mockFile);
+    }
+
+    if (files.length > 0) {
+      const fileList = {
+        length: files.length,
+        item: (index: number) => files[index] || null,
+        [Symbol.iterator]: function* () {
+          for (let i = 0; i < files.length; i++) {
+            yield files[i];
+          }
+        }
+      } as FileList;
+      files.forEach((file, index) => {
+        (fileList as any)[index] = file;
+      });
+      emit('files-selected', fileList);
+    }
+  }
+};
+
+// Setup Tauri event listeners globally (so drag-drop works even when uploader is hidden)
+onMounted(async () => {
+  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    try {
+      unlistenDragEnter = await listen('tauri://drag-enter', () => {
+        isDragOver.value = true;
+      });
+      unlistenDragOver = await listen('tauri://drag-over', () => {
+        isDragOver.value = true;
+      });
+      unlistenDragLeave = await listen('tauri://drag-leave', () => {
+        isDragOver.value = false;
+      });
+      unlistenDragDrop = await listen('tauri://drag-drop', (event: any) => {
+        isDragOver.value = false;
+        if (event?.payload?.paths) {
+          handleTauriFileDrop(event.payload.paths);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to register Tauri drag-drop listeners:', error);
+    }
+  }
+});
+
+onUnmounted(() => {
+  if (unlistenDragDrop) unlistenDragDrop();
+  if (unlistenDragEnter) unlistenDragEnter();
+  if (unlistenDragLeave) unlistenDragLeave();
+  if (unlistenDragOver) unlistenDragOver();
+});
 
 // 监听任务变化，自动清理已删除任务的展开状态
 watch(tasks, (newTasks) => {
