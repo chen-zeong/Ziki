@@ -201,15 +201,20 @@ pub async fn compress_video(
     println!("Actual compression duration: {} seconds", actual_compression_duration);
     
     let mut cmd = Command::new(&ffmpeg_path);
+    let mut args_for_log: Vec<String> = Vec::new();
     
     // Add time range parameters if specified
     if let Some(time_range) = &settings.time_range {
         if let Some(start) = time_range.start {
             cmd.arg("-ss").arg(start.to_string());
+            args_for_log.push("-ss".to_string());
+            args_for_log.push(start.to_string());
         }
     }
     
     cmd.arg("-i").arg(&inputPath);
+    args_for_log.push("-i".to_string());
+    args_for_log.push(inputPath.clone());
     
     // Add duration parameter if end time is specified
     if let Some(time_range) = &settings.time_range {
@@ -218,10 +223,14 @@ pub async fn compress_video(
                 let duration = end - start;
                 if duration > 0.0 {
                     cmd.arg("-t").arg(duration.to_string());
+                    args_for_log.push("-t".to_string());
+                    args_for_log.push(duration.to_string());
                 }
             } else {
                 // If only end time is specified, treat it as duration from start
                 cmd.arg("-t").arg(end.to_string());
+                args_for_log.push("-t".to_string());
+                args_for_log.push(end.to_string());
             }
         }
     }
@@ -318,10 +327,14 @@ pub async fn compress_video(
     
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(&ffmpeg_codec);
+    args_for_log.push("-c:v".to_string());
+    args_for_log.push(ffmpeg_codec.clone());
     
     // Add H.265 specific tag for better compatibility
     if ffmpeg_codec.contains("265") || ffmpeg_codec.contains("hevc") {
         cmd.arg("-tag:v").arg("hvc1");
+        args_for_log.push("-tag:v".to_string());
+        args_for_log.push("hvc1".to_string());
     }
     
     // Set pixel format based on bit depth
@@ -346,6 +359,8 @@ pub async fn compress_video(
     };
     println!("Using pix_fmt: {}", pix_fmt);
     cmd.arg("-pix_fmt").arg(pix_fmt);
+    args_for_log.push("-pix_fmt".to_string());
+    args_for_log.push(pix_fmt.to_string());
 
     // For hevc_videotoolbox, set main10 profile when requesting >=10-bit
     if is_videotoolbox {
@@ -353,6 +368,8 @@ pub async fn compress_video(
             if depth >= 10 {
                 println!("Setting VideoToolbox profile to main10 for {}-bit request", depth);
                 cmd.arg("-profile:v").arg("main10");
+                args_for_log.push("-profile:v".to_string());
+                args_for_log.push("main10".to_string());
             }
         }
     }
@@ -362,16 +379,22 @@ pub async fn compress_video(
         "crf" => {
             if let Some(crf) = settings.crf_value {
                 cmd.arg("-crf").arg(crf.to_string());
+                args_for_log.push("-crf".to_string());
+                args_for_log.push(crf.to_string());
             }
         }
         "bitrate" => {
             if let Some(bitrate) = &settings.bitrate {
                 cmd.arg("-b:v").arg(bitrate);
+                args_for_log.push("-b:v".to_string());
+                args_for_log.push(bitrate.clone());
             }
         }
         "qv" => {
             let q = settings.qv_value.unwrap_or(80).min(100);
             cmd.arg("-q:v").arg(q.to_string());
+            args_for_log.push("-q:v".to_string());
+            args_for_log.push(q.to_string());
         }
         _ => {}
     }
@@ -401,7 +424,9 @@ pub async fn compress_video(
     
     if !scale_filter.is_empty() {
         println!("Using filter chain: {}", scale_filter);
-        cmd.arg("-vf").arg(scale_filter);
+        cmd.arg("-vf").arg(scale_filter.clone());
+        args_for_log.push("-vf".to_string());
+        args_for_log.push(scale_filter);
     }
     
     // Set audio codec based on output format
@@ -410,18 +435,44 @@ pub async fn compress_video(
         cmd.arg("-c:a").arg("libopus");
         cmd.arg("-b:a").arg("128k");
         cmd.arg("-c:s").arg("webvtt");
+        args_for_log.push("-c:a".to_string());
+        args_for_log.push("libopus".to_string());
+        args_for_log.push("-b:a".to_string());
+        args_for_log.push("128k".to_string());
+        args_for_log.push("-c:s".to_string());
+        args_for_log.push("webvtt".to_string());
     } else {
         // For other formats, copy audio and subtitle streams
         cmd.arg("-c:a").arg("copy");
         cmd.arg("-c:s").arg("copy");
+        args_for_log.push("-c:a".to_string());
+        args_for_log.push("copy".to_string());
+        args_for_log.push("-c:s".to_string());
+        args_for_log.push("copy".to_string());
     }
     
     cmd.arg("-y").arg(&outputPath);
+    args_for_log.push("-y".to_string());
+    args_for_log.push(outputPath.clone());
     
     // 添加进度输出参数 - 输出到stdout
     cmd.arg("-progress").arg("pipe:1");
+    args_for_log.push("-progress".to_string());
+    args_for_log.push("pipe:1".to_string());
     
-    println!("Executing FFmpeg command: {:?}", cmd);
+    // 发送最终命令事件到前端
+    let args_joined = args_for_log
+        .iter()
+        .map(|a| if a.contains(' ') { format!("\"{}\"", a) } else { a.clone() })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let _ = app_handle.emit(&format!("compression-command-{}", taskId), json!({
+        "taskId": taskId,
+        "command": format!("{:?} {}", ffmpeg_path, args_joined),
+        "args": args_for_log,
+    }));
+    
+    println!("Executing FFmpeg command: {:?} {}", ffmpeg_path, args_joined);
     
     // 使用管道方式执行命令以实时监控进度
     let mut child = cmd
@@ -433,7 +484,22 @@ pub async fn compress_video(
     // 获取stdout用于进度监控
     let stdout = child.stdout.take().unwrap();
     let reader = BufReader::new(stdout);
-    
+
+    // 捕获stderr用于错误详情
+    let stderr = child.stderr.take().unwrap();
+    let stderr_reader = BufReader::new(stderr);
+    let stderr_acc: Arc<tokio::sync::Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    let stderr_acc_clone = stderr_acc.clone();
+    let stderr_handle = tokio::spawn(async move {
+        let mut lines = stderr_reader.lines();
+        while let Some(line) = lines.next_line().await.unwrap_or(None) {
+            println!("FFmpeg stderr: {}", line);
+            let mut acc = stderr_acc_clone.lock().await;
+            acc.push_str(&line);
+            acc.push('\n');
+        }
+    });
+
     // 将进程存储到进程管理器中
     {
         let process_manager = get_process_manager();
@@ -521,6 +587,10 @@ pub async fn compress_video(
                 }
             } else {
                 // 进程不在管理器中，说明被暂停或删除了
+                let _ = app_handle.emit(&format!("compression-error-{}", taskId), json!({
+                    "taskId": taskId,
+                    "error": "Process was interrupted"
+                }));
                 return Err("Process was interrupted".to_string());
             }
         }
@@ -528,6 +598,8 @@ pub async fn compress_video(
 
     // 等待进度监控线程完成
     let _ = progress_handle.await;
+    // 等待stderr读取完成
+    let _ = stderr_handle.await;
     
     println!("FFmpeg exit status: {}", status);
 
@@ -554,6 +626,17 @@ pub async fn compress_video(
             compressed_metadata,
         })
     } else {
+        // 获取stderr详情
+        let stderr_text = {
+            let acc = stderr_acc.lock().await;
+            acc.clone()
+        };
+        let err_msg = format!("FFmpeg process failed with exit code: {}", status);
+        let _ = app_handle.emit(&format!("compression-error-{}", taskId), json!({
+            "taskId": taskId,
+            "error": err_msg,
+            "stderr": stderr_text
+        }));
         Ok(CompressionResult {
             success: false,
             output_path: None,

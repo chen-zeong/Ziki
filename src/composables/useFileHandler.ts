@@ -4,6 +4,7 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useTaskStore } from '../stores/useTaskStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
+import { useLogStore } from '../stores/useLogStore';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 
 
@@ -11,6 +12,7 @@ import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult
 export function useFileHandler() {
   const taskStore = useTaskStore();
   const globalSettings = useGlobalSettingsStore();
+  const logStore = useLogStore();
   const selectedFiles = ref<VideoFile[]>([]);
   const tasks = computed(() => taskStore.tasks);
   const currentFile = ref<VideoFile | null>(null);
@@ -33,6 +35,9 @@ export function useFileHandler() {
   // 新增：维护每个任务的取消事件监听器和取消标记
   const activeCancelListeners = new Map<string, () => void>();
   const cancelledTasks = new Set<string>();
+  // 新增：维护日志相关监听器（后端发出的命令与错误事件）
+  const activeCommandListeners = new Map<string, () => void>();
+  const activeErrorListeners = new Map<string, () => void>();
 
 
 
@@ -50,6 +55,11 @@ export function useFileHandler() {
           try { unlistenCancel(); } catch (e) { console.warn('Failed to unlisten cancel listener:', e); }
           activeCancelListeners.delete(t.id);
         }
+        // 清理日志相关监听器
+        const unlistenCmd = activeCommandListeners.get(t.id);
+        if (unlistenCmd) { try { unlistenCmd(); } catch (e) { console.warn('Failed to unlisten command listener:', e); } activeCommandListeners.delete(t.id); }
+        const unlistenErr = activeErrorListeners.get(t.id);
+        if (unlistenErr) { try { unlistenErr(); } catch (e) { console.warn('Failed to unlisten error listener:', e); } activeErrorListeners.delete(t.id); }
       }
     });
   }, { deep: true });
@@ -80,6 +90,11 @@ export function useFileHandler() {
         try { unlistenCancel(); } catch (e) { console.warn('Failed to unlisten cancel before delete:', e); }
         activeCancelListeners.delete(taskId);
       }
+      // 清理日志相关监听器
+      const unlistenCmd = activeCommandListeners.get(taskId);
+      if (unlistenCmd) { try { unlistenCmd(); } catch {} activeCommandListeners.delete(taskId); }
+      const unlistenErr = activeErrorListeners.get(taskId);
+      if (unlistenErr) { try { unlistenErr(); } catch {} activeErrorListeners.delete(taskId); }
       cancelledTasks.delete(taskId);
 
       // 使用store删除任务
@@ -93,7 +108,7 @@ export function useFileHandler() {
         } else {
           currentFile.value = null;
           isUploaderVisible.value = true;
-          taskStore.selectedTaskId = null;
+          (taskStore as any).selectedTaskId = null;
         }
       }
       
@@ -149,6 +164,7 @@ export function useFileHandler() {
     }
 
     console.log('Resuming compression for task:', taskId);
+    logStore.addInfo(`恢复压缩：${task.file.name}`, { taskId: task.id });
     taskStore.updateTaskStatus(task.id, 'processing');
     isProcessing.value = true;
 
@@ -158,22 +174,6 @@ export function useFileHandler() {
       try { existingUnlistenResume(); } catch {}
       activeProgressListeners.delete(task.id);
     }
-
-    // 先设置取消监听器
-    const unlistenCancel = await listen(`compression-cancelled-${task.id}`, () => {
-      if (cancelledTasks.has(task.id)) return;
-      console.log('[CANCEL] Received cancel event during resume:', task.id);
-      cancelledTasks.add(task.id);
-      taskStore.updateTaskStatus(task.id, 'cancelled');
-      isProcessing.value = false;
-      // 清理进度监听器
-      const unlistenProg = activeProgressListeners.get(task.id);
-      if (unlistenProg) { try { unlistenProg(); } catch {} activeProgressListeners.delete(task.id); }
-      // 自行清理取消监听器
-      try { unlistenCancel(); } catch {}
-      activeCancelListeners.delete(task.id);
-    });
-    activeCancelListeners.set(task.id, unlistenCancel);
 
     // 重新设置进度监听器
     const unlisten = await listen(`compression-progress-${task.id}`, (event: any) => {
@@ -187,6 +187,38 @@ export function useFileHandler() {
     // 记录监听器
     activeProgressListeners.set(task.id, unlisten);
 
+    // 监听后端错误事件（恢复过程中可能不会再次发送command事件，但错误事件会发送）
+    const existingCmd = activeCommandListeners.get(task.id); if (existingCmd) { try { existingCmd(); } catch {} activeCommandListeners.delete(task.id); }
+    const existingErr = activeErrorListeners.get(task.id); if (existingErr) { try { existingErr(); } catch {} activeErrorListeners.delete(task.id); }
+    try {
+      const unlistenErr = await listen(`compression-error-${task.id}`, (event: any) => {
+        const { error, stderr } = (event && event.payload) || {};
+        logStore.addError(`压缩错误：${task.file.name} - ${error || '未知错误'}`, { taskId: task.id, stderr });
+      });
+      activeErrorListeners.set(task.id, unlistenErr);
+    } catch {}
+
+    // 先设置取消监听器
+    const unlistenCancel = await listen(`compression-cancelled-${task.id}`, () => {
+      if (cancelledTasks.has(task.id)) return;
+      console.log('[CANCEL] Received cancel event during resume:', task.id);
+      cancelledTasks.add(task.id);
+      taskStore.updateTaskStatus(task.id, 'cancelled');
+      isProcessing.value = false;
+      // 清理进度监听器
+      const unlistenProg = activeProgressListeners.get(task.id);
+      if (unlistenProg) { try { unlistenProg(); } catch {} activeProgressListeners.delete(task.id); }
+      // 清理日志监听器
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
+      // 自行清理取消监听器
+      try { unlistenCancel(); } catch {}
+      activeCancelListeners.delete(task.id);
+      // 日志
+      logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
+    });
+    activeCancelListeners.set(task.id, unlistenCancel);
+
     try {
       // 调用后端的 resume_task，它现在会等待任务完成
       const result = await invoke<CompressionResult>('resume_task', { taskId });
@@ -196,6 +228,8 @@ export function useFileHandler() {
       activeProgressListeners.delete(task.id);
       const unlistenCancelEnd = activeCancelListeners.get(task.id);
       if (unlistenCancelEnd) { try { unlistenCancelEnd(); } catch {} activeCancelListeners.delete(task.id); }
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
 
       if (cancelledTasks.has(task.id)) {
         console.log('[CANCEL] Task was cancelled during resume, skip completion:', task.id);
@@ -219,9 +253,11 @@ export function useFileHandler() {
         }
         
         console.log('Task completed successfully:', taskId);
+        logStore.addSuccess(`压缩完成：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
       } else {
         task.status = 'failed';
         task.error = result.error || 'Resume failed';
+        logStore.addError(`恢复失败：${task.file.name}`, { taskId: task.id, error: result.error });
       }
     } catch (error) {
       // 确保在任何错误情况下都清理监听器
@@ -229,15 +265,20 @@ export function useFileHandler() {
       activeProgressListeners.delete(task.id);
       const unlistenCancelErr = activeCancelListeners.get(task.id);
       if (unlistenCancelErr) { try { unlistenCancelErr(); } catch {} activeCancelListeners.delete(task.id); }
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to resume compression:', errorMessage);
+      // 日志
+      logStore.addError(`恢复失败：${task.file.name}`, { taskId: task.id, error: errorMessage });
 
       // 检查是否是再次被暂停
       if (errorMessage.includes('Process was interrupted')) {
         if (cancelledTasks.has(task.id)) {
           task.status = 'cancelled';
           console.log('[CANCEL] Interrupted due to cancellation during resume:', task.id);
+          logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
         } else {
           // 边界处理：如果进程在完成时被中断，但输出文件已生成，则判定为完成
           try {
@@ -262,23 +303,27 @@ export function useFileHandler() {
                 task.compressedMetadata = compressedMetadata;
                 task.completedAt = new Date();
                 task.file.compressedPath = expectedPath;
-                task.file.compressedUrl = convertFileSrc(expectedPath);
+                task.file.compressedUrl = expectedPath ? convertFileSrc(expectedPath) : undefined;
                 // Update currentFile if it matches this task
                 if (currentFile.value && currentFile.value.id === task.file.id) {
                   currentFile.value = { ...task.file };
                 }
                 console.log('[FALLBACK] Output exists after interruption, marking as completed:', task.id);
+                logStore.addSuccess(`压缩完成：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath: expectedPath });
               } else {
                 console.log('Task was paused, setting status to paused:', task.id);
                 task.status = 'paused';
+                logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id });
               }
             } else {
               console.log('Task was paused, setting status to paused (no output dir):', task.id);
               task.status = 'paused';
+              logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id });
             }
           } catch (postCheckErr) {
             console.log('Task was paused, setting status to paused:', task.id, 'post-check error:', postCheckErr);
             task.status = 'paused';
+            logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id, error: String(postCheckErr) });
           }
         }
       } else {
@@ -543,10 +588,16 @@ export function useFileHandler() {
         try { existingUnlisten(); } catch {}
         activeProgressListeners.delete(task.id);
       }
+      // 同步清理旧的日志监听器
+      const existingCmd = activeCommandListeners.get(task.id); if (existingCmd) { try { existingCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const existingErr = activeErrorListeners.get(task.id); if (existingErr) { try { existingErr(); } catch {} activeErrorListeners.delete(task.id); }
       
       // 分流：视频走 compress_video，图片走 compress_image（图片暂不设置进度监听器）
       if (task.type === 'image') {
         try {
+          // 日志：开始图片压缩
+          logStore.addInfo(`开始压缩（图片）：${task.file.name}`, { taskId: task.id, inputPath: task.file.path, outputPath, settings: backendSettings });
+
           const result = await invoke<CompressionResult>('compress_image', {
             taskId: task.id,
             inputPath: task.file.path,
@@ -566,14 +617,18 @@ export function useFileHandler() {
             if (currentFile.value && currentFile.value.id === task.file.id) {
               currentFile.value = { ...task.file };
             }
+            // 日志：完成
+            logStore.addSuccess(`压缩完成（图片）：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
           } else {
             task.status = 'failed';
             task.error = result.error || 'Compression failed';
+            logStore.addError(`压缩失败（图片）：${task.file.name}`, { taskId: task.id, error: result.error });
           }
         } catch (compressionError) {
           const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
           task.status = 'failed';
           task.error = errorMessage;
+          logStore.addError(`压缩失败（图片）：${task.file.name}`, { taskId: task.id, error: errorMessage });
         } finally {
           isProcessing.value = false;
         }
@@ -592,6 +647,22 @@ export function useFileHandler() {
       // 记录监听器
       activeProgressListeners.set(task.id, unlisten);
 
+      // 日志：监听后端命令与错误事件
+      try {
+        const unlistenCmd = await listen(`compression-command-${task.id}`, (event: any) => {
+          const { command, args } = (event && event.payload) || {};
+          logStore.addInfo(`FFmpeg 命令：${task.file.name}`, { taskId: task.id, command, args });
+        });
+        activeCommandListeners.set(task.id, unlistenCmd);
+      } catch {}
+      try {
+        const unlistenErr = await listen(`compression-error-${task.id}`, (event: any) => {
+          const { error, stderr } = (event && event.payload) || {};
+          logStore.addError(`压缩错误：${task.file.name} - ${error || '未知错误'}`, { taskId: task.id, stderr });
+        });
+        activeErrorListeners.set(task.id, unlistenErr);
+      } catch {}
+
       // 先设置取消监听器（清理旧的，重置标记）
       const existingCancelUnlisten = activeCancelListeners.get(task.id);
       if (existingCancelUnlisten) { try { existingCancelUnlisten(); } catch {} activeCancelListeners.delete(task.id); }
@@ -605,15 +676,23 @@ export function useFileHandler() {
         // 清理进度监听器
         const unlistenProg = activeProgressListeners.get(task.id);
         if (unlistenProg) { try { unlistenProg(); } catch {} activeProgressListeners.delete(task.id); }
+        // 清理日志监听器
+        const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+        const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
         // 清理自身取消监听器
         try { unlistenCancel(); } catch {}
         activeCancelListeners.delete(task.id);
+        // 日志
+        logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
       });
       activeCancelListeners.set(task.id, unlistenCancel);
 
       try {
          // 初始化进度
          task.progress = 0;
+
+         // 日志：开始视频压缩
+         logStore.addInfo(`开始压缩（视频）：${task.file.name}`, { taskId: task.id, inputPath: task.file.path, outputPath, settings: backendSettings });
 
          // Call backend compression
          const result = await invoke<CompressionResult>('compress_video', {
@@ -628,6 +707,8 @@ export function useFileHandler() {
          activeProgressListeners.delete(task.id);
          const unlistenCancelEnd = activeCancelListeners.get(task.id);
          if (unlistenCancelEnd) { try { unlistenCancelEnd(); } catch {} activeCancelListeners.delete(task.id); }
+         const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+         const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
 
          if (cancelledTasks.has(task.id)) {
            console.log('[CANCEL] Task was cancelled during start, skip completion:', task.id);
@@ -651,9 +732,12 @@ export function useFileHandler() {
            if (currentFile.value && currentFile.value.id === task.file.id) {
              currentFile.value = { ...task.file };
            }
+           // 日志：完成
+           logStore.addSuccess(`压缩完成（视频）：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
          } else {
            task.status = 'failed';
            task.error = result.error || 'Compression failed';
+           logStore.addError(`压缩失败（视频）：${task.file.name}`, { taskId: task.id, error: result.error });
          }
        } catch (compressionError) {
          // 当压缩被暂停或失败时，必须清理监听器，避免遗留
@@ -661,6 +745,8 @@ export function useFileHandler() {
          activeProgressListeners.delete(task.id);
          const unlistenCancelErr = activeCancelListeners.get(task.id);
          if (unlistenCancelErr) { try { unlistenCancelErr(); } catch {} activeCancelListeners.delete(task.id); }
+         const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+         const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
 
          const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
          
@@ -668,6 +754,7 @@ export function useFileHandler() {
             if (cancelledTasks.has(task.id)) {
               task.status = 'cancelled';
               console.log('[CANCEL] Interrupted due to cancellation during start:', task.id);
+              logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
             } else {
               // 边界处理：如果进程在完成时被中断，但输出文件已生成，则判定为完成
               try {
@@ -689,25 +776,30 @@ export function useFileHandler() {
                     currentFile.value = { ...task.file };
                   }
                   console.log('[FALLBACK] Output exists after interruption, marking as completed:', task.id);
+                  logStore.addSuccess(`压缩完成（视频）：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath });
                 } else {
                   console.log('Task was paused, setting status to paused:', task.id);
                   task.status = 'paused';
+                  logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id });
                 }
               } catch (postCheckErr) {
                 console.log('Task was paused, setting status to paused:', task.id, 'post-check error:', postCheckErr);
                 task.status = 'paused';
+                logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id, error: String(postCheckErr) });
               }
             }
          } else {
             // Real error
             task.status = 'failed';
             task.error = errorMessage;
+            logStore.addError(`压缩失败（视频）：${task.file.name}`, { taskId: task.id, error: errorMessage });
          }
        }
     } catch (error) {
       console.error('Compression setup error:', error);
       task.status = 'failed';
       task.error = error instanceof Error ? error.message : String(error);
+      logStore.addError(`压缩启动失败：${task.file.name}`, { taskId: task.id, error: task.error });
     } finally {
       isProcessing.value = false;
     }

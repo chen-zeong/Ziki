@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Sun, Moon, Minus, Square, X } from 'lucide-vue-next';
 import LanguageSwitcher from '../components/LanguageSwitcher.vue';
+import LogPanel from '../components/LogPanel.vue';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { onMounted, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -91,8 +92,13 @@ const handleClose = async () => {
     <!-- 中间留白：作为拖拽区域的缓冲，提高可拖拽面积 -->
     <div class="flex-1" />
 
-    <!-- 右侧：语言切换和主题切换 -->
+    <!-- 右侧：日志、语言切换和主题切换 -->
     <div class="flex items-center space-x-2">
+      <!-- Log Panel Button: 放在语言切换左边 -->
+      <div :data-tauri-drag-region="false">
+        <LogPanel />
+      </div>
+
       <!-- Language Switcher -->
       <LanguageSwitcher />
       
