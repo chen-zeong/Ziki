@@ -64,7 +64,7 @@
       >
         
         <div 
-          class="modal-content relative w-full max-w-7xl h-full max-h-[95vh] overflow-hidden"
+          class="modal-content relative w-full h-full overflow-hidden"
           @click.stop
         >
           
@@ -158,7 +158,7 @@ import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { useComparison } from '../composables/useComparison';
 import { invoke } from '@tauri-apps/api/core';
 import { useVideoPreviewStore } from '../stores/useVideoPreviewStore';
-
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 interface Props {
   title?: string;
@@ -247,11 +247,24 @@ let initialPreviewIdleId: number | null = null;
 let selectFrameDebounceTimer: number | null = null;
 
 // 新增：全屏和滑块交互相关方法
-const toggleFullscreen = () => {
+const toggleFullscreen = async () => {
+  try {
+    const appWindow = getCurrentWindow();
+    await appWindow.setFullscreen(true);
+  } catch (e) {
+    // 浏览器环境或权限不足时，仍回退为应用内全屏蒙层
+    console.warn('调用系统级全屏失败，回退为应用内全屏:', e);
+  }
   videoPreviewStore.toggleFullscreen();
 };
 
-const closeFullscreen = () => {
+const closeFullscreen = async () => {
+  try {
+    const appWindow = getCurrentWindow();
+    await appWindow.setFullscreen(false);
+  } catch (e) {
+    console.warn('退出系统级全屏失败（可能在浏览器环境）:', e);
+  }
   videoPreviewStore.closeFullscreen();
 };
 

@@ -26,6 +26,13 @@ const detachScrollListener = () => {
   }
 };
 
+const scrollToTop = () => {
+  if (scrollContainer.value) {
+    scrollContainer.value.scrollTop = 0;
+    updateScrollState();
+  }
+};
+
 const toggle = () => {
   open.value = !open.value;
   if (open.value) {
@@ -33,17 +40,11 @@ const toggle = () => {
     nextTick(() => {
       attachScrollListener();
       updateScrollState();
-      scrollToBottom();
+      // 默认展示最新日志（已按时间倒序排列），滚动到顶部
+      scrollToTop();
     });
   } else {
     detachScrollListener();
-  }
-};
-
-const scrollToBottom = () => {
-  if (scrollContainer.value) {
-    scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
-    updateScrollState();
   }
 };
 
@@ -55,7 +56,8 @@ onMounted(() => {
       nextTick(() => {
         attachScrollListener();
         updateScrollState();
-        scrollToBottom();
+        // 默认展示最新日志（已按时间倒序排列），滚动到顶部
+        scrollToTop();
       });
     } else {
       detachScrollListener();
@@ -72,11 +74,11 @@ onBeforeUnmount(() => {
 
 const entries = computed(() => logStore.orderedLogs);
 
-// 监听日志变化，自动滚动到底部
+// 监听日志变化，打开面板时保持最新（顶部）
 watch(entries, () => {
   if (open.value) {
     nextTick(() => {
-      scrollToBottom();
+      scrollToTop();
     });
   }
 }, { deep: true });
