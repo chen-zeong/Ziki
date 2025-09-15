@@ -235,24 +235,30 @@ pub async fn compress_video(
         println!("Using GPU acceleration");
         // 检查当前平台并使用相应的硬件加速编码器
         if cfg!(target_os = "macos") {
-            println!("Platform: macOS, using VideoToolbox");
-            // macOS 使用 VideoToolbox
-            match settings.codec.as_str() {
-                "H.264" | "libx264" | "h264" => {
-                    println!("Selected h264_videotoolbox encoder");
-                    "h264_videotoolbox".to_string()
-                },
-                "H.265" | "HEVC" | "libx265" | "hevc" => {
-                    println!("Selected hevc_videotoolbox encoder");
-                    "hevc_videotoolbox".to_string()
-                },
-                "ProRes" | "prores" => {
-                    println!("Selected prores_videotoolbox encoder");
-                    "prores_videotoolbox".to_string()
-                },
-                _ => {
-                    println!("Codec {} not supported for hardware acceleration, falling back to software", settings.codec);
-                    map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
+            // Intel 架构禁用硬件加速，ARM 使用 VideoToolbox
+            if cfg!(target_arch = "x86_64") {
+                println!("Platform: macOS (Intel), hardware acceleration disabled; falling back to software");
+                map_codec_to_ffmpeg(&settings.codec).to_string()
+            } else {
+                println!("Platform: macOS (ARM), using VideoToolbox");
+                // macOS 使用 VideoToolbox（ARM）
+                match settings.codec.as_str() {
+                    "H.264" | "libx264" | "h264" => {
+                        println!("Selected h264_videotoolbox encoder");
+                        "h264_videotoolbox".to_string()
+                    },
+                    "H.265" | "HEVC" | "libx265" | "hevc" => {
+                        println!("Selected hevc_videotoolbox encoder");
+                        "hevc_videotoolbox".to_string()
+                    },
+                    "ProRes" | "prores" => {
+                        println!("Selected prores_videotoolbox encoder");
+                        "prores_videotoolbox".to_string()
+                    },
+                    _ => {
+                        println!("Codec {} not supported for hardware acceleration, falling back to software", settings.codec);
+                        map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
+                    }
                 }
             }
         } else if cfg!(target_os = "windows") {

@@ -105,17 +105,24 @@
                   <!-- 滑动条轨道和自定义UI -->
                   <div class="relative h-8 flex items-center">
                     <!-- 轨道背景 -->
-                    <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner"></div>
-                    
+                    <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner z-0"></div>
+
+                    <!-- 默认值平衡点 -->
+                    <div
+                      class="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/95 dark:bg-white/90 ring-1 ring-[#4f89db] dark:ring-[#7aa6e8] ring-offset-1 ring-offset-slate-300 dark:ring-offset-slate-700 shadow-[0_0_0_0.5px_rgba(0,0,0,0.18)] pointer-events-none z-20"
+                      :style="{ left: `calc(${defaultImageSliderPosition}% - 4px)` }"
+                      aria-hidden="true"
+                    ></div>
+
                     <!-- 已填充的进度条 -->
-                    <div 
-                      class="absolute h-3 rounded-full shadow-sm"
+                    <div
+                      class="absolute h-3 rounded-full shadow-sm z-20"
                       :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
                     ></div>
-                    
+
                     <!-- 自定义的滑块 -->
-                    <div 
-                      class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105"
+                    <div
+                      class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105 z-30"
                       :class="{ 'scale-105': showTooltip }"
                       :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
                     >
@@ -139,14 +146,14 @@
                   </div>
 
                   <!-- 透明的 range input 处理逻辑 -->
-                  <input 
-                    type="range" 
-                    id="image-quality-slider" 
+                  <input
+                    type="range"
+                    id="image-quality-slider"
                     v-model.number="qualityValue"
-                    min="2" 
-                    max="98" 
-                    step="1" 
-                    class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    min="2"
+                    max="98"
+                    step="1"
+                    class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-40"
                     @input="updateQualityState"
                     @mouseenter="showTooltip = true"
                     @mouseleave="showTooltip = false"
@@ -300,6 +307,9 @@ const qualityValue = computed({
     qualitySettings.value = { ...qualitySettings.value, crfValue: isNaN(num as number) ? 0 : (num as number) }; 
   }
 });
+
+// 默认值位置（图片画质的“平衡点”）
+const defaultImageSliderPosition = computed(() => 80);
 
 // 质量文本（按新文案：极高画质、高画质、中等画质、低画质、极低画质 + 无损）
 const qualityText = computed(() => {

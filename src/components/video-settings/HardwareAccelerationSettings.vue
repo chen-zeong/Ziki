@@ -81,6 +81,13 @@
                    <!-- 分割线 -->
                    <div class="border-t border-gray-100 dark:border-dark-border my-4"></div>
   
+                   <!-- 仅 Intel Mac 显示的小字说明（英文标点 + 圆角背景 + 暗色适配） -->
+                  <div
+                    v-if="platform === 'macos' && arch === 'x86_64'"
+                    class="text-[11px] leading-4 text-gray-600 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 border border-gray-200 dark:border-dark-border rounded-md px-3 py-2"
+                  >
+                    注意: 根据系统限制, Intel 版本的 macOS 暂不支持使用 VideoToolbox 的质量模式 (-q:v), 本应用已禁用硬件加速.
+                  </div>
                    <!-- 检测信息与操作 -->
                    <div class="flex items-center justify-between">
                      <div class="flex items-center text-xs text-gray-500 dark:text-dark-secondary">
@@ -108,11 +115,11 @@
                        </span>
                      </button>
                    </div>
-                </div>
-              </transition>
-            </Teleport>
-          </div>
-        </div>
+                 </div>
+               </transition>
+             </Teleport>
+           </div>
+         </div>
 
         <!-- 移除外部的检测状态与重新检测行，内容已移动到弹出框内 -->
         
@@ -181,6 +188,7 @@ watch(() => props.modelValue, () => {
 const codecs = ref<Codec[]>([]);
 const isDetecting = ref(false);
 const platform = ref<'macos' | 'windows' | 'linux'>('macos');
+const arch = ref<'arm64' | 'x86_64' | 'unknown'>('unknown');
 
 // 新增：硬件编码器支持与检测状态
 const hardwareSupport = ref<HardwareSupport | null>(null);
@@ -282,6 +290,13 @@ const detectPlatform = async () => {
   try {
     const result = await invoke<string>('get_platform');
     platform.value = result as 'macos' | 'windows' | 'linux';
+    // 同时获取架构
+    try {
+      const a = await invoke<string>('get_arch');
+      arch.value = (a as any) as 'arm64' | 'x86_64' | 'unknown';
+    } catch (e) {
+      arch.value = 'unknown';
+    }
   } catch (error) {
     console.error('Failed to detect platform:', error);
   }
@@ -349,6 +364,8 @@ const hardwareOptions = computed<HardwareOption[]>(() => {
 
 // 硬件加速是否可用
 const isHardwareAvailable = computed(() => {
+  // Intel Mac 上强制不可用
+  if (platform.value === 'macos' && arch.value === 'x86_64') return false;
   return props.currentVideoCodec ? checkHardwareSupport(props.currentVideoCodec) : false;
 });
 
@@ -477,6 +494,10 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
 
 onMounted(async () => {
   await detectPlatform();
+  // Intel Mac 严格回退到 CPU 选项
+  if (platform.value === 'macos' && arch.value === 'x86_64') {
+    hardwareAcceleration.value = { value: 'cpu', name: 'CPU编码' };
+  }
   window.addEventListener('resize', calcPopupPosition);
   window.addEventListener('scroll', calcPopupPosition, true);
   document.addEventListener('click', onDocClick);

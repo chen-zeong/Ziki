@@ -703,12 +703,26 @@ fn detect_hardware_support_internal(app_handle: &tauri::AppHandle) -> HardwareSu
   for name in encoders_to_test() {
     if cfg!(debug_assertions) { println!("[HW Detect] >> Start testing {}", name); }
     let (ok, err) = test_encoder(&ffmpeg_path, &test_input, name);
+
+    // 在 Intel 架构的 macOS 上，禁用所有硬件编码器（VideoToolbox 质量模式不可用）
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    let force_disable_hw = true;
+    #[cfg(not(all(target_os = "macos", target_arch = "x86_64")))]
+    let force_disable_hw = false;
+
+    let supported = if force_disable_hw { false } else { ok };
+    let error_message = if force_disable_hw {
+      Some("Intel 架构的 macOS 暂不支持 VideoToolbox 的质量模式（-q:v），已禁用硬件加速".to_string())
+    } else {
+      if ok { None } else { err }
+    };
+
     encoders.push(EncoderSupport {
       name: name.to_string(),
       codec: map_codec(name).to_string(),
       vendor: map_vendor(name).to_string(),
-      supported: ok,
-      error_message: if ok { None } else { err },
+      supported,
+      error_message,
     });
   }
 
@@ -752,4 +766,16 @@ pub fn refresh_hardware_encoder_support(app_handle: tauri::AppHandle) -> Result<
   let hs = detect_hardware_support_internal(&app_handle);
   let _ = save_hardware_support_cache(&app_handle, &hs);
   Ok(hs)
+}
+
+#[tauri::command]
+pub fn get_arch() -> Result<String, String> {
+    #[cfg(target_arch = "aarch64")]
+    return Ok("arm64".to_string());
+
+    #[cfg(target_arch = "x86_64")]
+    return Ok("x86_64".to_string());
+
+    #[allow(unreachable_code)]
+    Ok("unknown".to_string())
 }

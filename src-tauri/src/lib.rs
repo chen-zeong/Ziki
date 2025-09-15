@@ -61,6 +61,7 @@ pub fn run() {
             get_video_metadata,
             detect_all_codecs,
             get_platform,
+            get_arch,
             open_output_folder,
             pause_task,
             resume_task,

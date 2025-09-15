@@ -14,17 +14,24 @@
         <!-- 滑动条轨道和自定义UI -->
         <div class="relative h-8 flex items-center">
           <!-- 轨道背景 -->
-          <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner"></div>
-          
+          <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner z-0"></div>
+
           <!-- 已填充的进度条 -->
-          <div 
-            class="absolute h-3 rounded-full shadow-sm"
+          <div
+            class="absolute h-3 rounded-full shadow-sm z-10"
             :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
           ></div>
-          
+
+          <!-- 默认值平衡点 (在进度条之上) -->
+          <div
+            class="absolute top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-[1px] overflow-hidden bg-white/95 dark:bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.12)] pointer-events-none z-20 before:content-[''] before:absolute before:left-1/2 before:-translate-x-1/2 before:top-0 before:border-l-[1.5px] before:border-r-[1.5px] before:border-b-[4px] before:border-l-transparent before:border-r-transparent before:border-b-white dark:before:border-b-white after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:border-l-[1.5px] after:border-r-[1.5px] after:border-t-[4px] after:border-l-transparent after:border-r-transparent after:border-t-white dark:after:border-t-white"
+            :style="{ left: `calc(${defaultSliderPosition}% - 1.5px)` }"
+            aria-hidden="true"
+          ></div>
+
           <!-- 自定义的滑块 -->
-          <div 
-            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105"
+          <div
+            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105 z-30"
             :class="{ 'scale-105': showTooltip }"
             :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
           >
@@ -45,14 +52,14 @@
         </div>
 
         <!-- 透明的 range input 处理逻辑 -->
-        <input 
-          type="range" 
-          id="quality-slider" 
+        <input
+          type="range"
+          id="quality-slider"
           v-model="qualityValue"
-          min="2" 
-          max="98" 
-          step="1" 
-          class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
+          min="2"
+          max="98"
+          step="1"
+          class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-40"
           @input="updateQualityState"
           @mouseenter="showTooltip = true"
           @mouseleave="showTooltip = false"
@@ -155,6 +162,14 @@ const emit = defineEmits<Emits>();
 
 // 质量滑动条值 (0-100)
 const qualityValue = ref(80);
+
+// 默认值位置（根据当前编码器与硬件加速状态）
+const defaultSliderPosition = computed(() => {
+  const codec = props.currentVideoCodec || 'h264';
+  const isHW = props.isHardwareAccelerated || false;
+  const d = getDefaultQualityParam(codec, isHW);
+  return d.sliderValue;
+});
 
 // 由滑块驱动更新的标志，避免循环
 const isUpdatingFromSlider = ref(false);
