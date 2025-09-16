@@ -566,6 +566,7 @@ fn log_available_hw_encoders(ffmpeg_path: &PathBuf) {
 }
 
 // Test input source for ffmpeg minimal probe
+#[allow(dead_code)]
 enum TestInput { File(PathBuf), Lavfi(String) }
 
 // Helper: run a minimal encode of 1 frame to null muxer; return (supported, error)

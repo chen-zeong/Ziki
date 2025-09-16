@@ -4,6 +4,7 @@ use base64::{Engine as _, engine::general_purpose};
 use crate::video::{get_ffmpeg_binary};
 
 // 获取视频时长的单独函数 - 使用ffprobe快速获取
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle) -> Result<f64, String> {
     let start_time = std::time::Instant::now();
@@ -41,6 +42,7 @@ pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle
 }
 
 // 生成单帧函数，支持自定义时间范围
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex: u32, timeRangeStart: f64, timeRangeEnd: f64, app_handle: tauri::AppHandle) -> Result<String, String> {
     let start_time = std::time::Instant::now();
@@ -146,6 +148,7 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
 }
 
 // 优化的生成单帧函数，接受预先计算的时长
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: u32, duration: f64, app_handle: tauri::AppHandle) -> Result<String, String> {
     let start_time = std::time::Instant::now();
@@ -217,6 +220,7 @@ pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: 
     }
 }
 
+#[allow(non_snake_case, dead_code)]
 #[tauri::command]
 pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handle: tauri::AppHandle) -> Result<String, String> {
     let start_time = std::time::Instant::now();
@@ -420,6 +424,7 @@ pub async fn generate_video_frames(video_path: String, app_handle: tauri::AppHan
     Ok(frames)
 }
 
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn generate_thumbnail(videoPath: String, app_handle: tauri::AppHandle) -> Result<String, String> {
     // In development mode, use the bin directory in src-tauri

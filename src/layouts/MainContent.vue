@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineExpose } from 'vue';
+import { ref, computed } from 'vue';
 import FileUploader from '../components/FileUploader.vue';
 import VideoComparison from '../components/VideoComparison.vue';
 import TaskList from '../components/TaskList.vue';

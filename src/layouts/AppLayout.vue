@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineExpose, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../stores/useTaskStore';
 import HeaderBar from './HeaderBar.vue';

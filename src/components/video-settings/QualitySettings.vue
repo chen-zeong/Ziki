@@ -132,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, withDefaults, onMounted, inject, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, inject, nextTick } from 'vue';
 import type { CompressionSettings } from '../../types';
 import { 
   getQualityLevelIndex, 

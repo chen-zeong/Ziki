@@ -14,9 +14,11 @@ use serde_json::json;
 #[derive(Clone, Debug)]
 struct TaskInfo {
     input_path: String,
+    #[allow(dead_code)]
     total_duration: f64,
     app_handle: tauri::AppHandle,
     output_path: String,
+    #[allow(dead_code)]
     settings: CompressionSettings,
 }
 
@@ -57,6 +59,7 @@ fn map_codec_to_ffmpeg(codec: &str) -> &str {
 }
 
 // 将前端音频编码器名称映射为FFmpeg编码器名称
+#[allow(dead_code)]
 fn map_audio_codec_to_ffmpeg(codec: &str) -> &str {
     match codec {
         "AAC" => "aac",
@@ -69,7 +72,6 @@ fn map_audio_codec_to_ffmpeg(codec: &str) -> &str {
         "WMA" => "wmav2",
         "AMR" => "libopencore_amrnb",
         "PCM" => "pcm_s16le",
-        // 如果已经是FFmpeg编码器名称，直接返回
         _ => codec,
     }
 }
@@ -100,6 +102,7 @@ fn parse_ffmpeg_progress(line: &str, total_duration: f64) -> Option<f64> {
     None
 }
 
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn compress_video(
     taskId: String,
@@ -718,6 +721,7 @@ fn resume_process(pid: u32) -> Result<(), String> {
     Ok(())
 }
 
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn pause_task(taskId: String) -> Result<(), String> {
     println!("Pausing task: {}", taskId);
@@ -778,6 +782,8 @@ pub async fn pause_task(taskId: String) -> Result<(), String> {
     }
 }
 
+#[allow(non_snake_case)]
+#[allow(unused_variables)]
 #[tauri::command]
 pub async fn resume_task(
     taskId: String,
@@ -937,6 +943,7 @@ pub async fn resume_task(
 }
 
 #[tauri::command]
+#[allow(non_snake_case)]
 pub async fn delete_task(taskId: String) -> Result<(), String> {
   println!("Deleting task: {}", taskId);
 

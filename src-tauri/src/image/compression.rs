@@ -66,6 +66,7 @@ fn build_scale_filter(settings: &CompressionSettings) -> Option<String> {
     None
 }
 
+#[allow(non_snake_case)]
 #[tauri::command]
 pub async fn compress_image(
     taskId: String,

@@ -444,15 +444,16 @@ const handleResumeCompression = async (taskId: string) => {
   }
 };
 
-// 初始化输出路径
-const initializeOutputPath = async () => {
-  try {
-    const path = await invoke<string>('get_desktop_path');
-    outputPath.value = path;
-  } catch (error) {
-    // Failed to initialize output path
-  }
-};
+// 初始化输出路径（从全局设置中获取并保持同步）
+watch(
+  () => globalSettingsStore.outputPath,
+  (newPath) => {
+    if (typeof newPath === 'string') {
+      outputPath.value = newPath;
+    }
+  },
+  { immediate: true }
+);
 
 // 清空所有任务
 const handleClearAllTasks = async () => {
@@ -521,13 +522,9 @@ const handleClearAllTasks = async () => {
 
 // 组件挂载时初始化
 onMounted(async () => {
-  // 初始化全局设置
+  // 初始化全局设置（其中包含从 localStorage 加载 outputPath）
   await globalSettingsStore.initialize();
   
-  // 只在Tauri环境中初始化输出路径
-  if (window.__TAURI__) {
-    await initializeOutputPath();
-  }
   // 预加载硬件编码器支持，避免后续切换视频时卡顿
   await invoke('get_hardware_encoder_support');
   
