@@ -37,6 +37,7 @@
         ref="settingsPanelRef"
         :video-path="videoPath"
         :is-processing="isProcessing"
+        :is-processing-batch="isProcessingBatch"
         :task-status="taskStatus"
         @compress="handleCompress"
       />
@@ -45,6 +46,7 @@
       <ImageSettingsPanel
         ref="settingsPanelRef"
         :is-processing="isProcessing"
+        :is-processing-batch="isProcessingBatch"
         :task-status="taskStatus"
         @compress="handleCompress"
       />
@@ -66,6 +68,7 @@ interface Props {
   compressedVideoPath?: string;
   compressedVideoFilePath?: string;
   isProcessing?: boolean;
+  isProcessingBatch?: boolean;
   taskStatus?: string;
   taskId?: string;
   timeRange?: {
@@ -77,6 +80,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   title: '处理与预览',
   isProcessing: false,
+  isProcessingBatch: false,
   taskStatus: 'pending'
 });
 

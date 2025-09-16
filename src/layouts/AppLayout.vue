@@ -92,6 +92,7 @@ defineExpose({
       :is-uploader-visible="props.isUploaderVisible"
       :selected-files="props.selectedFiles"
       :is-processing="props.isProcessing"
+      :is-processing-batch="props.isProcessingBatch"
       :selected-task-id="selectedTaskId"
       :time-range-settings="props.timeRangeSettings"
 
@@ -179,6 +180,4 @@ button {
     width: 0%;
   }
 }
-
-/* 移除全局button hover效果，避免与组件内部样式冲突 */
 </style>

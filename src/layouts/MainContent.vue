@@ -13,6 +13,7 @@ interface Props {
   isUploaderVisible: boolean;
   selectedFiles: any[];
   isProcessing: boolean;
+  isProcessingBatch?: boolean;
   selectedTaskId?: string | null;
   timeRangeSettings: any;
 }
@@ -171,13 +172,13 @@ defineExpose({
         :before-image="beforeImage"
         :after-image="afterImage"
         :is-processing="isProcessing"
+        :is-processing-batch="props.isProcessingBatch"
         :task-status="currentTaskStatus"
         :task-id="currentTaskId"
         :video-path="currentTaskType === 'video' ? currentFile?.path : undefined"
         :compressed-video-path="currentTaskType === 'video' ? currentFile?.compressedUrl : undefined"
         :compressed-video-file-path="currentTaskType === 'video' ? currentFile?.compressedPath : undefined"
         :time-range="currentTaskType === 'video' ? computedTimeRange : undefined"
-
         @reset="onReset"
         @compress="emit('compress', $event)"
         @update-images="emit('update-images', $event)"

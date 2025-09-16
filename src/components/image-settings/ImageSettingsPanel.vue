@@ -194,6 +194,7 @@ import type { CompressionSettings } from '../../types';
 interface Props {
   isProcessing?: boolean;
   taskStatus?: string;
+  isProcessingBatch?: boolean;
 }
 
 interface Emits {
@@ -218,8 +219,11 @@ const currentFile = inject<{ value: any }>('currentFile');
 // 注入当前任务ID
 const currentTaskId = inject<{ value: string | null }>('currentTaskId', { value: null });
 
-// 是否锁定设置（任务已完成时）
-const isSettingsLocked = computed(() => props.taskStatus === 'completed');
+// 是否锁定设置（仅在任务为 排队/压缩中/完成 状态时）
+const isSettingsLocked = computed(() => {
+  const status = props.taskStatus;
+  return status === 'queued' || status === 'processing' || status === 'completed';
+});
 
 // 气泡提示框显示状态
 const showTooltip = ref(false);

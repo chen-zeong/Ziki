@@ -343,6 +343,10 @@ export function useFileHandler() {
     const files = Array.from(fileList);
     console.log('Converted to array:', files);
 
+    // 记录导入前任务数量和是否已有选中任务
+    const prevTaskCount = tasks.value.length;
+    const hadSelected = !!taskStore.selectedTaskId;
+
     for (const file of files) {
       console.log('Processing file:', file);
       if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
@@ -484,6 +488,18 @@ export function useFileHandler() {
         await yieldToUI();
       }
     }
+
+    // 导入完成后，如是首次导入（或当前无选中任务），默认选中任务列表从上往下的第一个（数组顶部）
+    if (prevTaskCount === 0 || !hadSelected) {
+      const topTask = tasks.value[0];
+      if (topTask) {
+        // 同步 currentFile 与选中状态
+        currentFile.value = topTask.file;
+        isUploaderVisible.value = false;
+        taskStore.selectTask(topTask.id);
+        await yieldToUI();
+      }
+    }
   };
 
   const resetUploader = () => {
@@ -525,8 +541,8 @@ export function useFileHandler() {
           try { unlistenOther(); } catch {}
           activeProgressListeners.delete(other.id);
         }
-        // 同步前端状态
-        other.status = 'paused';
+        // 同步前端状态：进入排队而非暂停
+        other.status = 'queued';
       }
     }
     

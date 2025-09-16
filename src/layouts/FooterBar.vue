@@ -39,14 +39,14 @@ const selectedTask = computed(() => {
   return tasks.value.find(t => t.file?.id === props.currentFile.id) || null;
 });
 
-// 仅统计"等待中/排队中"的任务数量，并且仅限于当前选中的任务类型
+// 仅统计"等待中"（pending）的任务数量，并且仅限于当前选中的任务类型
 const pendingTasksCount = computed(() => {
   const type = selectedTask.value?.type;
   if (!type) return 0;
-  return tasks.value.filter(t => (t.status === 'pending' || t.status === 'queued') && t.type === type).length;
+  return tasks.value.filter(t => t.status === 'pending' && t.type === type).length;
 });
 
-// 当且仅当没有等待/排队中的任务时禁用批量按钮
+// 当且仅当没有等待中的任务时禁用批量按钮
 const isBatchButtonDisabled = computed(() => {
   return pendingTasksCount.value === 0;
 });
@@ -70,7 +70,7 @@ const isCompressButtonDisabled = computed(() => {
   return status === 'processing' || status === 'completed';
 });
 
-// 当前任务是否锁定（完成后不可更改设置）
+// 当前任务是否锁定（完成或排队/压缩中不可更改设置）
 const isSettingsLocked = computed(() => {
   const status = selectedTask.value?.status as string | undefined;
   return status === 'queued' || status === 'processing' || status === 'completed';

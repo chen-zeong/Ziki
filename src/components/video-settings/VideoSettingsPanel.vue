@@ -66,6 +66,7 @@ interface Props {
   isProcessing?: boolean;
   videoPath?: string;
   taskStatus?: string;
+  isProcessingBatch?: boolean;
 }
 
 interface Emits {
@@ -74,13 +75,17 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isProcessing: false,
+  isProcessingBatch: false,
   taskStatus: 'pending'
 });
 
 const emit = defineEmits<Emits>();
 
-// 是否锁定设置（任务已完成时）
-const isSettingsLocked = computed(() => props.taskStatus === 'completed');
+// 是否锁定设置（仅在任务为 排队/压缩中/完成 状态时）
+const isSettingsLocked = computed(() => {
+  const status = props.taskStatus;
+  return status === 'queued' || status === 'processing' || status === 'completed';
+});
 
 // 获取当前任务设置
 const getCurrentSettings = (): CompressionSettings => {

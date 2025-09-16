@@ -322,33 +322,22 @@ const handleBatchCompress = async () => {
     return;
   }
   
-  // 检查是否有排队中的任务需要恢复（仅该类型）
-  const queuedTasks = tasks.value.filter(t => t.status === 'queued' && t.type === selectedTaskType);
-  const pendingTasks = tasks.value.filter(t => t.status === 'pending' && t.type === selectedTaskType);
-  
-  if (queuedTasks.length > 0 && pendingTasks.length === 0) {
-    // 只有排队任务，恢复批量处理
-    // 创建仅包含该类型任务的临时数组
-    const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
-    await resumeBatchCompression(
-      filteredTasks,
-      startCompression,
-      switchToTask,
-      outputPath.value,
-      currentTaskSettings.value // 应用当前设置
-    );
-  } else {
-    // 开始新的批量压缩
-    // 创建仅包含该类型任务的临时数组
-    const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
-    await startBatchCompression(
-      filteredTasks,
-      startCompression,
-      switchToTask,
-      outputPath.value,
-      currentTaskSettings.value // 应用当前设置
-    );
+  // 仅限定于相同类型的任务
+  const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
+
+  // 仅当存在 pending 时才启动批量
+  const hasPending = filteredTasks.some(t => t.status === 'pending');
+  if (!hasPending) {
+    return;
   }
+
+  await startBatchCompression(
+    filteredTasks,
+    startCompression,
+    switchToTask,
+    outputPath.value,
+    currentTaskSettings.value
+  );
 };
 
 // AppLayout组件引用
@@ -426,17 +415,17 @@ const handleResumeCompression = async (taskId: string) => {
       // 使用该任务自身的设置启动压缩，传入 isBatchMode=false 来允许重新启动
       await startCompression(task.settings, outputPath.value, false);
 
-      // 自动恢复批量处理：当该任务完成或暂停后，如仍有排队/待处理任务且当前未处于批量模式，则自动继续批量
-      const remainingQueuedOrPending = tasks.value.filter(t => t.status === 'queued' || t.status === 'pending');
+      // 自动恢复批量处理：当该任务完成或暂停后，如仍有待处理任务且当前未处于批量模式，则自动继续批量
+      const remainingPending = tasks.value.filter(t => t.status === 'pending');
       const hasProcessing = tasks.value.some(t => t.status === 'processing');
-      if (remainingQueuedOrPending.length > 0 && !hasProcessing && !isProcessingBatch.value) {
-        await startBatchCompression(
-          tasks.value,
-          startCompression,
-          switchToTask,
-          outputPath.value,
-          currentTaskSettings.value
-        );
+      if (remainingPending.length > 0 && !hasProcessing && !isProcessingBatch.value) {
+         await startBatchCompression(
+           tasks.value,
+           startCompression,
+           switchToTask,
+           outputPath.value,
+           currentTaskSettings.value
+         );
       }
     }
   } catch (e) {

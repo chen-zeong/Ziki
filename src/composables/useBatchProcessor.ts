@@ -1,11 +1,13 @@
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { CompressionTask, CompressionSettings } from '../types';
+import { useTaskStore } from '../stores/useTaskStore';
 
 export function useBatchProcessor() {
   const isProcessingBatch = ref(false);
   const currentBatchIndex = ref(0);
   const batchQueue = ref<CompressionTask[]>([]);
+  const taskStore = useTaskStore();
 
   // 批量处理状态
   const batchProgress = computed(() => {
@@ -17,25 +19,25 @@ export function useBatchProcessor() {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // 等待某个任务进入终止状态（completed/failed/paused）
-  const waitUntilTaskSettled = async (allTasks: CompressionTask[], taskId: string) => {
+  const waitUntilTaskSettled = async (taskId: string) => {
     return new Promise<void>((resolve) => {
       const checkStatus = () => {
         if (!isProcessingBatch.value) {
           resolve();
           return;
         }
-        
-        const t = allTasks.find(t => t.id === taskId);
+
+        const t = taskStore.getTaskById(taskId);
         const status = t?.status;
         if (!t || status === 'completed' || status === 'failed' || status === 'paused') {
           resolve();
           return;
         }
-        
+
         // 使用 setTimeout 而不是 while 循环，避免阻塞主线程
         setTimeout(checkStatus, 150);
       };
-      
+
       checkStatus();
     });
   };
@@ -53,108 +55,98 @@ export function useBatchProcessor() {
       console.log('Batch processing already in progress, skipping start');
       return;
     }
-    
-    // 筛选出待处理的任务（包括排队中的任务）
-    const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'queued');
-    
-    if (pendingTasks.length === 0) {
-      console.log('No pending or queued tasks to process');
+
+    // 仅压缩等待中的任务（pending）
+    const candidates: CompressionTask[] = tasks.filter(t => t.status === 'pending');
+
+    if (candidates.length === 0) {
+      console.log('No pending tasks to process');
       return;
     }
 
-    // 如果提供了覆盖设置，则应用到所有待处理任务（不覆盖 timeRange，保持每个任务自己的时间段）
-    if (overrideSettings) {
-      console.log('Applying override settings to all batch tasks (excluding timeRange):', overrideSettings);
-      const { timeRange: _ignoredTimeRange, ...overrideWithoutTimeRange } = overrideSettings as any;
-      pendingTasks.forEach(task => {
-        task.settings = { ...task.settings, ...overrideWithoutTimeRange } as CompressionSettings;
-      });
-    }
+    // 计算批量基准设置：优先使用传入的 overrideSettings；否则使用第一个候选任务的设置
+    const batchBaseSettings: CompressionSettings = overrideSettings || { ...candidates[0].settings } as CompressionSettings;
 
-    console.log(`Starting batch compression for ${pendingTasks.length} tasks`);
-    
+    console.log(`Starting batch compression for ${candidates.length} tasks, using base settings from ${overrideSettings ? 'overrideSettings' : 'first task'}`);
+
     isProcessingBatch.value = true;
-    batchQueue.value = [...pendingTasks];
+
+    // 构建批量队列：不包含当前 processing 任务
+    batchQueue.value = [...candidates];
     currentBatchIndex.value = 0;
 
-    // 将所有待处理任务设置为排队状态，除了第一个
-    pendingTasks.forEach((task, index) => {
-      if (index === 0) {
-        task.status = 'processing';
-      } else {
-        task.status = 'queued';
+    // 如果当前存在同类型的 processing 任务，则将候选任务全部进入排队状态，等待其结束
+    const currentProcessing = tasks.find(t => t.status === 'processing');
+    if (currentProcessing) {
+      // 标记所有候选为排队
+      batchQueue.value.forEach(task => taskStore.updateTaskStatus(task.id, 'queued'));
+      // 等待当前任务结束（完成/失败/暂停）
+      await waitUntilTaskSettled(currentProcessing.id);
+    } else {
+      // 若没有 processing，则除首个之外其余设为排队，便于 UI 提示
+      if (batchQueue.value.length > 1) {
+        batchQueue.value.slice(1).forEach(task => taskStore.updateTaskStatus(task.id, 'queued'));
       }
-    });
+    }
 
     try {
       // 依次处理每个任务
       for (let i = 0; i < batchQueue.value.length; i++) {
         const task = batchQueue.value[i];
         currentBatchIndex.value = i;
-        
+
         console.log(`[BATCH_LOG] startBatchCompression: Processing task ${i + 1}/${batchQueue.value.length}: ${task.file.name}`);
-        
+
+        // 如存在其它 processing 任务，等待其结束（不强制暂停）
+        const others = taskStore.tasks.filter(t => t.status === 'processing' && t.id !== task.id);
+        if (others.length > 0) {
+          await waitUntilTaskSettled(others[0].id);
+        }
+
         // 切换到当前任务
         switchToTaskFn(task.id);
-        
         // 等待一小段时间确保切换完成
         await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // 开始压缩当前任务
+
         try {
-          // 确保任务状态正确设置
-          task.status = 'processing';
+          // 将当前任务设为 processing
+          taskStore.updateTaskStatus(task.id, 'processing');
 
-          // 额外安全：在批量模式下也确保不会出现多个 processing
-          const others = tasks.filter(t => t.status === 'processing' && t.id !== task.id);
-          if (others.length > 0) {
-            console.log('[BATCH_SAFETY] Detected other processing tasks, pausing them:', others.map(o => o.id));
-            for (const o of others) {
-              try {
-                await invoke('pause_task', { taskId: o.id });
-                console.log('[BATCH_SAFETY] Paused other processing task:', o.id);
-              } catch (e) {
-                const msg = String(e);
-                if (msg.includes('Process was interrupted') || msg.includes('not found')) {
-                  console.log('[BATCH_SAFETY] Other task already interrupted/not found, treat as paused:', o.id);
-                } else {
-                  console.warn('[BATCH_SAFETY] Failed to pause other processing task:', o.id, e);
-                }
-              }
-              o.status = 'paused';
-            }
-          }
-
-          // 如果有下一个任务，将其设置为排队状态
+          // 如果有下一个任务，将其设置为排队状态（幂等）
           if (i + 1 < batchQueue.value.length) {
-            batchQueue.value[i + 1].status = 'queued';
+            taskStore.updateTaskStatus(batchQueue.value[i + 1].id, 'queued');
           }
-          
-          // 触发压缩但不直接等待它完成，避免在“暂停”时无法返回
-          startCompressionFn(task.settings, outputDirectory, true).catch((error) => {
+
+          // 为该任务计算本次实际生效的设置：批量统一使用 batchBaseSettings
+          const liveTask = taskStore.getTaskById(task.id);
+          const effectiveSettings: CompressionSettings = { ...batchBaseSettings } as CompressionSettings;
+
+          // 同步更新 store 中该任务的 settings（便于 UI 显示与后续恢复一致）
+          if (liveTask) {
+            taskStore.updateTask({ ...liveTask, settings: effectiveSettings });
+          }
+
+          // 启动压缩（批量模式）
+          startCompressionFn(effectiveSettings, outputDirectory, true).catch((error) => {
             console.error(`startCompressionFn error for ${task.file.name}:`, error);
-            // 若不是用户暂停且任务也未完成，则标记为失败
-            const t = tasks.find(t => t.id === task.id);
+            const t = taskStore.getTaskById(task.id);
             if (t && t.status !== 'paused' && t.status !== 'completed') {
-              t.status = 'failed';
+              taskStore.updateTaskStatus(task.id, 'failed');
             }
           });
 
           // 等待任务进入终止状态（完成/失败/暂停），再处理下一个
-          await waitUntilTaskSettled(tasks, task.id);
-          console.log(`[BATCH_LOG] startBatchCompression: task settled for ${task.file.name}. Final status: ${tasks.find(t => t.id === task.id)?.status}`);
-          
-          // 这里无需根据状态做额外处理，循环会继续下一个任务
+          await waitUntilTaskSettled(task.id);
+          console.log(`[BATCH_LOG] startBatchCompression: task settled for ${task.file.name}. Final status: ${taskStore.getTaskById(task.id)?.status}`);
         } catch (error) {
           console.error(`Task ${task.file.name} failed:`, error);
-          task.status = 'failed';
-          // 继续处理下一个任务，不中断整个批量处理
+          taskStore.updateTaskStatus(task.id, 'failed');
         }
-        
+
         // 等待一小段时间再处理下一个任务
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
-      
+
       console.log('Batch compression completed');
     } catch (error) {
       console.error('Batch compression error:', error);
@@ -181,18 +173,18 @@ export function useBatchProcessor() {
     outputDirectory?: string,
     overrideSettings?: CompressionSettings | null
   ) => {
-    // 为保证逻辑一致性，直接复用 startBatchCompression（它会处理pending/queued两种状态）
+    // 为保证逻辑一致性，直接复用 startBatchCompression（它会处理 pending 状态）
     return startBatchCompression(tasks, startCompressionFn, switchToTaskFn, outputDirectory, overrideSettings);
   };
 
   // 获取批量处理统计信息
   const getBatchStats = (tasks: CompressionTask[]) => {
-    const pending = tasks.filter(t => t.status === 'pending' || t.status === 'queued').length;
+    const pending = tasks.filter(t => t.status === 'pending').length;
     const processing = tasks.filter(t => t.status === 'processing').length;
     const completed = tasks.filter(t => t.status === 'completed').length;
     const failed = tasks.filter(t => t.status === 'failed').length;
     const paused = tasks.filter(t => t.status === 'paused').length;
-    
+
     return {
       pending,
       processing,
