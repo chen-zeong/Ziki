@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import i18n from '../i18n'
 
 // 输出文件名格式类型
 export type OutputFileNameFormat = 'original' | 'with-time' | 'with-random'
@@ -19,6 +20,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   const language = ref<Language>('zh')
   const isInitialized = ref(false)
 
+  const { t } = i18n.global
+
   // 计算属性
   const isDarkMode = computed(() => {
     if (theme.value === 'auto') {
@@ -27,11 +30,11 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     return theme.value === 'dark'
   })
 
-  // 文件名格式选项
-  const fileNameFormatOptions = computed(() => [
-    { value: 'original', label: '原文件名', description: '保持原始文件名' },
-    { value: 'with-time', label: '原文件名\n+时间', description: '文件名_20240101_120000' },
-    { value: 'with-random', label: '原文件名\n+随机编号', description: '文件名_abc123' }
+  // 文件名格式选项（已接入 i18n，且 value 类型严格为 OutputFileNameFormat）
+  const fileNameFormatOptions = computed<{ value: OutputFileNameFormat; label: string; description: string }[]>(() => [
+    { value: 'original', label: t('outputFolder.optionOriginal'), description: t('outputFolder.descOriginal') },
+    { value: 'with-time', label: t('outputFolder.optionWithTime'), description: t('outputFolder.descWithTime') },
+    { value: 'with-random', label: t('outputFolder.optionWithRandom'), description: t('outputFolder.descWithRandom') }
   ])
 
   // 动作

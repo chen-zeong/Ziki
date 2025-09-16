@@ -198,10 +198,10 @@ const onTrackClick = (ev: MouseEvent) => {
     <button
       class="relative h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
       @click.stop="toggle"
-      :title="open ? '关闭日志' : '打开日志'"
+      :title="$t('logPanel.' + (open ? 'close' : 'open')) || (open ? '关闭日志' : '打开日志')"
     >
       <Logs class="w-4 h-4" />
-      <span v-if="logStore.hasUnread && !open" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+      <!-- 移除未读红点 -->
     </button>
 
     <!-- Floating Panel -->
@@ -210,20 +210,20 @@ const onTrackClick = (ev: MouseEvent) => {
         <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#262626]">
           <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
             <MessageSquareText class="w-4 h-4" />
-            日志
+            {{ $t('logPanel.title') || '日志' }}
           </div>
           <div class="flex items-center gap-1">
             <button
               class="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-[#333]"
               @click="logStore.clear()"
-              title="清空日志"
+              :title="$t('logPanel.clear') || '清空日志'"
             >
               <Trash2 class="w-4 h-4" />
             </button>
             <button
               class="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-[#333]"
               @click="open = false"
-              title="关闭"
+              :title="$t('common.close') || '关闭'"
             >
               <X class="w-4 h-4" />
             </button>
@@ -234,7 +234,7 @@ const onTrackClick = (ev: MouseEvent) => {
             ref="scrollContainer"
             class="p-3 space-y-2 overflow-auto max-h-[50vh] custom-scroll-area"
           >
-            <div v-if="entries.length === 0" class="text-center text-sm text-gray-500 dark:text-gray-400 py-6">暂无日志</div>
+            <div v-if="entries.length === 0" class="text-center text-sm text-gray-500 dark:text-gray-400 py-6">{{ $t('logPanel.empty') || '暂无日志' }}</div>
             <div
               v-for="e in entries"
               :key="e.id"
@@ -249,11 +249,11 @@ const onTrackClick = (ev: MouseEvent) => {
                   <div class="mt-1 text-sm leading-relaxed break-all" :class="levelColor(e.level)">{{ e.message }}</div>
                   <pre v-if="e.meta" class="mt-1 text-xs text-gray-500 whitespace-pre-wrap break-all">{{ JSON.stringify(e.meta, null, 2) }}</pre>
                 </div>
-                <button class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300" @click.stop="copyLog(e)" title="复制">
+                <button class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300" @click.stop="copyLog(e)" :title="$t('logPanel.copy') || '复制'">
                   <Copy class="w-4 h-4" />
                 </button>
               </div>
-              <div v-if="lastCopiedId === e.id" class="absolute right-2 top-2 text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/90 text-white">已复制</div>
+              <div v-if="lastCopiedId === e.id" class="absolute right-2 top-2 text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/90 text-white">{{ $t('logPanel.copied') || '已复制' }}</div>
             </div>
           </div>
 

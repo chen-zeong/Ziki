@@ -3,7 +3,7 @@
     <div class="space-y-4">
       <!-- 标题和质量等级 -->
       <div class="flex justify-between items-center mb-4">
-        <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">画质</label>
+        <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ t('videoSettings.quality') }}</label>
         <div class="text-right">
           <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
         </div>
@@ -72,7 +72,7 @@
       <!-- 高bit率选项 -->
       <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
         <div class="flex justify-between items-center mb-3">
-          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">色彩深度</label>
+          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ t('videoSettings.colorDepth') }}</label>
           <div class="text-right">
             <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ bitDepthText }}</span>
           </div>
@@ -97,7 +97,7 @@
           <button
             @click="setBitDepth(10)"
             :disabled="!canUse10bit"
-            :title="!canUse10bit ? '源视频位深不足，无法升到10bit（仅支持向下转换）' : ''"
+            :title="!canUse10bit ? t('videoSettings.bitDepth10Unavailable') : ''"
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 10
@@ -114,7 +114,7 @@
           <button
             @click="setBitDepth(12)"
             :disabled="!canUse12bit"
-            :title="!canUse12bit ? '源视频位深不足，无法升到12bit（仅支持向下转换）' : ''"
+            :title="!canUse12bit ? t('videoSettings.bitDepth12Unavailable') : ''"
             :class="[
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 12
@@ -140,8 +140,10 @@ import {
   getDefaultQualityParam,
   QUALITY_LEVELS 
 } from '../../config/qualityMappings';
+import { useI18n } from 'vue-i18n';
 // 注入当前文件信息
 const currentFile = inject<{ value: any }>('currentFile');
+const { t } = useI18n();
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
@@ -343,11 +345,11 @@ initializeQualityValue();
 // 将滑动条值映射到质量描述文本
 const qualityText = computed(() => {
   const value = qualityValue.value;
-  if (value <= 20) return '极低质量'; // 2-20
-  if (value <= 40) return '低质量';   // 21-40
-  if (value <= 60) return '中等质量'; // 41-60
-  if (value <= 85) return '高质量';   // 61-85
-  return '极高质量';                  // 86-98
+  if (value <= 20) return t('videoSettings.qualityVeryLow'); // 2-20
+  if (value <= 40) return t('videoSettings.qualityLow');   // 21-40
+  if (value <= 60) return t('videoSettings.qualityMedium'); // 41-60
+  if (value <= 85) return t('videoSettings.qualityHigh');   // 61-85
+  return t('videoSettings.qualityVeryHigh');                  // 86-98
 });
 
 // 当前参数显示（用于气泡提示框）

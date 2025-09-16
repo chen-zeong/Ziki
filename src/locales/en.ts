@@ -19,7 +19,11 @@ export default {
     error: 'Error',
     warning: 'Warning',
     info: 'Info',
-    unknown: 'Unknown'
+    unknown: 'Unknown',
+    available: 'Available',
+    unavailable: 'Unavailable',
+    enabled: 'Enabled',
+    disabled: 'Disabled'
   },
 
   // File Upload
@@ -69,7 +73,28 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     qualityLossless: 'Lossless',
     compress: 'Start Compression',
     compressing: 'Compressing...',
-    original: 'Original'
+    original: 'Original',
+    colorDepth: 'Color Depth',
+    qualityVeryLow: 'Very Low Quality',
+    qualityLow: 'Low Quality',
+    qualityMedium: 'Medium Quality',
+    qualityHigh: 'High Quality',
+    qualityVeryHigh: 'Very High Quality',
+    bitDepth10Unavailable: 'Source bit depth is insufficient. Up-conversion to 10-bit is not supported (down-conversion only).',
+    bitDepth12Unavailable: 'Source bit depth is insufficient. Up-conversion to 12-bit is not supported (down-conversion only).',
+    viewSupportedList: 'View Supported List',
+    supportedHardwareEncodersTitle: 'Supported Hardware Encoders',
+    noHardwareEncoders: 'No hardware encoders are supported on this system',
+    intelMacNoQvNotice: 'Note: Due to system limitations, Intel macOS does not support VideoToolbox quality mode (-q:v). Hardware acceleration is disabled.',
+    lastChecked: 'Last checked: ',
+    detecting: 'Detecting…',
+    recheck: 'Re-check',
+    detectingHardwareEncoders: 'Detecting hardware encoders, please wait...',
+    cpuEncodingDesc: 'Highest compatibility, works on all devices, slower speed',
+    gpuSupportedDesc: 'Hardware acceleration supported for current codec, faster speed',
+    gpuUnsupportedDesc: 'Hardware acceleration is not supported for current codec',
+    selectVideoCodecFirst: 'Please select a video codec first',
+    hardwareNotSupportedForCodec: 'Hardware acceleration is not supported for the current codec'
   },
 
   // Task List
@@ -108,7 +133,13 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     uploadHint: 'Upload files to start compression',
     fileInfo: 'File Information',
     pauseAllTasks: 'Pause All Tasks',
-    startAllTasks: 'Start All Tasks'
+    startAllTasks: 'Start All Tasks',
+    clearAllTasks: 'Clear All Tasks',
+    pauseTask: 'Pause Task',
+    startTask: 'Start Task',
+    resumeTask: 'Resume Task',
+    remaining: 'Remaining',
+    clear: 'Clear'
   },
 
   // Output Folder
@@ -116,7 +147,14 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     title: 'Output Folder Settings',
     selectFolder: 'Select Folder',
     currentPath: 'Current Path',
-    defaultPath: 'Default Path'
+    defaultPath: 'Default Path',
+    fileNameFormat: 'Output File Name Format',
+    optionOriginal: 'Original Name',
+    optionWithTime: 'Original Name\n+Time',
+    optionWithRandom: 'Original Name\n+Random',
+    descOriginal: 'Keep original file name',
+    descWithTime: 'filename_20240101_120000',
+    descWithRandom: 'filename_abc123'
   },
 
   // Video Comparison
@@ -164,7 +202,10 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
 
   // Toolbar
   toolbar: {
-    addFiles: 'Add Files'
+    addFiles: 'Add Files',
+    startQueue: 'Start Queue',
+    pauseQueue: 'Pause Queue',
+    batchCompress: 'Batch Compress'
   },
 
   // Status
@@ -178,5 +219,34 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     paused: 'Paused',
     completed: 'Completed',
     failed: 'Failed'
+  },
+
+  // Log Panel
+  logPanel: {
+    open: 'Open Logs',
+    close: 'Close Logs',
+    title: 'Logs',
+    clear: 'Clear Logs',
+    empty: 'No logs yet',
+    copy: 'Copy',
+    copied: 'Copied'
+  },
+
+  // Log Messages (business)
+  logMessages: {
+    ffmpegCommand: 'FFmpeg command: {name}',
+    resumeFailed: 'Resume failed: {name}',
+    paused: 'Paused: {name}',
+    importFailed: 'Import failed: Unable to parse video metadata.\nFile: {name}\nReason: {reason}',
+    compressionFailedImage: 'Compression failed (image): {name}',
+    compressionFailedVideo: 'Compression failed (video): {name}',
+    compressionStartFailed: 'Failed to start compression: {name}'
+  },
+
+  // Window Buttons
+  window: {
+    minimize: 'Minimize',
+    maximizeRestore: 'Maximize/Restore',
+    close: 'Close'
   }
 };

@@ -78,7 +78,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  title: '处理与预览',
+  title: undefined,
   isProcessing: false,
   isProcessingBatch: false,
   taskStatus: 'pending'

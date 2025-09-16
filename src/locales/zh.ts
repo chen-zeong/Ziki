@@ -19,7 +19,11 @@ export default {
     error: '错误',
     warning: '警告',
     info: '信息',
-    unknown: '未知'
+    unknown: '未知',
+    available: '可用',
+    unavailable: '不可用',
+    enabled: '已启用',
+    disabled: '已关闭'
   },
 
   // 文件上传
@@ -58,6 +62,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     timeRangeHint: '提示：结束时间设为 00:00:00 或留空表示处理到视频末尾',
     hardwareAcceleration: '硬件加速',
     cpuEncoding: 'CPU编码',
+    gpuAcceleration: '显卡加速',
     recommendedFormats: '推荐格式',
     otherFormats: '其他格式',
     incompatibleCodecs: '编码组合不兼容',
@@ -69,7 +74,28 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     qualityLossless: '无损',
     compress: '开始压缩',
     compressing: '压缩中...',
-    original: '原始'
+    original: '原始',
+    colorDepth: '色彩深度',
+    qualityVeryLow: '极低质量',
+    qualityLow: '低质量',
+    qualityMedium: '中等质量',
+    qualityHigh: '高质量',
+    qualityVeryHigh: '极高质量',
+    bitDepth10Unavailable: '源视频位深不足，无法升到10bit（仅支持向下转换）',
+    bitDepth12Unavailable: '源视频位深不足，无法升到12bit（仅支持向下转换）',
+    viewSupportedList: '查看支持列表',
+    supportedHardwareEncodersTitle: '支持的硬件编码格式',
+    noHardwareEncoders: '当前系统不支持任何硬件编码格式',
+    intelMacNoQvNotice: '注意: 根据系统限制, Intel 版本的 macOS 暂不支持使用 VideoToolbox 的质量模式 (-q:v), 本应用已禁用硬件加速.',
+    lastChecked: '上次检测时间：',
+    detecting: '检测中…',
+    recheck: '重新检测',
+    detectingHardwareEncoders: '正在检测硬件编码器，请稍候...',
+    cpuEncodingDesc: '兼容性最高，适用于所有设备，速度较慢',
+    gpuSupportedDesc: '当前编码格式支持硬件加速，速度更快',
+    gpuUnsupportedDesc: '当前编码格式不支持硬件加速',
+    selectVideoCodecFirst: '请先选择视频编码格式',
+    hardwareNotSupportedForCodec: '当前编码格式不支持硬件加速'
   },
 
   // 任务列表
@@ -108,7 +134,13 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     uploadHint: '上传文件开始压缩',
     fileInfo: '文件信息',
     pauseAllTasks: '暂停所有任务',
-    startAllTasks: '开始所有任务'
+    startAllTasks: '开始所有任务',
+    clearAllTasks: '清空所有任务',
+    pauseTask: '暂停任务',
+    startTask: '开始任务',
+    resumeTask: '恢复任务',
+    remaining: '剩余',
+    clear: '清空'
   },
 
   // 输出文件夹
@@ -116,7 +148,14 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     title: '输出文件夹设置',
     selectFolder: '选择文件夹',
     currentPath: '当前路径',
-    defaultPath: '默认路径'
+    defaultPath: '默认路径',
+    fileNameFormat: '输出文件名格式',
+    optionOriginal: '原文件名',
+    optionWithTime: '原文件名\n+时间',
+    optionWithRandom: '原文件名\n+随机编号',
+    descOriginal: '保持原始文件名',
+    descWithTime: '文件名_20240101_120000',
+    descWithRandom: '文件名_abc123'
   },
 
   // 视频对比
@@ -164,7 +203,10 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
 
   // 工具栏
   toolbar: {
-    addFiles: '添加文件'
+    addFiles: '添加文件',
+    startQueue: '开始队列',
+    pauseQueue: '暂停队列',
+    batchCompress: '批量压缩'
   },
 
   // 状态
@@ -178,5 +220,34 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     paused: '已暂停',
     completed: '已完成',
     failed: '失败'
+  },
+
+  // 日志面板
+  logPanel: {
+    open: '打开日志',
+    close: '关闭日志',
+    title: '日志',
+    clear: '清空日志',
+    empty: '暂无日志',
+    copy: '复制',
+    copied: '已复制'
+  },
+
+  // 日志消息（业务文案）
+  logMessages: {
+    ffmpegCommand: 'FFmpeg 命令：{name}',
+    resumeFailed: '恢复失败：{name}',
+    paused: '已暂停：{name}',
+    importFailed: '导入失败：无法解析视频元数据。\n文件：{name}\n原因：{reason}',
+    compressionFailedImage: '压缩失败（图片）：{name}',
+    compressionFailedVideo: '压缩失败（视频）：{name}',
+    compressionStartFailed: '压缩启动失败：{name}'
+  },
+
+  // 窗口按钮
+  window: {
+    minimize: '最小化',
+    maximizeRestore: '最大化/还原',
+    close: '关闭'
   }
 };

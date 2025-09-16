@@ -14,7 +14,7 @@
             {{ getCompressionRatio(task) }}
           </span>
           <!-- 压缩/膨胀箭头图标 -->
-          <ArrowDown v-if="getCompressionText(task) === '压缩'" class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" />
+          <ArrowDown v-if="getCompressionDirection(task) === 'compress'" class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" />
           <ArrowUp v-else class="w-4 h-4 ml-1 text-green-600 dark:text-green-300" />
         </div>
       </div>
@@ -63,9 +63,9 @@
          
          <!-- 进度文字覆盖层 -->
          <div class="absolute inset-0 flex items-center justify-between px-3 text-xs font-semibold text-purple-500 dark:text-[#d9c8f5] tracking-wide">
-           <span>压缩中 {{ Math.round(task.progress || 0) }}%</span>
+           <span>{{ $t('taskList.statusProcessing') }} {{ Math.round(task.progress || 0) }}%</span>
           <span v-if="getEstimatedTimeRemaining(task)" class="text-xs opacity-80">
-            剩余 {{ getEstimatedTimeRemaining(task) }}
+            {{ $t('taskList.remaining') }} {{ getEstimatedTimeRemaining(task) }}
           </span>
         </div>
       </div>
@@ -76,7 +76,7 @@
         <button
           @click="$emit('pause', task.id)"
           class="p-1 text-gray-400 hover:text-orange-500 dark:text-gray-500 dark:hover:text-orange-400 transition-colors duration-200"
-          :title="'暂停任务'"
+          :title="$t('taskList.pauseTask')"
         >
           <Pause class="w-4 h-4" />
         </button>
@@ -105,9 +105,9 @@
       <!-- 压缩失败状态 -->
       <div v-else-if="task.status === 'failed'" class="flex items-center justify-between">
         <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-             :title="task.error || '压缩失败'">
+             :title="task.error || $t('taskList.statusFailed')">
           <X class="w-3 h-3 mr-1" />
-          失败{{ task.error ? ': ' + (task.error.length > 20 ? task.error.substring(0, 20) + '...' : task.error) : '' }}
+          {{ $t('taskList.statusFailed') }}{{ task.error ? ': ' + (task.error.length > 20 ? task.error.substring(0, 20) + '...' : task.error) : '' }}
         </div>
         
         <!-- 操作按钮组 -->
@@ -137,7 +137,7 @@
       <div v-else-if="task.status === 'pending'" class="flex items-center justify-between">
         <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
           <Clock class="w-3 h-3 mr-1" />
-          等待中
+          {{ $t('taskList.statusPending') }}
         </div>
         
         <!-- 操作按钮组 -->
@@ -168,7 +168,7 @@
         <div class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
              :style="{ backgroundColor: '#fff5dc', color: '#d97706' }">
           <Clock class="w-3 h-3 mr-1" />
-          排队中
+          {{ $t('taskList.statusQueued') }}
         </div>
         
         <!-- 操作按钮组 -->
@@ -177,7 +177,7 @@
           <button
             @click="$emit('resume', task.id)"
             class="p-1 text-gray-400 hover:text-green-500 dark:text-gray-500 dark:hover:text-green-400 transition-colors duration-200"
-            title="开始任务"
+            :title="$t('taskList.startTask')"
           >
             <Play class="w-4 h-4" />
           </button>
@@ -215,7 +215,7 @@
         
         <!-- 进度文字覆盖层 -->
         <div class="absolute inset-0 flex items-center justify-between px-3 text-xs font-semibold text-orange-700 dark:text-orange-100 tracking-wide">
-          <span>已暂停 {{ Math.round(task.progress || 0) }}%</span>
+          <span>{{ $t('status.paused') }} {{ Math.round(task.progress || 0) }}%</span>
           <span v-if="getEstimatedTimeRemaining(task)" class="text-xs opacity-80">
             {{ getEstimatedTimeRemaining(task) }}
           </span>
@@ -228,7 +228,7 @@
           <button
             @click="$emit('resume', task.id)"
             class="p-1 text-gray-400 hover:text-green-500 dark:text-gray-500 dark:hover:text-green-400 transition-colors duration-200"
-            title="恢复任务"
+            :title="$t('taskList.resumeTask')"
           >
             <Play class="w-4 h-4" />
           </button>
@@ -269,6 +269,8 @@ interface Props {
 const props = defineProps<Props>();
 const taskStore = useTaskStore();
 
+const { t } = useI18n();
+
 defineEmits<{
   'delete': [id: string];
   'toggle-expand': [id: string];
@@ -292,10 +294,11 @@ const getCompressionRatio = (task: CompressionTask): string => {
   return Math.round(Math.abs(ratio)) + '%';
 };
 
-const getCompressionText = (task: CompressionTask): string => {
-  if (!task.compressedSize || !task.originalSize || isNaN(task.compressedSize) || isNaN(task.originalSize)) return '压缩';
+// 返回压缩方向用于显示箭头
+const getCompressionDirection = (task: CompressionTask): 'compress' | 'expand' => {
+  if (!task.compressedSize || !task.originalSize || isNaN(task.compressedSize) || isNaN(task.originalSize)) return 'compress';
   const ratio = ((task.originalSize - task.compressedSize) / task.originalSize) * 100;
-  return ratio >= 0 ? '压缩' : '膨胀';
+  return ratio >= 0 ? 'compress' : 'expand';
 };
 
 // 计算预估剩余时间
@@ -324,7 +327,7 @@ const getEstimatedTimeRemaining = (task: CompressionTask): string | null => {
   const remainingProgress = 100 - task.progress;
   const estimatedRemainingSeconds = remainingProgress / progressRate;
   
-  // 格式化时间显示
+  // 格式化时间显示（保留中文，具体 i18n 可按需扩展为国际化格式化）
   if (estimatedRemainingSeconds < 60) {
     return `${Math.round(estimatedRemainingSeconds)}秒`;
   } else if (estimatedRemainingSeconds < 3600) {

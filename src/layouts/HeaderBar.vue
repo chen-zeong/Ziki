@@ -65,7 +65,7 @@ const handleClose = async () => {
         class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
         @click="handleMinimize"
         :data-tauri-drag-region="false"
-        title="最小化"
+        :title="$t('window.minimize') || '最小化'"
       >
         <Minus class="w-4 h-4" />
       </button>
@@ -74,7 +74,7 @@ const handleClose = async () => {
         class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
         @click="handleMaximize"
         :data-tauri-drag-region="false"
-        title="最大化/还原"
+        :title="$t('window.maximizeRestore') || '最大化/还原'"
       >
         <Square class="w-4 h-4" />
       </button>
@@ -83,7 +83,7 @@ const handleClose = async () => {
         class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 rounded-md transition-colors"
         @click="handleClose"
         :data-tauri-drag-region="false"
-        title="关闭"
+        :title="$t('window.close') || '关闭'"
       >
         <X class="w-4 h-4" />
       </button>

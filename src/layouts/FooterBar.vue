@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Archive, FolderCog } from 'lucide-vue-next';
 import OutputFolder from '../components/OutputFolder.vue';
 import TimeRangeSettings from '../components/video-settings/TimeRangeSettings.vue';
@@ -19,6 +20,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const taskStore = useTaskStore();
+const { t } = useI18n();
 
 // 从store或props获取数据
 const tasks = computed(() => props.tasks || taskStore.tasks);
@@ -53,14 +55,14 @@ const isBatchButtonDisabled = computed(() => {
 
 // 批量按钮文案始终为“批量压缩”
 const batchButtonText = computed(() => {
-  return '批量压缩';
+  return t('toolbar.batchCompress');
 });
 
 // 底部压缩按钮的文本
 const compressButtonText = computed(() => {
-  if (selectedTask.value?.status === 'processing') return '压缩中...';
-  if (selectedTask.value?.status === 'completed') return '已完成';
-  return '开始压缩';
+  if (selectedTask.value?.status === 'processing') return t('videoSettings.compressing');
+  if (selectedTask.value?.status === 'completed') return t('taskList.statusCompleted');
+  return t('videoSettings.compress');
 });
 
 // 底部压缩按钮是否禁用
@@ -165,7 +167,7 @@ const toggleTimeRangePopup = () => {
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="timeRangeSettings.enabled ? 'text-[#518dd6] dark:text-[#518dd6]' : 'text-gray-700 dark:text-dark-secondary'">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
-          <span>自定义时间段</span>
+          <span>{{ $t('videoSettings.customTimeRange') || '自定义时间段' }}</span>
         </button>
         
         <!-- 时间段设置弹出框 -->

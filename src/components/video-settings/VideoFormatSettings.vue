@@ -11,7 +11,7 @@
         <CustomSelect 
           v-model="format"
           :options="formatOptions"
-          placeholder="选择输出格式"
+          :placeholder="t('videoSettings.selectOutputFormat')"
           dropdown-direction="down"
           :teleport-to-body="true"
           strict-direction
@@ -24,13 +24,13 @@
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.videoCodec') }}</label>
           <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600">{{ metadata.videoCodec?.toUpperCase() || 'UNKNOWN' }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600">{{ metadata.videoCodec?.toUpperCase() || t('common.unknown') }}</span>
           </div>
         </div>
         <CustomSelect 
           v-model="videoCodec"
           :options="videoCodecOptions"
-          placeholder="选择视频编码"
+          :placeholder="t('videoSettings.selectVideoCodec')"
           dropdown-direction="down"
           strict-direction
           :teleport-to-body="true"
@@ -43,7 +43,7 @@
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.resolution') }}</label>
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600 dark:text-dark-secondary">自定义</span>
+            <span class="text-sm text-gray-600 dark:text-dark-secondary">{{ t('videoSettings.custom') }}</span>
             <button
               type="button"
               class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
@@ -64,7 +64,7 @@
               v-model="customWidth"
               :min="1"
               :max="7680"
-              placeholder="宽度"
+              :placeholder="t('videoSettings.width')"
             />
             <button
               type="button"
@@ -72,7 +72,7 @@
               :class="{ 'hover:bg-blue-50': isAspectRatioLocked }"
               :style="{ color: isAspectRatioLocked ? '#5492dc' : '' }"
               @click="toggleAspectRatioLock"
-              title="等比例缩放"
+              :title="t('videoSettings.lockAspectRatio')"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -83,14 +83,14 @@
               v-model="customHeight"
               :min="1"
               :max="4320"
-              placeholder="高度"
+              :placeholder="t('videoSettings.height')"
             />
           </div>
           <CustomSelect 
             v-if="!isCustomResolution"
             v-model="resolution"
             :options="resolutionOptions.filter((opt: { value: string; label: string; tags?: string[] }) => opt.value !== 'custom')"
-            :placeholder="metadata?.resolution ? `${metadata.resolution}` : '选择分辨率'"
+            :placeholder="metadata?.resolution ? `${metadata.resolution}` : t('videoSettings.selectResolution')"
             dropdown-direction="up"
             strict-direction
             :teleport-to-body="true"
@@ -119,6 +119,9 @@ import CustomNumberInput from '../common/CustomNumberInput.vue';
 import QualitySettings from './QualitySettings.vue';
 import { useVideoFormats } from '../../composables/useVideoFormats';
 import type { CompressionSettings, VideoMetadata } from '../../types';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface Props {
   modelValue: Partial<CompressionSettings>;
@@ -224,16 +227,16 @@ const videoCodecOptions = computed(() => {
 // 获取视频编码标签
 const getVideoCodecTags = (codec: string): string[] => {
   const c = (codec || '').toUpperCase();
-  if (c.includes('H.264') || c === 'H264') return ['高兼容性', '主流'];
-  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return ['高效压缩', '10bit支持'];
-  if (c.includes('AV1')) return ['更高效压缩', '编码复杂'];
-  if (c.includes('VP9')) return ['Web', '谷歌开发'];
-  if (c.includes('VP8')) return ['Web', '旧'];
-  if (c.includes('PRORES')) return ['专业', 'Apple'];
-  if (c.includes('MPEG-4') || c.includes('MPEG4') || c.includes('XVID')) return ['旧'];
-  if (c.includes('MPEG-2') || c.includes('MPEG2')) return ['旧'];
-  if (c.includes('WMV')) return ['Windows'];
-  if (c.includes('THEORA')) return ['开源', '旧'];
+  if (c.includes('H.264') || c === 'H264') return [t('videoSettings.tagHighCompatibility'), t('videoSettings.tagPopular')];
+  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return [t('videoSettings.tagHighEfficiency'), t('videoSettings.tagTenBitSupport')];
+  if (c.includes('AV1')) return [t('videoSettings.tagMoreEfficient'), t('videoSettings.tagComplexEncoding')];
+  if (c.includes('VP9')) return ['Web', 'Google'];
+  if (c.includes('VP8')) return ['Web', t('videoSettings.tagLegacy')];
+  if (c.includes('PRORES')) return [t('videoSettings.tagProfessional'), t('videoSettings.tagApple')];
+  if (c.includes('MPEG-4') || c.includes('MPEG4') || c.includes('XVID')) return [t('videoSettings.tagLegacy')];
+  if (c.includes('MPEG-2') || c.includes('MPEG2')) return [t('videoSettings.tagLegacy')];
+  if (c.includes('WMV')) return [t('videoSettings.tagWindows')];
+  if (c.includes('THEORA')) return [t('videoSettings.tagOpenSource'), t('videoSettings.tagLegacy')];
   return [];
 };
 
@@ -246,7 +249,7 @@ const getResolutionTags = (resolution: string): string[] => {
   if (resolution.includes('240')) return ['240p'];
   if (resolution.includes('2160')) return ['4K'];
   if (resolution.includes('1440')) return ['2K'];
-  if (resolution === 'original' || resolution.includes('原始')) return ['原始'];
+  if (resolution === 'original' || resolution.includes('原始')) return [t('videoSettings.original')];
   return [];
 };
 
@@ -279,7 +282,7 @@ const calculateScaledResolutions = (originalResolution: string) => {
 };
 
 const resolutionOptions = computed(() => {
-  const options = [];
+  const options = [] as { value: any; label: string; tags?: string[] }[];
   
   // 如果有metadata，首先添加原始分辨率选项
   if (props.metadata) {
@@ -287,7 +290,7 @@ const resolutionOptions = computed(() => {
     options.push({
       value: props.metadata.resolution,
       label: props.metadata.resolution,
-      tags: ['原始']
+      tags: [t('videoSettings.original')]
     });
     
     // 添加等比例缩放的分辨率选项
@@ -303,7 +306,7 @@ const resolutionOptions = computed(() => {
   }
   
   // 添加自定义分辨率选项
-  options.push({ value: 'custom', label: '自定义分辨率' });
+  options.push({ value: 'custom', label: t('videoSettings.customResolution') });
   
   return options;
 });

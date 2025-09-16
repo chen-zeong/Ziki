@@ -5,20 +5,20 @@
         <!-- 显卡加速开关 -->
          <div class="flex items-center justify-between">
            <div class="flex items-center gap-3">
-             <h3 class="text-sm font-medium text-gray-700 dark:text-dark-text">显卡加速</h3>
+             <h3 class="text-sm font-medium text-gray-700 dark:text-dark-text">{{ t('videoSettings.gpuAcceleration') }}</h3>
              <div v-if="isHardwareAvailable" class="px-2 py-1 bg-green-100 dark:bg-dark-success/20 text-green-700 dark:text-dark-success text-xs rounded-full font-medium flex items-center space-x-1">
                <Zap class="w-3 h-3" />
-               <span>可用</span>
+               <span>{{ t('common.available') }}</span>
              </div>
              <div v-else class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium flex items-center space-x-1">
                <Ban class="w-3 h-3" />
-               <span>不可用</span>
+               <span>{{ t('common.unavailable') }}</span>
              </div>
            </div>
           
           <!-- 可用时显示开关 -->
           <div v-if="isHardwareAvailable" class="flex items-center gap-2">
-            <span class="text-xs text-gray-500 dark:text-dark-secondary">{{ hardwareAcceleration.value === 'gpu' ? '已启用' : '已关闭' }}</span>
+            <span class="text-xs text-gray-500 dark:text-dark-secondary">{{ hardwareAcceleration.value === 'gpu' ? t('common.enabled') : t('common.disabled') }}</span>
             <button
               type="button"
               class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
@@ -46,7 +46,7 @@
               @mouseover="($event.target as HTMLElement).style.color = '#7c3aed'"
               @mouseleave="($event.target as HTMLElement).style.color = '#9150e1'"
             >
-              查看支持列表
+              {{ t('videoSettings.viewSupportedList') }}
             </button>
             
             <!-- 使用 Teleport 将弹出框放到 body，避免被父容器裁剪或遮挡 -->
@@ -61,7 +61,7 @@
                   <div class="flex items-center justify-between mb-3">
                     <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
                       <CheckCircle class="w-4 h-4 text-blue-500" />
-                      <span>支持的硬件编码格式</span>
+                      <span>{{ t('videoSettings.supportedHardwareEncodersTitle') }}</span>
                     </h4>
                     <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
                       <X class="w-4 h-4" />
@@ -69,7 +69,7 @@
                   </div>
                   <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
                     <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                    当前系统不支持任何硬件编码格式
+                    {{ t('videoSettings.noHardwareEncoders') }}
                   </div>
                   <div v-else class="space-y-2 max-h-48 overflow-y-auto">
                      <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
@@ -86,13 +86,13 @@
                     v-if="platform === 'macos' && arch === 'x86_64'"
                     class="text-[11px] leading-4 text-gray-600 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 border border-gray-200 dark:border-dark-border rounded-md px-3 py-2"
                   >
-                    注意: 根据系统限制, Intel 版本的 macOS 暂不支持使用 VideoToolbox 的质量模式 (-q:v), 本应用已禁用硬件加速.
+                    {{ t('videoSettings.intelMacNoQvNotice') }}
                   </div>
                    <!-- 检测信息与操作 -->
                    <div class="flex items-center justify-between">
                      <div class="flex items-center text-xs text-gray-500 dark:text-dark-secondary">
                        <Clock class="w-3 h-3 mr-1 opacity-70" />
-                       <span>上次检测时间：{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
+                       <span>{{ t('videoSettings.lastChecked') }}{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
                      </div>
                      <button
                        class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-all duration-200"
@@ -111,7 +111,7 @@
                          </span>
                        </div>
                        <span class="transition-all duration-200">
-                         {{ isDetectingHardwareEncoders ? '检测中…' : '重新检测' }}
+                         {{ isDetectingHardwareEncoders ? t('videoSettings.detecting') : t('videoSettings.recheck') }}
                        </span>
                      </button>
                    </div>
@@ -133,6 +133,9 @@
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { CheckCircle, X, AlertTriangle, Check, Zap, Ban, Clock, RefreshCw, Loader2 } from 'lucide-vue-next';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface HardwareOption {
   value: string;
@@ -225,7 +228,7 @@ const detectCodecs = async () => {
 const loadHardwareSupport = async () => {
   if (isDetectingHardwareEncoders.value) return;
   isDetectingHardwareEncoders.value = true;
-  detectHint.value = '正在检测硬件编码器，请稍候...';
+  detectHint.value = t('videoSettings.detectingHardwareEncoders');
   try {
     const result = await invoke<HardwareSupport>('get_hardware_encoder_support');
     hardwareSupport.value = result;
@@ -346,18 +349,18 @@ const hardwareOptions = computed<HardwareOption[]>(() => {
   return [
     {
       value: 'cpu',
-      name: 'CPU编码',
-      description: '兼容性最高，适用于所有设备，速度较慢',
+      name: t('videoSettings.cpuEncoding'),
+      description: t('videoSettings.cpuEncodingDesc'),
       icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9Vz',
       available: true
     },
     {
       value: 'gpu',
-      name: '显卡加速',
-      description: isHardwareSupported ? '当前编码格式支持硬件加速，速度更快' : '当前编码格式不支持硬件加速',
+      name: t('videoSettings.gpuAcceleration'),
+      description: isHardwareSupported ? t('videoSettings.gpuSupportedDesc') : t('videoSettings.gpuUnsupportedDesc'),
       icon: 'M13 10V3L4 14h7v7l9-11h-7z',
       available: isHardwareSupported,
-      reason: isHardwareSupported ? '可用' : '不可用'
+      reason: isHardwareSupported ? t('common.available') : t('common.unavailable')
     }
   ];
 });
@@ -372,10 +375,10 @@ const isHardwareAvailable = computed(() => {
 // 不可用原因
 const unavailableReason = computed(() => {
   if (!props.currentVideoCodec) {
-    return '请先选择视频编码格式';
+    return t('videoSettings.selectVideoCodecFirst');
   }
   if (!isHardwareAvailable.value) {
-    return '当前编码格式不支持硬件加速';
+    return t('videoSettings.hardwareNotSupportedForCodec');
   }
   return '';
 });
@@ -398,40 +401,40 @@ const selectHardware = (option: HardwareOption) => {
 // 处理显卡加速功能
 const handleGpuAcceleration = () => {
   if (platform.value === 'macos') {
-    console.log('macOS 显卡加速已启用');
-    console.log('使用 VideoToolbox 硬件编码器');
-    console.log('当前编码格式:', props.currentVideoCodec);
-    console.log('支持的硬件编码器:', supportedCodecs.value.join(', '));
+    console.log('macOS GPU acceleration enabled');
+    console.log('Using VideoToolbox hardware encoder');
+    console.log('Current codec:', props.currentVideoCodec);
+    console.log('Supported hardware encoders:', supportedCodecs.value.join(', '));
     
     // 检查具体的编码器支持
     const codecName = props.currentVideoCodec?.toLowerCase() || '';
     if (codecName.includes('h264') || codecName.includes('h.264')) {
-      console.log('将使用 h264_videotoolbox 编码器');
+      console.log('Using h264_videotoolbox');
     } else if (codecName.includes('hevc') || codecName.includes('h265') || codecName.includes('h.265')) {
-      console.log('将使用 hevc_videotoolbox 编码器');
+      console.log('Using hevc_videotoolbox');
     } else if (codecName.includes('prores')) {
-      console.log('将使用 prores_videotoolbox 编码器');
+      console.log('Using prores_videotoolbox');
     }
   } else if (platform.value === 'windows') {
-    console.log('Windows 显卡加速：根据检测结果选择 NVENC/QSV/AMF');
+    console.log('Windows GPU acceleration: choose NVENC/QSV/AMF based on detection');
   } else {
-    console.log('当前平台不支持显卡加速');
+    console.log('GPU acceleration is not supported on this platform');
   }
 };
 
 // 处理CPU编码
 const handleCpuEncoding = () => {
-  console.log('使用 CPU 编码模式');
-  console.log('当前编码格式:', props.currentVideoCodec);
+  console.log('Using CPU encoding mode');
+  console.log('Current codec:', props.currentVideoCodec);
 };
 
 // 恢复：硬件加速开关切换
 const toggleHardwareAcceleration = () => {
   if (hardwareAcceleration.value.value === 'gpu') {
-    hardwareAcceleration.value = { value: 'cpu', name: 'CPU编码' };
+    hardwareAcceleration.value = { value: 'cpu', name: t('videoSettings.cpuEncoding') };
     handleCpuEncoding();
   } else {
-    hardwareAcceleration.value = { value: 'gpu', name: '显卡加速' };
+    hardwareAcceleration.value = { value: 'gpu', name: t('videoSettings.gpuAcceleration') };
     handleGpuAcceleration();
   }
 };
@@ -482,8 +485,8 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
   if (hardwareAcceleration.value.value === 'gpu' && newCodec && !checkHardwareSupport(newCodec)) {
     selectHardware({
       value: 'cpu',
-      name: 'CPU编码',
-      description: '兼容性最高，适用于所有设备，速度较慢',
+      name: t('videoSettings.cpuEncoding'),
+      description: t('videoSettings.cpuEncodingDesc'),
       icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z',
       available: true
     });
@@ -496,7 +499,7 @@ onMounted(async () => {
   await detectPlatform();
   // Intel Mac 严格回退到 CPU 选项
   if (platform.value === 'macos' && arch.value === 'x86_64') {
-    hardwareAcceleration.value = { value: 'cpu', name: 'CPU编码' };
+    hardwareAcceleration.value = { value: 'cpu', name: t('videoSettings.cpuEncoding') };
   }
   window.addEventListener('resize', calcPopupPosition);
   window.addEventListener('scroll', calcPopupPosition, true);

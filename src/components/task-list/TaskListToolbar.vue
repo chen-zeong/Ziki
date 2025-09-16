@@ -10,7 +10,7 @@
          :title="t('toolbar.addFiles')"
        >
         <Plus class="w-4 h-4" />
-        <span class="text-xs">添加</span>
+        <span class="text-xs">{{ t('toolbar.addFiles') }}</span>
       </button>
       
       <!-- 清空任务按钮 -->
@@ -19,10 +19,10 @@
         style="background-color: #eb534b; height: 32px;"
         @click="handleClearAllTasks"
         :disabled="tasks.length === 0"
-        title="清空所有任务"
+        :title="t('taskList.clearAllTasks')"
       >
         <BrushCleaning class="w-4 h-4" />
-        <span class="text-xs">清空</span>
+        <span class="text-xs">{{ t('taskList.clear') }}</span>
       </button>
     </div>
     
@@ -84,11 +84,11 @@ const emit = defineEmits<{
   toggleStatusFilter: [status: string];
 }>();
 
-// 状态筛选器配置
+// 状态筛选器配置（标签使用 i18n）
 const statusFilters = computed(() => [
   {
     key: 'pending',
-    label: '未开始',
+    label: t('taskList.statusPending'),
     bgColor: '#dbebfd',
     borderColor: '#dbebfd',
     textColor: '#1e40af',
@@ -97,7 +97,7 @@ const statusFilters = computed(() => [
   },
   {
     key: 'queued',
-    label: '等待中',
+    label: t('taskList.statusQueued'),
     bgColor: '#fff5dc',
     borderColor: '#fff5dc',
     textColor: '#d97706',
@@ -106,7 +106,7 @@ const statusFilters = computed(() => [
   },
   {
     key: 'processing',
-    label: '压缩中',
+    label: t('taskList.statusProcessing'),
     bgColor: '#f3e8ff',
     borderColor: '#f3e8ff',
     textColor: '#7c3aed',
@@ -115,7 +115,7 @@ const statusFilters = computed(() => [
   },
   {
     key: 'completed',
-    label: '完成',
+    label: t('taskList.statusCompleted'),
     bgColor: '#dcfce7',
     borderColor: '#dcfce7',
     textColor: '#16a34a',

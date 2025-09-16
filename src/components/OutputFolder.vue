@@ -20,13 +20,13 @@
           <!-- 输出文件名格式 -->
           <div>
             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-              输出文件名格式
+              {{ $t('outputFolder.fileNameFormat') }}
             </label>
             <div class="flex space-x-2">
               <button
                 v-for="option in globalSettings.fileNameFormatOptions"
                 :key="option.value"
-                @click="globalSettings.setOutputFileNameFormat(option.value)"
+                @click="setOutputFormat(option.value)"
                 :class="[
                   'flex-1 px-3 py-2 text-xs font-medium rounded-md border transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] whitespace-pre-line text-center',
                   globalSettings.outputFileNameFormat === option.value
@@ -46,7 +46,7 @@
           <!-- 输出文件夹路径 -->
           <div>
             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-              输出文件夹
+              {{ $t('outputFolder.title') || '输出文件夹' }}
             </label>
             <div class="flex items-center space-x-2">
               <div class="flex-1 relative">
@@ -54,14 +54,14 @@
                   v-model="globalSettings.outputPath"
                   type="text" 
                    class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                   placeholder="选择输出路径..."
+                   :placeholder="$t('outputFolder.selectFolder') || '选择输出路径...'"
                    readonly
                  />
                  <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
                    <button 
                      class="p-2 rounded-md transition-colors group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                      @click="selectOutputFolder"
-                     title="选择文件夹"
+                     :title="$t('outputFolder.selectFolder') || '选择文件夹'"
                    >
                      <FolderPen class="w-4 h-4 group-hover:animate-pulse" />
                    </button>
@@ -80,6 +80,8 @@ import { computed, onMounted, watch } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { FolderPen, Folder } from 'lucide-vue-next';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
+import { useI18n } from 'vue-i18n';
+import type { OutputFileNameFormat } from '../stores/useGlobalSettingsStore';
 
 // Props
 interface Props {
@@ -99,6 +101,8 @@ const emit = defineEmits<Emits>();
 // 使用全局设置store
 const globalSettings = useGlobalSettingsStore();
 
+const { t } = useI18n();
+
 // 当前格式描述
 const currentFormatDescription = computed(() => {
   const option = globalSettings.fileNameFormatOptions.find(
@@ -107,13 +111,18 @@ const currentFormatDescription = computed(() => {
   return option?.description || '';
 });
 
+// 包装设置函数，确保模板类型安全
+const setOutputFormat = (val: OutputFileNameFormat) => {
+  globalSettings.setOutputFileNameFormat(val);
+};
+
 // 选择输出文件夹
 const selectOutputFolder = async () => {
   try {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: '选择输出文件夹'
+      title: t('outputFolder.selectFolder')
     });
     
     if (selected && typeof selected === 'string') {
