@@ -91,9 +91,3 @@ watch(() => props.selectedFrame, (newFrame) => {
   selectedFrame.value = newFrame;
 });
 </script>
-
-<style scoped>
-.frame-selector {
-  /* 简化的帧选择器样式 */
-}
-</style>

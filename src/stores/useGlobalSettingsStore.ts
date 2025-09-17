@@ -15,7 +15,7 @@ export type Theme = 'light' | 'dark' | 'auto'
 export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   // 状态
   const outputPath = ref('')
-  const outputFileNameFormat = ref<OutputFileNameFormat>('original')
+  const outputFileNameFormat = ref<OutputFileNameFormat>('with-time')
   const theme = ref<Theme>('auto')
   const language = ref<Language>('zh')
   const isInitialized = ref(false)
@@ -60,10 +60,12 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   }
 
   const toggleTheme = () => {
-    const themes: Theme[] = ['light', 'dark', 'auto']
-    const currentIndex = themes.indexOf(theme.value)
-    const nextIndex = (currentIndex + 1) % themes.length
-    setTheme(themes[nextIndex])
+    // 只在 light 和 dark 之间切换，不包含 auto
+    if (theme.value === 'light') {
+      setTheme('dark')
+    } else {
+      setTheme('light')
+    }
   }
 
   // 更新主题类名

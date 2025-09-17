@@ -1,9 +1,19 @@
 export default {
-  // 通用
+  // Time units
+  timeUnits: {
+    seconds: '秒',
+    minutes: '分',
+    hours: '小时',
+    secondsShort: '秒',
+    minutesShort: '分',
+    hoursShort: '时',
+  },
+
+  // Common
   common: {
-    confirm: '确定',
+    confirm: '确认',
     cancel: '取消',
-    clear: '清除',
+    clear: '清空',
     reset: '重置',
     close: '关闭',
     save: '保存',
@@ -23,7 +33,7 @@ export default {
     available: '可用',
     unavailable: '不可用',
     enabled: '已启用',
-    disabled: '已关闭',
+    disabled: '已禁用',
     tip: '提示：',
     pleaseSelect: '请选择'
   },
@@ -165,7 +175,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     colorDepth: '色彩深度',
     statusPending: '等待中',
     statusQueued: '排队中',
-    statusProcessing: '压缩中',
+    statusProcessing: '压缩中...',
     statusCompleted: '压缩完成',
     statusFailed: '压缩失败',
     noFilteredTasks: '没有符合筛选条件的任务',
@@ -243,7 +253,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
 
   // 工具栏
   toolbar: {
-    addFiles: '添加文件',
+    addFiles: '添加',
     startQueue: '开始队列',
     pauseQueue: '暂停队列',
     batchCompress: '批量压缩'
@@ -281,7 +291,10 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     importFailed: '导入失败：无法解析视频元数据。\n文件：{name}\n原因：{reason}',
     compressionFailedImage: '压缩失败（图片）：{name}',
     compressionFailedVideo: '压缩失败（视频）：{name}',
-    compressionStartFailed: '压缩启动失败：{name}'
+    compressionStartFailed: '压缩启动失败：{name}',
+    compressionStartedImage: '开始压缩（图片）：{name}',
+    compressionCompletedImage: '压缩完成（图片）：{name}',
+    compressionError: '压缩错误：{name} - {error}'
   },
 
   // 窗口按钮

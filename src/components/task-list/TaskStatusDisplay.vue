@@ -65,7 +65,7 @@
          <div class="absolute inset-0 flex items-center justify-between px-3 text-xs font-semibold text-purple-500 dark:text-[#d9c8f5] tracking-wide">
            <span>{{ $t('taskList.statusProcessing') }} {{ Math.round(task.progress || 0) }}%</span>
           <span v-if="getEstimatedTimeRemaining(task)" class="text-xs opacity-80">
-            {{ $t('taskList.remaining') }} {{ getEstimatedTimeRemaining(task) }}
+            {{ getEstimatedTimeRemaining(task) }}
           </span>
         </div>
       </div>
@@ -327,18 +327,18 @@ const getEstimatedTimeRemaining = (task: CompressionTask): string | null => {
   const remainingProgress = 100 - task.progress;
   const estimatedRemainingSeconds = remainingProgress / progressRate;
   
-  // 格式化时间显示（保留中文，具体 i18n 可按需扩展为国际化格式化）
+  // 格式化时间显示（使用简写形式）
   if (estimatedRemainingSeconds < 60) {
-    return `${Math.round(estimatedRemainingSeconds)}秒`;
+    return `${Math.round(estimatedRemainingSeconds)}${t('timeUnits.secondsShort')}`;
   } else if (estimatedRemainingSeconds < 3600) {
     const minutes = Math.floor(estimatedRemainingSeconds / 60);
     const seconds = Math.round(estimatedRemainingSeconds % 60);
-    return `${minutes}分${seconds}秒`;
+    return `${minutes}${t('timeUnits.minutesShort')}${seconds}${t('timeUnits.secondsShort')}`;
   } else {
     const hours = Math.floor(estimatedRemainingSeconds / 3600);
     const minutes = Math.floor((estimatedRemainingSeconds % 3600) / 60);
     const seconds = Math.round(estimatedRemainingSeconds % 60);
-    return `${hours}小时${minutes}分${seconds}秒`;
+    return `${hours}${t('timeUnits.hoursShort')}${minutes}${t('timeUnits.minutesShort')}${seconds}${t('timeUnits.secondsShort')}`;
   }
 };
 </script>

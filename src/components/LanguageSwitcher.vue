@@ -66,7 +66,7 @@ const globalSettings = useGlobalSettingsStore();
 const showDropdown = ref(false);
 
 const languages = [
-  { code: 'zh' as Language, name: '中文' },
+  { code: 'zh' as Language, name: '简体中文' },
   { code: 'en' as Language, name: 'English' }
 ];
 

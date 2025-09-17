@@ -84,7 +84,7 @@
                    <!-- 仅 Intel Mac 显示的小字说明（英文标点 + 圆角背景 + 暗色适配） -->
                   <div
                     v-if="platform === 'macos' && arch === 'x86_64'"
-                    class="text-[11px] leading-4 text-gray-600 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 border border-gray-200 dark:border-dark-border rounded-md px-3 py-2"
+                    class="text-[11px] leading-4 text-gray-600 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 border border-gray-200 dark:border-dark-border rounded-md px-3 py-2 mb-4"
                   >
                     {{ t('videoSettings.intelMacNoQvNotice') }}
                   </div>

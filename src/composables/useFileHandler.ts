@@ -614,7 +614,7 @@ export function useFileHandler() {
       if (task.type === 'image') {
         try {
           // 日志：开始图片压缩
-          logStore.addInfo(`开始压缩（图片）：${task.file.name}`, { taskId: task.id, inputPath: task.file.path, outputPath, settings: backendSettings });
+          logStore.addInfo(i18n.global.t('logMessages.compressionStartedImage', { name: task.file.name }), { taskId: task.id, inputPath: task.file.path, outputPath, settings: backendSettings });
 
           const result = await invoke<CompressionResult>('compress_image', {
             taskId: task.id,
@@ -636,17 +636,17 @@ export function useFileHandler() {
               currentFile.value = { ...task.file };
             }
             // 日志：完成
-            logStore.addSuccess(`压缩完成（图片）：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+            logStore.addSuccess(i18n.global.t('logMessages.compressionCompletedImage', { name: task.file.name }), { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
           } else {
             task.status = 'failed';
             task.error = result.error || 'Compression failed';
-            logStore.addError(`压缩失败（图片）：${task.file.name}`, { taskId: task.id, error: result.error });
+            logStore.addError(i18n.global.t('logMessages.compressionFailedImage', { name: task.file.name }), { taskId: task.id, error: result.error });
           }
         } catch (compressionError) {
           const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
           task.status = 'failed';
           task.error = errorMessage;
-          logStore.addError(`压缩失败（图片）：${task.file.name}`, { taskId: task.id, error: errorMessage });
+          logStore.addError(i18n.global.t('logMessages.compressionFailedImage', { name: task.file.name }), { taskId: task.id, error: errorMessage });
         } finally {
           isProcessing.value = false;
         }
@@ -669,14 +669,14 @@ export function useFileHandler() {
       try {
         const unlistenCmd = await listen(`compression-command-${task.id}`, (event: any) => {
           const { command, args } = (event && event.payload) || {};
-          logStore.addInfo(`FFmpeg 命令：${task.file.name}`, { taskId: task.id, command, args });
+          logStore.addInfo(i18n.global.t('logMessages.ffmpegCommand', { name: task.file.name }), { taskId: task.id, command, args });
         });
         activeCommandListeners.set(task.id, unlistenCmd);
       } catch {}
       try {
         const unlistenErr = await listen(`compression-error-${task.id}`, (event: any) => {
           const { error, stderr } = (event && event.payload) || {};
-          logStore.addError(`压缩错误：${task.file.name} - ${error || '未知错误'}`, { taskId: task.id, stderr });
+          logStore.addError(i18n.global.t('logMessages.compressionError', { name: task.file.name, error: error || '未知错误' }), { taskId: task.id, stderr });
         });
         activeErrorListeners.set(task.id, unlistenErr);
       } catch {}
