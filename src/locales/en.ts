@@ -23,7 +23,9 @@ export default {
     available: 'Available',
     unavailable: 'Unavailable',
     enabled: 'Enabled',
-    disabled: 'Disabled'
+    disabled: 'Disabled',
+    tip: 'Tip:',
+    pleaseSelect: 'Please select'
   },
 
   // File Upload
@@ -71,10 +73,11 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     qualityGood: 'Good',
     qualityExcellent: 'Excellent',
     qualityLossless: 'Lossless',
-    compress: 'Start Compression',
+    compress: 'compress',
     compressing: 'Compressing...',
     original: 'Original',
     colorDepth: 'Color Depth',
+    colors: 'colors',
     qualityVeryLow: 'Very Low Quality',
     qualityLow: 'Low Quality',
     qualityMedium: 'Medium Quality',
@@ -82,7 +85,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     qualityVeryHigh: 'Very High Quality',
     bitDepth10Unavailable: 'Source bit depth is insufficient. Up-conversion to 10-bit is not supported (down-conversion only).',
     bitDepth12Unavailable: 'Source bit depth is insufficient. Up-conversion to 12-bit is not supported (down-conversion only).',
-    viewSupportedList: 'View Supported List',
+    viewSupportedList: 'Supported List',
     supportedHardwareEncodersTitle: 'Supported Hardware Encoders',
     noHardwareEncoders: 'No hardware encoders are supported on this system',
     intelMacNoQvNotice: 'Note: Due to system limitations, Intel macOS does not support VideoToolbox quality mode (-q:v). Hardware acceleration is disabled.',
@@ -94,7 +97,42 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     gpuSupportedDesc: 'Hardware acceleration supported for current codec, faster speed',
     gpuUnsupportedDesc: 'Hardware acceleration is not supported for current codec',
     selectVideoCodecFirst: 'Please select a video codec first',
-    hardwareNotSupportedForCodec: 'Hardware acceleration is not supported for the current codec'
+    hardwareNotSupportedForCodec: 'Hardware acceleration is not supported for the current codec',
+    selectOutputFormat: 'Select Output Format',
+    selectVideoCodec: 'Select Video Codec',
+    custom: 'Custom',
+    customResolution: 'Custom Resolution',
+    width: 'Width',
+    height: 'Height',
+    lockAspectRatio: 'Lock Aspect Ratio',
+    selectResolution: 'Select Resolution',
+    tagHighCompatibility: 'High Compatibility',
+    tagPopular: 'Popular',
+    tagHighEfficiency: 'High Efficiency',
+    tagTenBitSupport: '10-bit Support',
+    tagMoreEfficient: 'More Efficient',
+    tagComplexEncoding: 'Complex Encoding',
+    tagLegacy: 'Legacy',
+    tagProfessional: 'Professional',
+    tagApple: 'Apple',
+    tagWindows: 'Windows',
+    tagOpenSource: 'Open-source',
+    tagMediumSize: 'Medium Size',
+    tagLargestSize: 'Largest Size',
+    tagSmallestSize: 'Smallest Size',
+    tagGoogleDeveloped: 'Google Developed',
+    tagWebOptimized: 'Web Optimized',
+    tagFlashDeveloped: 'Flash Developed',
+    tagOutdated: 'Outdated',
+    tagHighQualityImage: 'High Quality Dynamic Image',
+    tagMainstream: 'Mainstream',
+    tagStrongCompatibility: 'Strong Compatibility',
+    tagAppleEcosystem: 'Apple Ecosystem',
+    tagMultiTrackSubtitle: 'Multi-track Subtitle',
+    tagOldFormat: 'Legacy Format',
+    tagLargeSize: 'Large Size',
+    tagWindowsOptimized: 'Windows Optimized',
+    pngPaletteWarning: 'Using palette compression may cause some colors to be lost'
   },
 
   // Task List
@@ -139,7 +177,9 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     startTask: 'Start Task',
     resumeTask: 'Resume Task',
     remaining: 'Remaining',
-    clear: 'Clear'
+    clear: 'Clear',
+    clearAllTasksConfirmActive: 'There are {count} active tasks. Do you want to clear all? This will stop all in-progress tasks and remove them from the queue.',
+    clearAllTasksConfirmSimple: 'Are you sure you want to clear all tasks? This will remove all tasks from the queue.'
   },
 
   // Output Folder
@@ -202,10 +242,10 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
 
   // Toolbar
   toolbar: {
-    addFiles: 'Add Files',
+    addFiles: 'add',
     startQueue: 'Start Queue',
     pauseQueue: 'Pause Queue',
-    batchCompress: 'Batch Compress'
+    batchCompress: 'Start Batch Compression'
   },
 
   // Status

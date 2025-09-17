@@ -12,7 +12,7 @@
             <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full min-h-[220px] flex flex-col">
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">输出格式</label>
+                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.format') }}</label>
                 </div>
                 <CustomSelect
                   :options="formatOptions"
@@ -24,9 +24,9 @@
               <!-- 分辨率区域 -->
               <div class="mt-4">
                 <div class="flex items-center justify-between mb-2">
-                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">分辨率</label>
+                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.resolution') }}</label>
                    <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold text-gray-600 dark:text-dark-secondary opacity-80">自定义</span>
+                    <span class="text-xs font-semibold text-gray-600 dark:text-dark-secondary opacity-80">{{ t('videoSettings.custom') }}</span>
                      <button
                        type="button"
                        class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
@@ -49,7 +49,7 @@
                       :min="8"
                       :max="8192"
                       :step="2"
-                      placeholder="宽度"
+                      :placeholder="t('videoSettings.width')"
                     />
                     <button
                       type="button"
@@ -57,7 +57,7 @@
                       :class="{ 'hover:bg-blue-50': isAspectRatioLocked }"
                       :style="{ color: isAspectRatioLocked ? '#5492dc' : '' }"
                       @click="toggleAspectRatioLock"
-                      title="等比例缩放"
+                      :title="t('videoSettings.lockAspectRatio')"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -69,7 +69,7 @@
                       :min="8"
                       :max="8192"
                       :step="2"
-                      placeholder="高度"
+                      :placeholder="t('videoSettings.height')"
                     />
                   </div>
 
@@ -77,7 +77,7 @@
                     v-else
                     v-model="resolutionValue"
                     :options="resolutionOptions.filter((opt: any) => opt.value !== 'custom')"
-                    :placeholder="originalResolutionText || '选择分辨率'"
+                    :placeholder="originalResolutionText || t('videoSettings.selectResolution')"
                     dropdown-direction="down"
                     strict-direction
                     :teleport-to-body="true"
@@ -94,7 +94,7 @@
               <div class="space-y-4">
                 <!-- 标题和质量等级 -->
                 <div class="flex justify-between items-center mb-4">
-                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">画质</label>
+                  <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.quality') }}</label>
                   <div class="text-right">
                     <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
                   </div>
@@ -109,14 +109,14 @@
 
                     <!-- 默认值平衡点 -->
                     <div
-                      class="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/95 dark:bg-white/90 ring-1 ring-[#4f89db] dark:ring-[#7aa6e8] ring-offset-1 ring-offset-slate-300 dark:ring-offset-slate-700 shadow-[0_0_0_0.5px_rgba(0,0,0,0.18)] pointer-events-none z-20"
-                      :style="{ left: `calc(${defaultImageSliderPosition}% - 4px)` }"
+                      class="absolute top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-[1px] overflow-hidden bg-white/95 dark:bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.12)] pointer-events-none z-30 before:content-[''] before:absolute before:left-1/2 before:-translate-x-1/2 before:top-0 before:border-l-[1.5px] before:border-r-[1.5px] before:border-b-[4px] before:border-l-transparent before:border-r-transparent before:border-b-white dark:before:border-b-white after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:border-l-[1.5px] after:border-r-[1.5px] after:border-t-[4px] after:border-l-transparent after:border-r-transparent after:border-t-white dark:after:border-t-white"
+                      :style="{ left: `calc(${defaultImageSliderPosition}% - 1.5px)` }"
                       aria-hidden="true"
                     ></div>
 
                     <!-- 已填充的进度条 -->
                     <div
-                      class="absolute h-3 rounded-full shadow-sm z-20"
+                      class="absolute h-3 rounded-full shadow-sm z-10"
                       :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
                     ></div>
 
@@ -169,7 +169,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-7.5 13A1 1 0 003.62 19h16.76a1 1 0 00.87-1.5l-7.5-13a1 1 0 00-1.76 0z" />
                     </svg>
                     <div class="leading-snug">
-                      <span class="font-medium">提示：</span>{{ qualityHintText.colorWarning }}
+                      <span class="font-medium">{{ t('common.tip') }}</span>{{ qualityHintText.colorWarning }}
                     </div>
                   </div>
                 </div>
@@ -190,6 +190,9 @@ import CustomSelect from '../common/CustomSelect.vue';
 import CustomNumberInput from '../common/CustomNumberInput.vue';
 import { useTaskSettingsStore } from '../../stores/useTaskSettingsStore';
 import type { CompressionSettings } from '../../types';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface Props {
   isProcessing?: boolean;
@@ -231,12 +234,12 @@ const showTooltip = ref(false);
 // 防止递归/交叉覆盖的标志（对齐视频面板行为）
 const isUpdatingFromTask = ref(false);
 
-// 选项
-const formatOptions = [
-  { value: 'jpeg', label: 'JPEG', tags: ['体积中等'] },
-  { value: 'png', label: 'PNG', tags: ['体积最大'] },
-  { value: 'webp', label: 'WebP', tags: ['谷歌开发','体积最小'] }
-];
+// 选项（根据语言动态生成标签）
+const formatOptions = computed(() => [
+  { value: 'jpeg', label: 'JPEG', tags: [t('videoSettings.tagMediumSize')] },
+  { value: 'png', label: 'PNG', tags: [t('videoSettings.tagLargestSize')] },
+  { value: 'webp', label: 'WebP', tags: [t('videoSettings.tagGoogleDeveloped'), t('videoSettings.tagSmallestSize')] }
+]);
 
 // 提前派生当前格式，避免在其他计算属性中访问尚未初始化的 formatValue
 const currentFormat = computed(() => (formatSettings.value.format ?? 'jpeg'));
@@ -315,23 +318,20 @@ const qualityValue = computed({
 // 默认值位置（图片画质的“平衡点”）
 const defaultImageSliderPosition = computed(() => 80);
 
-// 质量文本（按新文案：极高画质、高画质、中等画质、低画质、极低画质 + 无损）
+// 质量文本（i18n）
 const qualityText = computed(() => {
   const v = qualityValue.value;
   const format = currentFormat.value;
   
-  if (v === 100) {
-    if (format === 'png') {
-      return '无损';
-    }
+  if (v === 100 && format === 'png') {
+    return t('videoSettings.qualityLossless');
   }
   
-  // 根据质量值返回对应文案
-  if (v >= 90) return '极高画质';
-  if (v >= 75) return '高画质';
-  if (v >= 60) return '中等画质';
-  if (v >= 30) return '低画质';
-  return '极低画质';
+  if (v >= 90) return t('videoSettings.qualityVeryHigh');
+  if (v >= 75) return t('videoSettings.qualityHigh');
+  if (v >= 60) return t('videoSettings.qualityMedium');
+  if (v >= 30) return t('videoSettings.qualityLow');
+  return t('videoSettings.qualityVeryLow');
 });
 
 // 质量提示信息（含参数和色彩警告）
@@ -352,15 +352,15 @@ const qualityHintText = computed(() => {
     paramHint = `-q:v ${v}`;
   } else if (format === 'png') {
     if (v === 100) {
-      paramHint = '无损';
+      paramHint = t('videoSettings.qualityLossless');
     } else {
       // PNG：显示色彩位数
       const colors = v >= 80 ? 256 : v >= 60 ? 128 : v >= 40 ? 96 : 64;
-      paramHint = `${colors} 色`;
+      paramHint = `${colors} ${t('videoSettings.colors')}`;
       
       // PNG 画质 80 以下警告
       if (v < 80) {
-        colorWarning = '使用调色板压缩，可能缺失部分色彩';
+        colorWarning = t('videoSettings.pngPaletteWarning');
       }
     }
   }
@@ -374,7 +374,7 @@ const resolutionOptions = computed(() => {
   if (originalWidth.value && originalHeight.value) {
     const w = originalWidth.value;
     const h = originalHeight.value;
-    opts.push({ value: 'original', label: `${w}x${h}`, tags: ['原始'] });
+    opts.push({ value: 'original', label: `${w}x${h}`, tags: [t('videoSettings.original')] });
 
     const presets = [
       { w: 1920, h: 1080, name: '1080p' },
@@ -392,7 +392,7 @@ const resolutionOptions = computed(() => {
     opts.push({ value: '1280x720', label: '1280x720', tags: ['720p'] });
     opts.push({ value: '854x480', label: '854x480', tags: ['480p'] });
   }
-  opts.push({ value: 'custom', label: '自定义' });
+  opts.push({ value: 'custom', label: t('videoSettings.custom') });
   return opts;
 });
 

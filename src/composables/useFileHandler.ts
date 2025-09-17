@@ -6,6 +6,7 @@ import { useTaskStore } from '../stores/useTaskStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useLogStore } from '../stores/useLogStore';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
+import i18n from '../i18n';
 
 
 
@@ -253,7 +254,7 @@ export function useFileHandler() {
         }
         
         console.log('Task completed successfully:', taskId);
-        logStore.addSuccess(`压缩完成：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
       } else {
         task.status = 'failed';
         task.error = result.error || 'Resume failed';
@@ -309,7 +310,7 @@ export function useFileHandler() {
                   currentFile.value = { ...task.file };
                 }
                 console.log('[FALLBACK] Output exists after interruption, marking as completed:', task.id);
-                logStore.addSuccess(`压缩完成：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath: expectedPath });
+                logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath: expectedPath });
               } else {
                 console.log('Task was paused, setting status to paused:', task.id);
                 task.status = 'paused';
@@ -424,10 +425,11 @@ export function useFileHandler() {
             console.warn('Failed to get video metadata for', displayName, ':', error);
             // 新增：用户提示，避免静默失败
             try {
-              const msg = `导入失败：无法解析视频元数据。\n文件：${displayName}\n原因：${typeof error === 'string' ? error : (error?.message || '未知错误')}`;
+              const reason = typeof error === 'string' ? error : (error?.message || '未知错误');
+              const msg = i18n.global.t('importFailed', { name: displayName, reason });
               // 在桌面端以最简单方式提示
               if (typeof window !== 'undefined' && window?.alert) {
-                window.alert(msg);
+                window.alert(msg as unknown as string);
               }
             } catch (_) {
               // ignore
@@ -792,7 +794,7 @@ export function useFileHandler() {
                     currentFile.value = { ...task.file };
                   }
                   console.log('[FALLBACK] Output exists after interruption, marking as completed:', task.id);
-                  logStore.addSuccess(`压缩完成（视频）：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath });
+                  logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath });
                 } else {
                   console.log('Task was paused, setting status to paused:', task.id);
                   task.status = 'paused';

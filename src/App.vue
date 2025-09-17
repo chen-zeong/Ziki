@@ -44,6 +44,8 @@ import { useGlobalSettingsStore } from './stores/useGlobalSettingsStore';
 import { useFileHandler } from './composables/useFileHandler';
 import { useBatchProcessor } from './composables/useBatchProcessor';
 import type { CompressionSettings, CompressionTask } from './types';
+import { useI18n } from 'vue-i18n';
+const { t } = useI18n();
 
 // 全局缓存清理函数
 const clearAllCaches = () => {
@@ -453,11 +455,11 @@ const handleClearAllTasks = async () => {
   if (activeTasks.length > 0) {
     // 如果有活跃任务，显示确认对话框
     const confirmed = await confirm(
-      `当前有 ${activeTasks.length} 个任务正在进行中，确定要清空所有任务吗？这将停止所有进行中的任务，并从队列中删除。`,
+      t('taskList.clearAllTasksConfirmActive', { count: activeTasks.length }),
       {
-        title: '确认清空',
-        okLabel: '确定清空',
-        cancelLabel: '取消'
+        title: t('common.confirm'),
+        okLabel: t('common.confirm'),
+        cancelLabel: t('common.cancel')
       }
     );
 
@@ -467,11 +469,11 @@ const handleClearAllTasks = async () => {
   } else if (tasks.value.length > 0) {
     // 如果只有已完成或失败的任务，简单确认
     const confirmed = await confirm(
-      '确定要清空所有任务吗？这将从队列中删除所有任务。',
+      t('taskList.clearAllTasksConfirmSimple'),
       {
-        title: '确认清空',
-        okLabel: '确定',
-        cancelLabel: '取消'
+        title: t('common.confirm'),
+        okLabel: t('common.confirm'),
+        cancelLabel: t('common.cancel')
       }
     );
 

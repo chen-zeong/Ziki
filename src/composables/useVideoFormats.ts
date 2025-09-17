@@ -1,6 +1,7 @@
 import { ref, computed, type Ref } from 'vue';
 import type { VideoFormatsConfig, VideoFormat } from '../types/videoFormats';
 import videoFormatsConfig from '../config/videoFormats.json';
+import i18n from '../i18n';
 
 // 创建全局状态实例
 const config = videoFormatsConfig as VideoFormatsConfig;
@@ -108,15 +109,16 @@ export function useVideoFormats() {
 
   // 为每种格式生成标签（克制、简洁）
   const getFormatTags = (key: string): string[] => {
+    const t = i18n.global.t;
     switch (key) {
-      case 'mp4': return ['主流','兼容性强'];
-      case 'mov': return ['Apple生态'];
-      case 'mkv': return ['开源','多音轨字幕'];
-      case 'avi': return ['老牌格式','体积大'];
-      case 'wmv': return ['Windows优化'];
-      case 'webm': return ['谷歌开发','Web优化'];
-      case 'flv': return ['Flash开发','过时'];
-      case 'avif': return ['高质量动态图片'];
+      case 'mp4': return [t('videoSettings.tagMainstream'), t('videoSettings.tagStrongCompatibility')];
+      case 'mov': return [t('videoSettings.tagAppleEcosystem')];
+      case 'mkv': return [t('videoSettings.tagOpenSource'), t('videoSettings.tagMultiTrackSubtitle')];
+      case 'avi': return [t('videoSettings.tagOldFormat'), t('videoSettings.tagLargeSize')];
+      case 'wmv': return [t('videoSettings.tagWindowsOptimized')];
+      case 'webm': return [t('videoSettings.tagGoogleDeveloped'), t('videoSettings.tagWebOptimized')];
+      case 'flv': return [t('videoSettings.tagFlashDeveloped'), t('videoSettings.tagOutdated')];
+      case 'avif': return [t('videoSettings.tagHighQualityImage')];
       default: return [];
     }
   };

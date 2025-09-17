@@ -6,7 +6,7 @@
       class="w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-md px-3 py-2 text-left shadow-sm hover:bg-gray-50 dark:hover:bg-[#151515] focus:outline-none focus:ring-2 focus:ring-amber-500 relative pr-9"
       @click.stop="toggleDropdown"
     >
-      <span :class="['block truncate', isPlaceholder ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200']">{{ selectedLabel || placeholder }}</span>
+      <span :class="['block truncate', isPlaceholder ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200']">{{ selectedLabel || placeholderText }}</span>
       <ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
     </button>
 
@@ -100,6 +100,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onBeforeUnmount, type CSSProperties } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ChevronDown, Check } from 'lucide-vue-next';
 
 interface Option { value: string; label: string; description?: string; tags?: string[] }
@@ -117,13 +118,15 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: undefined,
-  placeholder: '请选择',
+  placeholder: '',
   dropdownDirection: 'down',
   teleportToBody: false,
   maxVisibleOptions: 6,
   containerClass: '',
   strictDirection: false
 });
+
+const { t } = useI18n();
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -137,6 +140,7 @@ const selectedLabel = computed(() => {
   return opt?.label || '';
 });
 const isPlaceholder = computed(() => !selectedLabel.value);
+const placeholderText = computed(() => props.placeholder || t('common.pleaseSelect'));
 
 // 不再截断 options，使用 maxHeight 控制可视数量
 const visibleOptions = computed(() => props.options);
@@ -178,12 +182,15 @@ function computePosition() {
       useUp = spaceAbove > spaceBelow;
     }
 
-    // 按方向计算可用高度，并裁剪 maxHeight
+    // 实际内容高度（可能小于 desiredMax）
+    const naturalH = menu.scrollHeight || desiredMax;
+
+    // 按方向计算可用高度，并裁剪高度用于定位
     const available = useUp ? spaceAbove : spaceBelow;
-    const maxH = Math.max(0, Math.min(desiredMax, available));
+    const targetH = Math.max(0, Math.min(desiredMax, available, naturalH));
 
     const top = useUp
-      ? (rect.top - maxH - GAP)
+      ? (rect.top - targetH - GAP)
       : (rect.bottom + GAP);
 
     menuStyle.value = {
@@ -191,7 +198,7 @@ function computePosition() {
       width: rect.width + 'px',
       left: rect.left + 'px',
       top: Math.round(top) + 'px',
-      maxHeight: Math.round(maxH) + 'px'
+      maxHeight: Math.round(Math.min(desiredMax, available)) + 'px'
     };
   });
 }

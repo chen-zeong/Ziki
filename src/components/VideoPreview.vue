@@ -9,7 +9,7 @@
       <!-- 压缩前（左侧） -->
       <img 
          ref="beforeImgRef"
-         alt="压缩前" 
+         :alt="$t('videoComparison.original')" 
          class="before-image w-full h-full object-cover"
        >
        
@@ -17,17 +17,17 @@
        <div v-if="hasAfter" class="after-image">
          <img 
            ref="afterImgRef"
-           alt="压缩后" 
+           :alt="$t('videoComparison.compressed')" 
            class="w-full h-full object-cover"
          >
        </div>
        
        <!-- 文字标签 - 只在任务完成时显示 -->
        <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20 ">
-         压缩前
+         {{ $t('videoComparison.original') }}
        </div>
        <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20">
-         压缩后
+         {{ $t('videoComparison.compressed') }}
        </div>
        
 
@@ -89,7 +89,7 @@
               <!-- 压缩前（左侧） -->
               <img 
                 :src="fullscreenBeforeSrc"
-                alt="压缩前" 
+                :alt="$t('videoComparison.original')" 
                 class="before-image w-full h-full object-contain"
               >
               
@@ -97,17 +97,17 @@
               <div v-if="hasAfter" class="after-image">
                 <img 
                   :src="fullscreenAfterSrc"
-                  alt="压缩后" 
+                  :alt="$t('videoComparison.compressed')" 
                   class="w-full h-full object-contain"
                 >
               </div>
               
               
               <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-3 py-2 rounded text-base z-20">
-                压缩前
+                {{ $t('videoComparison.original') }}
               </div>
               <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-3 py-2 rounded text-base z-20">
-                压缩后
+                {{ $t('videoComparison.compressed') }}
               </div>
               
               
