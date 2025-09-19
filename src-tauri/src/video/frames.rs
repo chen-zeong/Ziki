@@ -1,7 +1,7 @@
 use std::process::Command;
 use tauri::Manager;
 use base64::{Engine as _, engine::general_purpose};
-use crate::video::{get_ffmpeg_binary};
+use crate::video::{get_ffmpeg_binary, get_ffprobe_binary};
 
 // 获取视频时长的单独函数 - 使用ffprobe快速获取
 #[allow(non_snake_case)]
@@ -10,8 +10,41 @@ pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle
     let start_time = std::time::Instant::now();
     println!("[Rust Debug] 开始获取视频时长: {}", videoPath);
     
+    // 解析 ffprobe 路径（开发/生产均可用，含多路径回退）
+    let ffprobe_path = if cfg!(debug_assertions) {
+        let current_exe = std::env::current_exe().unwrap();
+        let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+        src_tauri_dir.join("bin").join(get_ffprobe_binary())
+    } else {
+        let resource_dir = _app_handle.path().resource_dir().unwrap();
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffprobe_binary()),
+            resource_dir.join("bin").join("ffprobe"),
+            resource_dir.join("bin").join("ffprobe.exe"),
+            exe_dir.join(get_ffprobe_binary()),
+            exe_dir.join("ffprobe"),
+            exe_dir.join("ffprobe.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFprobe binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    };
+    
     // 使用ffprobe快速获取视频时长，比FFmpeg快得多
-    let output = Command::new("ffprobe")
+    let output = Command::new(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -60,20 +93,39 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
     let path_check_start = std::time::Instant::now();
     println!("[Rust Debug] 检查FFmpeg路径...");
     
-    // Get FFmpeg path
+    // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
         let current_exe = std::env::current_exe().unwrap();
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffmpeg_binary()),
+            resource_dir.join("bin").join("ffmpeg"),
+            resource_dir.join("bin").join("ffmpeg.exe"),
+            exe_dir.join(get_ffmpeg_binary()),
+            exe_dir.join("ffmpeg"),
+            exe_dir.join("ffmpeg.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFmpeg binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     };
     println!("[Rust Debug] FFmpeg路径获取完成, 耗时: {:?}, 路径: {:?}", path_check_start.elapsed(), ffmpeg_path);
-    
-    if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
-    }
     
     // Calculate timestamp within the custom time range
     let timestamp_calc_start = std::time::Instant::now();
@@ -118,32 +170,26 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
         .arg("-f").arg("image2pipe")     // 管道输出
         .arg("-vcodec").arg("mjpeg")     // MJPEG编码器
         .arg("-threads").arg("1")        // 单线程，减少开销
-        .arg("-an")                      // 禁用音频处理
-        .arg("-sn")                      // 禁用字幕处理
-        .arg("-dn")                      // 禁用数据流处理
-        .arg("-avoid_negative_ts").arg("make_zero")
         .arg("-")
         .output()
         .map_err(|e| format!("Failed to generate frame {}: {}", frameIndex, e))?;
-    println!("[Frame {}] FFmpeg command executed", frameIndex);
     println!("[Rust Debug] FFmpeg命令执行完成, 帧 {} 耗时: {:?}", frameIndex, ffmpeg_start.elapsed());
     
     if output.status.success() {
         if !output.stdout.is_empty() {
             let base64_start = std::time::Instant::now();
             let base64_data = general_purpose::STANDARD.encode(&output.stdout);
-            let data_url = format!("data:image/jpeg;base64,{}", base64_data);
-            println!("[Rust Debug] Base64编码完成, 帧 {} 耗时: {:?}, 总耗时: {:?}", frameIndex, base64_start.elapsed(), start_time.elapsed());
-            Ok(data_url)
+            println!("[Rust Debug] Base64编码完成, 帧 {} 耗时: {:?}, 数据大小: {} bytes", frameIndex, base64_start.elapsed(), output.stdout.len());
+            println!("[Rust Debug] 帧 {} 生成完成, 总耗时: {:?}", frameIndex, start_time.elapsed());
+            Ok(format!("data:image/jpeg;base64,{}", base64_data))
         } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            println!("[Rust Debug] FFmpeg成功但返回空数据, 帧 {}, stderr: {}", frameIndex, stderr);
-            Err(format!("Empty frame data for frame {} - FFmpeg stderr: {}", frameIndex, stderr))
+            println!("[Rust Debug] FFmpeg输出为空, 帧 {}", frameIndex);
+            Err(format!("No frame data generated for frame {}", frameIndex))
         }
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("[Rust Debug] FFmpeg执行失败, 帧 {}, stderr: {}", frameIndex, stderr);
-        Err(format!("FFmpeg failed for frame {}: {}", frameIndex, stderr))
+        println!("[Rust Debug] FFmpeg执行失败, 帧 {}, 错误: {}", frameIndex, stderr);
+        Err(format!("FFmpeg failed to generate frame {}: {}", frameIndex, stderr))
     }
 }
 
@@ -157,20 +203,39 @@ pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: 
     let path_check_start = std::time::Instant::now();
     println!("[Rust Debug] 检查FFmpeg路径...");
     
-    // Get FFmpeg path
+    // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
         let current_exe = std::env::current_exe().unwrap();
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffmpeg_binary()),
+            resource_dir.join("bin").join("ffmpeg"),
+            resource_dir.join("bin").join("ffmpeg.exe"),
+            exe_dir.join(get_ffmpeg_binary()),
+            exe_dir.join("ffmpeg"),
+            exe_dir.join("ffmpeg.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFmpeg binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     };
     println!("[Rust Debug] FFmpeg路径获取完成, 耗时: {:?}, 路径: {:?}", path_check_start.elapsed(), ffmpeg_path);
-    
-    if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
-    }
     
     // Calculate timestamp for the specific frame (跳过获取时长步骤)
     let timestamp_calc_start = std::time::Instant::now();
@@ -226,24 +291,76 @@ pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handl
     let start_time = std::time::Instant::now();
     println!("[Rust Debug] 开始生成帧 {} for {}", frameIndex, videoPath);
     
-    // Get FFmpeg path
+    // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
         let current_exe = std::env::current_exe().unwrap();
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffmpeg_binary()),
+            resource_dir.join("bin").join("ffmpeg"),
+            resource_dir.join("bin").join("ffmpeg.exe"),
+            exe_dir.join(get_ffmpeg_binary()),
+            exe_dir.join("ffmpeg"),
+            exe_dir.join("ffmpeg.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFmpeg binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     };
     
-    if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
-    }
-    
-    // First, get video duration using ffprobe (fast)
+    // 先用 ffprobe 获取时长（含多路径回退）
     let duration_start = std::time::Instant::now();
     println!("[Rust Debug] 开始获取视频时长 for 帧 {}", frameIndex);
-    let duration_output = Command::new("ffprobe")
+
+    let ffprobe_path = if cfg!(debug_assertions) {
+        let current_exe = std::env::current_exe().unwrap();
+        let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+        src_tauri_dir.join("bin").join(get_ffprobe_binary())
+    } else {
+        let resource_dir = app_handle.path().resource_dir().unwrap();
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffprobe_binary()),
+            resource_dir.join("bin").join("ffprobe"),
+            resource_dir.join("bin").join("ffprobe.exe"),
+            exe_dir.join(get_ffprobe_binary()),
+            exe_dir.join("ffprobe"),
+            exe_dir.join("ffprobe.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFprobe binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    };
+
+    let duration_output = Command::new(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -326,22 +443,74 @@ pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handl
 
 #[tauri::command]
 pub async fn generate_video_frames(video_path: String, app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
-    // Get FFmpeg path
+    // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
         let current_exe = std::env::current_exe().unwrap();
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffmpeg_binary()),
+            resource_dir.join("bin").join("ffmpeg"),
+            resource_dir.join("bin").join("ffmpeg.exe"),
+            exe_dir.join(get_ffmpeg_binary()),
+            exe_dir.join("ffmpeg"),
+            exe_dir.join("ffmpeg.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFmpeg binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     };
     
-    if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
-    }
-    
+    // 解析 ffprobe 路径（含多路径回退）
+    let ffprobe_path = if cfg!(debug_assertions) {
+        let current_exe = std::env::current_exe().unwrap();
+        let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+        src_tauri_dir.join("bin").join(get_ffprobe_binary())
+    } else {
+        let resource_dir = app_handle.path().resource_dir().unwrap();
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffprobe_binary()),
+            resource_dir.join("bin").join("ffprobe"),
+            resource_dir.join("bin").join("ffprobe.exe"),
+            exe_dir.join(get_ffprobe_binary()),
+            exe_dir.join("ffprobe"),
+            exe_dir.join("ffprobe.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFprobe binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    };
+
     // First, get video duration using ffprobe (fast)
-    let duration_output = Command::new("ffprobe")
+    let duration_output = Command::new(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -424,7 +593,7 @@ pub async fn generate_video_frames(video_path: String, app_handle: tauri::AppHan
     Ok(frames)
 }
 
-#[allow(non_snake_case)]
+#[allow(non_snake_case, dead_code)]
 #[tauri::command]
 pub async fn generate_thumbnail(videoPath: String, app_handle: tauri::AppHandle) -> Result<String, String> {
     // In development mode, use the bin directory in src-tauri
@@ -435,16 +604,35 @@ pub async fn generate_thumbnail(videoPath: String, app_handle: tauri::AppHandle)
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
-        // Production mode: use resource directory
+        // Production mode: search multiple candidate locations
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or(std::env::current_dir().unwrap());
+        let candidates: Vec<std::path::PathBuf> = vec![
+            resource_dir.join("bin").join(get_ffmpeg_binary()),
+            resource_dir.join("bin").join("ffmpeg"),
+            resource_dir.join("bin").join("ffmpeg.exe"),
+            exe_dir.join(get_ffmpeg_binary()),
+            exe_dir.join("ffmpeg"),
+            exe_dir.join("ffmpeg.exe"),
+        ];
+        if let Some(found) = candidates.iter().find(|p| p.exists()).cloned() {
+            found
+        } else {
+            return Err(format!(
+                "FFmpeg binary not found. Tried: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
     };
 
     println!("[Thumbnail] Creating ffmpeg command for {}", videoPath);
-
-    if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
-    }
 
     // 首先获取视频时长以计算中间帧位置
     let duration_result = get_video_duration(videoPath.clone(), app_handle.clone()).await;

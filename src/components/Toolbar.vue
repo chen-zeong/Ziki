@@ -8,7 +8,7 @@
         data-tauri-drag-region="false"
       >
         <BadgePlus class="w-4 h-4" />
-        <span>{{ $t('toolbar.addFiles') || '添加文件' }}</span>
+        <span>{{ $t('toolbar.addFiles') || '添加' }}</span>
       </button>
       
       <button 

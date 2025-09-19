@@ -119,15 +119,53 @@ pub async fn compress_video(
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
-        // Production mode: use resource directory
+        // Production mode: prefer resource dir, then fallback to exe dir with both suffixed and unsuffixed names
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        candidates.push(resource_dir.join("bin").join(get_ffmpeg_binary()));
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                candidates.push(exe_dir.join(get_ffmpeg_binary()));
+                #[cfg(target_os = "windows")]
+                {
+                    candidates.push(exe_dir.join("ffmpeg.exe"));
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    candidates.push(exe_dir.join("ffmpeg"));
+                }
+            }
+        }
+        candidates.into_iter().find(|p| p.exists()).unwrap_or_else(|| resource_dir.join("bin").join(get_ffmpeg_binary()))
     };
     
     println!("FFmpeg path: {:?}", ffmpeg_path);
     
     if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
+        // Build helpful error message with tried paths
+        let mut tried: Vec<String> = Vec::new();
+        if cfg!(debug_assertions) {
+            let current_exe = std::env::current_exe().unwrap();
+            let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+            tried.push(src_tauri_dir.join("bin").join(get_ffmpeg_binary()).display().to_string());
+        } else {
+            let resource_dir = app_handle.path().resource_dir().unwrap();
+            tried.push(resource_dir.join("bin").join(get_ffmpeg_binary()).display().to_string());
+            if let Ok(exe_path) = std::env::current_exe() {
+                if let Some(exe_dir) = exe_path.parent() {
+                    tried.push(exe_dir.join(get_ffmpeg_binary()).display().to_string());
+                    #[cfg(target_os = "windows")]
+                    {
+                        tried.push(exe_dir.join("ffmpeg.exe").display().to_string());
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        tried.push(exe_dir.join("ffmpeg").display().to_string());
+                    }
+                }
+            }
+        }
+        return Err(format!("FFmpeg binary not found. Tried: {}", tried.join(" | ")));
     }
     
     let original_size = std::fs::metadata(&inputPath)
@@ -141,15 +179,52 @@ pub async fn compress_video(
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffprobe_binary())
     } else {
-        // Production mode: use resource directory
+        // Production mode: prefer resource dir, then fallback to exe dir with both suffixed and unsuffixed names
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffprobe_binary())
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        candidates.push(resource_dir.join("bin").join(get_ffprobe_binary()));
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                candidates.push(exe_dir.join(get_ffprobe_binary()));
+                #[cfg(target_os = "windows")]
+                {
+                    candidates.push(exe_dir.join("ffprobe.exe"));
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    candidates.push(exe_dir.join("ffprobe"));
+                }
+            }
+        }
+        candidates.into_iter().find(|p| p.exists()).unwrap_or_else(|| resource_dir.join("bin").join(get_ffprobe_binary()))
     };
     
     println!("FFprobe path: {:?}", ffprobe_path);
     
     if !ffprobe_path.exists() {
-        return Err(format!("FFprobe binary not found at: {:?}", ffprobe_path));
+        let mut tried: Vec<String> = Vec::new();
+        if cfg!(debug_assertions) {
+            let current_exe = std::env::current_exe().unwrap();
+            let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+            tried.push(src_tauri_dir.join("bin").join(get_ffprobe_binary()).display().to_string());
+        } else {
+            let resource_dir = app_handle.path().resource_dir().unwrap();
+            tried.push(resource_dir.join("bin").join(get_ffprobe_binary()).display().to_string());
+            if let Ok(exe_path) = std::env::current_exe() {
+                if let Some(exe_dir) = exe_path.parent() {
+                    tried.push(exe_dir.join(get_ffprobe_binary()).display().to_string());
+                    #[cfg(target_os = "windows")]
+                    {
+                        tried.push(exe_dir.join("ffprobe.exe").display().to_string());
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        tried.push(exe_dir.join("ffprobe").display().to_string());
+                    }
+                }
+            }
+        }
+        return Err(format!("FFprobe binary not found. Tried: {}", tried.join(" | ")));
     }
     
     let duration_cmd = Command::new(&ffprobe_path)

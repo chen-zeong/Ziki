@@ -81,8 +81,26 @@ pub async fn compress_image(
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffmpeg_binary())
     } else {
+        // 生产环境：构建候选路径并选择第一个存在的
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffmpeg_binary())
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+        candidates.push(resource_dir.join("bin").join(get_ffmpeg_binary()));
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                // 带后缀的打包文件名
+                candidates.push(exe_dir.join(get_ffmpeg_binary()));
+                // 无后缀名称（如 Contents/MacOS/ffmpeg）
+                #[cfg(target_os = "windows")]
+                {
+                    candidates.push(exe_dir.join("ffmpeg.exe"));
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    candidates.push(exe_dir.join("ffmpeg"));
+                }
+            }
+        }
+        candidates.into_iter().find(|p| p.exists()).unwrap_or_else(|| resource_dir.join("bin").join(get_ffmpeg_binary()))
     };
 
     // 基本参数打印
@@ -102,7 +120,33 @@ pub async fn compress_image(
     }
 
     if !ffmpeg_path.exists() {
-        return Err(format!("FFmpeg binary not found at: {:?}", ffmpeg_path));
+        // 进一步给出候选路径提示，帮助定位打包位置
+        let mut tried: Vec<String> = Vec::new();
+        if cfg!(debug_assertions) {
+            let current_exe = std::env::current_exe().unwrap();
+            let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
+            tried.push(src_tauri_dir.join("bin").join(get_ffmpeg_binary()).display().to_string());
+        } else {
+            let resource_dir = app_handle.path().resource_dir().unwrap();
+            tried.push(resource_dir.join("bin").join(get_ffmpeg_binary()).display().to_string());
+            if let Ok(exe_path) = std::env::current_exe() {
+                if let Some(exe_dir) = exe_path.parent() {
+                    tried.push(exe_dir.join(get_ffmpeg_binary()).display().to_string());
+                    #[cfg(target_os = "windows")]
+                    {
+                        tried.push(exe_dir.join("ffmpeg.exe").display().to_string());
+                    }
+                    #[cfg(not(target_os = "windows"))]
+                    {
+                        tried.push(exe_dir.join("ffmpeg").display().to_string());
+                    }
+                }
+            }
+        }
+        return Err(format!(
+            "FFmpeg binary not found. Tried: {}",
+            tried.join(" | ")
+        ));
     }
 
     let original_size = std::fs::metadata(&inputPath)
@@ -209,60 +253,37 @@ pub async fn compress_image(
             args_for_log.push(q.to_string());
             println!("[Image] codec=libwebp, args: -q:v {}", q);
         },
-        other => {
-            // Fallback to PNG (无损)
-            eprintln!("[Image] Unknown image format '{}', falling back to PNG", other);
-            
-            if let Some(scale) = scale_filter {
-                println!("[Image] scale_filter: {}", scale);
-                cmd.arg("-vf").arg(&scale);
-                args_for_log.push("-vf".to_string());
-                args_for_log.push(scale);
-            } else {
-                println!("[Image] scale_filter: <none> (original)");
-            }
-            
-            cmd.arg("-c:v").arg("png");
-            cmd.arg("-compression_level").arg("90");
-            args_for_log.push("-c:v".to_string());
-            args_for_log.push("png".to_string());
-            args_for_log.push("-compression_level".to_string());
-            args_for_log.push("90".to_string());
-            println!("[Image] codec=png (fallback), args: -compression_level 90");
+        _ => {
+            return Err(format!("Unsupported image format: {}", settings.format));
         }
     }
 
+    // 输出路径
     cmd.arg(&outputPath);
     args_for_log.push(outputPath.clone());
 
-    // 打印将要执行的完整命令（路径 + 参数）
-    let args_joined = args_for_log
-        .iter()
-        .map(|a| if a.contains(' ') { format!("\"{}\"", a) } else { a.clone() })
-        .collect::<Vec<_>>()
-        .join(" ");
-    println!("[Image] Executing FFmpeg: {:?} {}", ffmpeg_path, args_joined);
+    println!("[Image] ffmpeg command: {} {}",
+        ffmpeg_path.display(),
+        args_for_log.join(" ")
+    );
 
-    let output = cmd.output().await.map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
+    let status = cmd.status().await.map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        eprintln!("[Image] ffmpeg failed: {}", stderr);
-        return Err(format!("ffmpeg failed: {}", stderr));
+    if !status.success() {
+        return Err(format!("ffmpeg exited with status: {}", status));
     }
 
+    // 计算压缩前后的文件大小
     let compressed_size = std::fs::metadata(&outputPath)
-        .map(|m| m.len())
-        .ok();
-
-    println!("[Image] Success. original_size={} bytes, compressed_size={:?} bytes", original_size, compressed_size);
+        .map_err(|e| format!("Failed to get compressed file size: {}", e))?
+        .len();
 
     Ok(CompressionResult {
         success: true,
         output_path: Some(outputPath),
         error: None,
         original_size,
-        compressed_size,
+        compressed_size: Some(compressed_size),
         compressed_metadata: None,
     })
 }

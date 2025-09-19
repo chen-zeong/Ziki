@@ -151,24 +151,52 @@ pub async fn open_output_folder(folder_path: String) -> Result<(), String> {
 #[tauri::command]
 pub fn get_video_metadata(app_handle: tauri::AppHandle, videoPath: String) -> Result<VideoMetadata, String> {
     // In development mode, use the bin directory in src-tauri
-    // In production, use the resource directory
+    // In production, use the resource directory with robust fallbacks
     let ffprobe_path = if cfg!(debug_assertions) {
         // Development mode: use bin directory relative to src-tauri
         let current_exe = std::env::current_exe().unwrap();
         let src_tauri_dir = current_exe.parent().unwrap().parent().unwrap().parent().unwrap();
         src_tauri_dir.join("bin").join(get_ffprobe_binary())
     } else {
-        // Production mode: use resource directory
+        // Production mode: try multiple candidate locations
+        let mut candidates: Vec<std::path::PathBuf> = Vec::new();
         let resource_dir = app_handle.path().resource_dir().unwrap();
-        resource_dir.join("bin").join(get_ffprobe_binary())
+        let resource_bin = resource_dir.join("bin");
+        candidates.push(resource_bin.join(get_ffprobe_binary()));
+        candidates.push(resource_bin.join("ffprobe"));
+        candidates.push(resource_bin.join("ffprobe.exe"));
+
+        if let Ok(current_exe) = std::env::current_exe() {
+            if let Some(exe_dir) = current_exe.parent() {
+                candidates.push(exe_dir.join(get_ffprobe_binary()));
+                candidates.push(exe_dir.join("ffprobe"));
+                candidates.push(exe_dir.join("ffprobe.exe"));
+            }
+        }
+
+        // Pick the first existing path; if none, keep the first for error message
+        match candidates.iter().find(|p| p.exists()) {
+            Some(p) => p.clone(),
+            None => {
+                let tried = candidates
+                    .iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                return Err(format!(
+                    "FFprobe binary not found. Tried: {}",
+                    tried
+                ));
+            }
+        }
     };
-    
+
     println!("FFprobe path for metadata: {:?}", ffprobe_path);
-    
+
     if !ffprobe_path.exists() {
         return Err(format!("FFprobe binary not found at: {:?}", ffprobe_path));
     }
-    
+
     let output = Command::new(&ffprobe_path)
         .args([
             "-v", "quiet",
@@ -179,14 +207,14 @@ pub fn get_video_metadata(app_handle: tauri::AppHandle, videoPath: String) -> Re
         ])
         .output()
         .map_err(|e| format!("Failed to execute ffprobe: {}", e))?;
-    
+
     if !output.status.success() {
         return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
-    
+
     let json_str = String::from_utf8(output.stdout)
         .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
-    
+
     parse_ffprobe_json(&json_str)
 }
 

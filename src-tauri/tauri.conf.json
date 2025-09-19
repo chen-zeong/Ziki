@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "Ziki",
   "version": "0.1.0",
-  "identifier": "com.tauri-app.app",
+  "identifier": "com.ziki.ziki",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:7350",
@@ -14,6 +14,7 @@
     "windows": [
       {
         "titleBarStyle": "Overlay",
+        "title": "",
         "width": 1147,
         "height": 852,
         "minWidth": 1147,
@@ -40,6 +41,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
+      "bin/ffmpeg",
       "bin/ffprobe"
     ]
   }

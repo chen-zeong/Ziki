@@ -17,7 +17,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   const outputPath = ref('')
   const outputFileNameFormat = ref<OutputFileNameFormat>('with-time')
   const theme = ref<Theme>('auto')
-  const language = ref<Language>('zh')
+  // 默认语言与 i18n 的默认语言保持一致（根据系统语言自动判定）
+  const language = ref<Language>(i18n.global.locale.value as Language)
   const isInitialized = ref(false)
 
   const { t } = i18n.global
@@ -37,7 +38,6 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     { value: 'with-random', label: t('outputFolder.optionWithRandom'), description: t('outputFolder.descWithRandom') }
   ])
 
-  // 动作
   const setOutputPath = (path: string) => {
     outputPath.value = path
     saveSettings()
@@ -48,8 +48,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     saveSettings()
   }
 
-  const setTheme = (newTheme: Theme) => {
-    theme.value = newTheme
+  const setTheme = (value: Theme) => {
+    theme.value = value
     updateThemeClass()
     saveSettings()
   }
@@ -142,10 +142,16 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
         outputPath.value = settings.outputPath || ''
         outputFileNameFormat.value = settings.outputFileNameFormat || 'original'
         theme.value = settings.theme || 'auto'
-        language.value = settings.language || 'zh'
+        // 未保存语言时，回退到按系统自动判定的 i18n 默认语言
+        language.value = settings.language || (i18n.global.locale.value as Language)
+      } else {
+        // 没有任何保存记录时，使用 i18n 的默认语言（系统语言）
+        language.value = i18n.global.locale.value as Language
       }
     } catch (error) {
       console.error('Failed to load settings:', error)
+      // 兜底：保持 i18n 默认语言
+      language.value = i18n.global.locale.value as Language
     }
   }
 
@@ -174,7 +180,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   const resetSettings = async () => {
     outputFileNameFormat.value = 'original'
     theme.value = 'auto'
-    language.value = 'zh'
+    // 重置为系统语言（与 i18n 默认一致）
+    language.value = i18n.global.locale.value as Language
     await initializeOutputPath()
     updateThemeClass()
     saveSettings()

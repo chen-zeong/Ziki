@@ -89,7 +89,7 @@
           <CustomSelect 
             v-if="!isCustomResolution"
             v-model="resolution"
-            :options="resolutionOptions.filter((opt: { value: string; label: string; tags?: string[] }) => opt.value !== 'custom')"
+            :options="resolutionOptionsNoCustom"
             :placeholder="metadata?.resolution ? `${metadata.resolution}` : t('videoSettings.selectResolution')"
             dropdown-direction="up"
             strict-direction
@@ -282,14 +282,14 @@ const calculateScaledResolutions = (originalResolution: string) => {
 };
 
 const resolutionOptions = computed(() => {
-  const options = [] as { value: any; label: string; tags?: string[] }[];
+  const options: { value: string; label: string; tags?: string[] }[] = [];
   
   // 如果有metadata，首先添加原始分辨率选项
   if (props.metadata) {
     // 添加原始分辨率选项
     options.push({
-      value: props.metadata.resolution,
-      label: props.metadata.resolution,
+      value: 'original',
+      label: `${props.metadata.resolution} (${t('videoSettings.original')})`,
       tags: [t('videoSettings.original')]
     });
     
@@ -309,6 +309,10 @@ const resolutionOptions = computed(() => {
   options.push({ value: 'custom', label: t('videoSettings.customResolution') });
   
   return options;
+});
+
+const resolutionOptionsNoCustom = computed(() => {
+  return resolutionOptions.value.filter(opt => opt.value !== 'custom');
 });
 
 const toggleCustomResolution = () => {

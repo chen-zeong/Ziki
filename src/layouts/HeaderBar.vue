@@ -19,6 +19,15 @@ onMounted(async () => {
 
   try {
     appWindow = TauriWindow.getCurrent();
+
+    // 设置窗口标题为空字符串，保证顶部不显示任何文字（跨平台生效）
+    try {
+    // 使用单个空格而非空字符串，避免在部分平台/策略下被视为无效标题
+    await appWindow.setTitle(' ');
+    } catch (e) {
+      console.warn('Failed to set empty window title:', e);
+    }
+
     const platform = await invoke<string>('get_platform');
     isWindows.value = platform === 'windows';
     if (isWindows.value) {
@@ -74,13 +83,13 @@ const handleClose = async () => {
         class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
         @click="handleMaximize"
         :data-tauri-drag-region="false"
-        :title="$t('window.maximizeRestore') || '最大化/还原'"
+        :title="$t('window.maximize') || '最大化'"
       >
         <Square class="w-4 h-4" />
       </button>
       <!-- 关闭 -->
       <button
-        class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 rounded-md transition-colors"
+        class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
         @click="handleClose"
         :data-tauri-drag-region="false"
         :title="$t('window.close') || '关闭'"
@@ -89,20 +98,15 @@ const handleClose = async () => {
       </button>
     </div>
 
-    <!-- 中间留白：作为拖拽区域的缓冲，提高可拖拽面积 -->
+    <!-- 中间：标题留白（不显示任何文字） -->
     <div class="flex-1" />
 
-    <!-- 右侧：日志、语言切换和主题切换 -->
-    <div class="flex items-center space-x-2">
-      <!-- Log Panel Button: 放在语言切换左边 -->
-      <div :data-tauri-drag-region="false">
+    <!-- 右侧：主题与语言切换、日志按钮等 -->
+    <div class="flex items-center space-x-2" :data-tauri-drag-region="false">
+      <div>
         <LogPanel />
       </div>
-
-      <!-- Language Switcher -->
       <LanguageSwitcher />
-      
-      <!-- Theme Toggle -->
       <button 
         class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
         @click="globalSettings.toggleTheme"

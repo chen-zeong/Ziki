@@ -4,9 +4,9 @@ export default {
     seconds: '秒',
     minutes: '分',
     hours: '小时',
-    secondsShort: '秒',
-    minutesShort: '分',
-    hoursShort: '时',
+    secondsShort: 's',
+    minutesShort: 'm',
+    hoursShort: 'h'
   },
 
   // Common
@@ -175,7 +175,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     colorDepth: '色彩深度',
     statusPending: '等待中',
     statusQueued: '排队中',
-    statusProcessing: '压缩中...',
+    statusProcessing: '压缩中',
     statusCompleted: '压缩完成',
     statusFailed: '压缩失败',
     noFilteredTasks: '没有符合筛选条件的任务',

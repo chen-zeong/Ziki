@@ -20,6 +20,14 @@
     "core:window:allow-close",
     "core:window:allow-is-maximized",
     "core:window:allow-set-fullscreen",
-    "core:window:allow-is-fullscreen"
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-set-title",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "bin/ffmpeg", "sidecar": true },
+        { "name": "bin/ffprobe", "sidecar": true }
+      ]
+    }
   ]
 }
