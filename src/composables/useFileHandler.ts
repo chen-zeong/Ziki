@@ -199,6 +199,18 @@ export function useFileHandler() {
       activeErrorListeners.set(task.id, unlistenErr);
     } catch {}
 
+    // 新增：监听后端发送的 FFmpeg 命令事件（恢复场景）
+    try {
+      const unlistenCmd = await listen(`compression-command-${task.id}`, (event: any) => {
+        const { command, args } = (event && event.payload) || {};
+        const display = command || (Array.isArray(args) ? `ffmpeg ${args.join(' ')}` : '');
+        if (display) {
+          logStore.addInfo(i18n.global.t('logMessages.ffmpegCommand', { name: display }), { taskId: task.id, command, args });
+        }
+      });
+      activeCommandListeners.set(task.id, unlistenCmd);
+    } catch {}
+
     // 先设置取消监听器
     const unlistenCancel = await listen(`compression-cancelled-${task.id}`, () => {
       if (cancelledTasks.has(task.id)) return;
@@ -238,26 +250,34 @@ export function useFileHandler() {
       }
 
       if (result.success) {
-        // 恢复成功，标记为完成状态
-        task.status = 'completed';
-        task.progress = 100;
-        task.originalSize = result.originalSize;
-        task.compressedSize = result.compressedSize || 0;
-        task.compressedMetadata = result.compressedMetadata;
-        task.completedAt = new Date();
-        task.file.compressedPath = result.outputPath;
-        task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
+        // 恢复成功，使用 store 的实时任务对象来更新，避免陈旧引用
+        const live = taskStore.getTaskById(task.id) || task;
+        const updatedTask: CompressionTask = {
+          ...live,
+          status: 'completed',
+          progress: 100,
+          originalSize: result.originalSize,
+          compressedSize: result.compressedSize ?? live.compressedSize ?? 0,
+          compressedMetadata: result.compressedMetadata,
+          completedAt: new Date(),
+          file: {
+            ...live.file,
+            compressedPath: result.outputPath,
+            compressedUrl: result.outputPath ? convertFileSrc(result.outputPath) : undefined
+          }
+        };
+        taskStore.updateTask(updatedTask);
         
         // Update currentFile if it matches this task
-        if (currentFile.value && currentFile.value.id === task.file.id) {
-          currentFile.value = { ...task.file };
+        if (currentFile.value && currentFile.value.id === updatedTask.file.id) {
+          currentFile.value = { ...updatedTask.file };
         }
         
         console.log('Task completed successfully:', taskId);
-        logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${updatedTask.file.name}`, { taskId: updatedTask.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
       } else {
-        task.status = 'failed';
-        task.error = result.error || 'Resume failed';
+        const live = taskStore.getTaskById(task.id) || task;
+        taskStore.updateTask({ ...live, status: 'failed', error: result.error || 'Resume failed' });
         logStore.addError(`恢复失败：${task.file.name}`, { taskId: task.id, error: result.error });
       }
     } catch (error) {
@@ -270,8 +290,6 @@ export function useFileHandler() {
       const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Failed to resume compression:', errorMessage);
-      // 日志
       logStore.addError(`恢复失败：${task.file.name}`, { taskId: task.id, error: errorMessage });
 
       // 检查是否是再次被暂停
@@ -298,39 +316,48 @@ export function useFileHandler() {
                 try {
                   compressedMetadata = await invoke<VideoMetadata>('get_video_metadata', { videoPath: expectedPath });
                 } catch {}
-                task.status = 'completed';
-                task.progress = 100;
-                task.compressedSize = size;
-                task.compressedMetadata = compressedMetadata;
-                task.completedAt = new Date();
-                task.file.compressedPath = expectedPath;
-                task.file.compressedUrl = expectedPath ? convertFileSrc(expectedPath) : undefined;
-                // Update currentFile if it matches this task
-                if (currentFile.value && currentFile.value.id === task.file.id) {
-                  currentFile.value = { ...task.file };
+                // 使用store进行原子更新，避免直接修改task导致的引用问题
+                const live = taskStore.getTaskById(task.id) || task;
+                const updatedTask: CompressionTask = {
+                  ...live,
+                  status: 'completed',
+                  progress: 100,
+                  compressedSize: size,
+                  compressedMetadata,
+                  completedAt: new Date(),
+                  file: {
+                    ...live.file,
+                    compressedPath: expectedPath,
+                    compressedUrl: expectedPath ? convertFileSrc(expectedPath) : undefined
+                  }
+                };
+                taskStore.updateTask(updatedTask);
+                if (currentFile.value && currentFile.value.id === updatedTask.file.id) {
+                  currentFile.value = { ...updatedTask.file };
                 }
                 console.log('[FALLBACK] Output exists after interruption, marking as completed:', task.id);
                 logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath: expectedPath });
               } else {
                 console.log('Task was paused, setting status to paused:', task.id);
-                task.status = 'paused';
+                taskStore.updateTaskStatus(task.id, 'paused');
                 logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id });
               }
             } else {
               console.log('Task was paused, setting status to paused (no output dir):', task.id);
-              task.status = 'paused';
+              taskStore.updateTaskStatus(task.id, 'paused');
               logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id });
             }
           } catch (postCheckErr) {
             console.log('Task was paused, setting status to paused:', task.id, 'post-check error:', postCheckErr);
-            task.status = 'paused';
+            taskStore.updateTaskStatus(task.id, 'paused');
             logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id, error: String(postCheckErr) });
           }
         }
       } else {
         // Real error
-        task.status = 'failed';
-        task.error = errorMessage;
+        const live = taskStore.getTaskById(task.id) || task;
+        taskStore.updateTask({ ...live, status: 'failed', error: errorMessage });
+        logStore.addError(`恢复失败：${task.file.name}`, { taskId: task.id, error: errorMessage });
       }
     } finally {
       isProcessing.value = false;
@@ -514,12 +541,12 @@ export function useFileHandler() {
     if (!currentFile.value) {
       return;
     }
-    
+
     const task = tasks.value.find(t => t.file.id === currentFile.value?.id);
     if (!task) {
       return;
     }
-    
+
     // 在开始任何新任务前，确保全局只有一个任务在 processing：
     // 如果发现有其它任务正在处理，则先尝试暂停它们，并清理其进度监听器
     const otherProcessingTasks = tasks.value.filter(t => t.status === 'processing' && t.id !== task.id);
@@ -544,312 +571,256 @@ export function useFileHandler() {
           activeProgressListeners.delete(other.id);
         }
         // 同步前端状态：进入排队而非暂停
-        other.status = 'queued';
+        taskStore.updateTaskStatus(other.id, 'queued');
       }
     }
-    
+
     // 检查任务是否已经在处理中，避免重复启动（批量模式除外）
     if (task.status === 'processing' && !isBatchMode) {
       console.log(`Task ${task.file.name} is already processing, skipping`);
       return;
     }
-    
+
     console.log(`Starting compression for task: ${task.file.name}, current status: ${task.status}`);
-    
+
     isProcessing.value = true;
-    task.status = 'processing';
-    task.settings = settings;
-    task.progress = 0;
-    task.startedAt = new Date(); // 记录开始时间
-    
+
+    // 清理旧的监听器与取消标记
+    const existingProg = activeProgressListeners.get(task.id); if (existingProg) { try { existingProg(); } catch {} activeProgressListeners.delete(task.id); }
+    const existingCancel = activeCancelListeners.get(task.id); if (existingCancel) { try { existingCancel(); } catch {} activeCancelListeners.delete(task.id); }
+    const existingCmd = activeCommandListeners.get(task.id); if (existingCmd) { try { existingCmd(); } catch {} activeCommandListeners.delete(task.id); }
+    const existingErr = activeErrorListeners.get(task.id); if (existingErr) { try { existingErr(); } catch {} activeErrorListeners.delete(task.id); }
+    cancelledTasks.delete(task.id);
+
+    // 计算输出目录
+    let outDir = outputDirectory || task.outputDirectory;
+    if (!outDir) {
+      try { outDir = await invoke<string>('get_desktop_path'); } catch {}
+    }
+    if (outDir) {
+      const live2 = taskStore.getTaskById(task.id) || task;
+      taskStore.updateTask({ ...live2, outputDirectory: outDir });
+    }
+
+    // 规范化图片任务的格式，防止传入视频容器格式（如 mp4）导致“Unsupported image format”
+    const isImageTask = task.type === 'image';
+    const lowerFormat = String((settings as any)?.format || '').toLowerCase();
+    const imageFormats = new Set(['jpeg', 'jpg', 'png', 'webp', 'avif']);
+    let effectiveFormat = lowerFormat;
+    if (isImageTask && !imageFormats.has(effectiveFormat)) {
+      let fallback = String((task.settings as any)?.format || '').toLowerCase();
+      if (!imageFormats.has(fallback)) {
+        const name = task.file.name.toLowerCase();
+        if (name.endsWith('.png')) fallback = 'png';
+        else if (name.endsWith('.webp')) fallback = 'webp';
+        else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) fallback = 'jpeg';
+        else fallback = 'jpeg';
+      }
+      try { logStore.addWarning(`检测到无效的图片格式：${(settings as any)?.format}，已更正为 ${fallback}` as string, { taskId: task.id }); } catch {}
+      effectiveFormat = fallback;
+    }
+    const normalizedSettings = { ...(settings as any), format: effectiveFormat as any } as any;
+
+    // 初始化任务状态与进度
+    {
+      const live = taskStore.getTaskById(task.id) || task;
+      taskStore.updateTask({ ...live, status: 'processing', settings: normalizedSettings as any, progress: 0, startedAt: new Date() });
+    }
+
+    // 监听压缩进度
+    let unlistenProg: (() => void) | undefined;
+    unlistenProg = await listen(`compression-progress-${task.id}`, (event: any) => {
+      const { taskId, progress } = event?.payload || {};
+      if (taskId === task.id) {
+        const progressValue = Math.min(100, Math.max(0, Math.round(progress)));
+        taskStore.updateTaskProgress(task.id, progressValue);
+        console.log(`Compression progress for ${task.file.name}: ${progressValue}%`);
+      }
+    });
+    activeProgressListeners.set(task.id, unlistenProg);
+
+    // 监听错误事件
     try {
-      // Use provided output directory or get default desktop path
-      const outputDir = outputDirectory || await invoke<string>('get_desktop_path');
-      
-      // 记录输出目录，便于后续恢复/校验
-      task.outputDirectory = outputDir;
-      
-      // Generate output filename using global settings
-      const fileExtension = settings.format;
-      const outputFileName = globalSettings.generateOutputFileName(task.file.name, fileExtension);
-      const outputPath = `${outputDir}/${outputFileName}`;
-      
-      // Update progress
-      task.progress = 10;
-      
-      // Prepare compression settings for backend
-      const backendSettings = {
-        format: settings.format,
-        codec: settings.videoCodec,
-        resolution: settings.resolution || 'original',
-        custom_resolution: settings.customResolution ? {
-          width: settings.customResolution.width,
-          height: settings.customResolution.height
-        } : null,
-        quality_type: settings.qualityType,
-        crf_value: settings.crfValue,
-        qv_value: settings.qvValue,
-        time_range: settings.timeRange ? {
-          start: settings.timeRange.start,
-          end: settings.timeRange.end
-        } : null,
+      const unlistenErr = await listen(`compression-error-${task.id}`, (event: any) => {
+        const { error, stderr } = (event && event.payload) || {};
+        logStore.addError(`压缩错误：${task.file.name} - ${error || '未知错误'}`, { taskId: task.id, stderr });
+      });
+      activeErrorListeners.set(task.id, unlistenErr);
+    } catch {}
 
-        hardwareAcceleration: settings.hardwareAcceleration,
-        bitDepth: settings.bitDepth
-      };
-      
-      console.log('Backend settings with hardware acceleration:', backendSettings);
-      
-      // 若该任务已有遗留监听器，先清理，避免重复日志/进度
-      const existingUnlisten = activeProgressListeners.get(task.id);
-      if (existingUnlisten) {
-        try { existingUnlisten(); } catch {}
-        activeProgressListeners.delete(task.id);
+    // 监听取消事件
+    const unlistenCancel = await listen(`compression-cancelled-${task.id}`, () => {
+      if (cancelledTasks.has(task.id)) return;
+      console.log('[CANCEL] Received cancel event:', task.id);
+      cancelledTasks.add(task.id);
+      taskStore.updateTaskStatus(task.id, 'cancelled');
+      isProcessing.value = false;
+      const up = activeProgressListeners.get(task.id); if (up) { try { up(); } catch {} activeProgressListeners.delete(task.id); }
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
+      try { unlistenCancel(); } catch {}
+      activeCancelListeners.delete(task.id);
+      logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
+    });
+    activeCancelListeners.set(task.id, unlistenCancel);
+
+    // 新增：监听后端发送的 FFmpeg 命令事件（启动场景）
+    try {
+      const unlistenCmd = await listen(`compression-command-${task.id}`, (event: any) => {
+        const { command, args } = (event && event.payload) || {};
+        const display = command || (Array.isArray(args) ? `ffmpeg ${args.join(' ')}` : '');
+        if (display) {
+          logStore.addInfo(i18n.global.t('logMessages.ffmpegCommand', { name: display }), { taskId: task.id, command, args });
+        }
+      });
+      activeCommandListeners.set(task.id, unlistenCmd);
+    } catch {}
+
+    // 计算输出文件路径
+    const ext = (normalizedSettings as any).format;
+    const outputFileName = globalSettings.generateOutputFileName(task.file.name, ext);
+    const outputPath = outDir ? `${outDir}/${outputFileName}` : undefined;
+
+    const inputPath = task.file.path;
+
+    // 构建后端所需的 settings 结构（字段名与 Rust 对齐）
+    const payloadSettings: any = {
+      format: (normalizedSettings as any).format,
+      codec: (normalizedSettings as any).videoCodec || 'image',
+      resolution: (normalizedSettings as any).resolution,
+      custom_resolution: (normalizedSettings as any).customResolution
+        ? { width: (normalizedSettings as any).customResolution.width, height: (normalizedSettings as any).customResolution.height }
+        : undefined,
+      quality_type: (normalizedSettings as any).qualityType,
+      crf_value: (normalizedSettings as any).crfValue,
+      qv_value: (normalizedSettings as any).qvValue,
+      bitrate: (normalizedSettings as any).bitrate,
+      time_range: (normalizedSettings as any).timeRange
+        ? { start: (normalizedSettings as any).timeRange.start ?? null, end: (normalizedSettings as any).timeRange.end ?? null }
+        : undefined,
+      // 这两个字段在 Rust 侧通过 serde(rename) 期望驼峰命名
+      hardwareAcceleration: (normalizedSettings as any).hardwareAcceleration,
+      bitDepth: (normalizedSettings as any).bitDepth,
+    };
+
+    try {
+      if (!outputPath) {
+        throw new Error('No output directory available');
       }
-      // 同步清理旧的日志监听器
-      const existingCmd = activeCommandListeners.get(task.id); if (existingCmd) { try { existingCmd(); } catch {} activeCommandListeners.delete(task.id); }
-      const existingErr = activeErrorListeners.get(task.id); if (existingErr) { try { existingErr(); } catch {} activeErrorListeners.delete(task.id); }
-      
-      // 分流：视频走 compress_video，图片走 compress_image（图片暂不设置进度监听器）
+
+      let result: CompressionResult;
       if (task.type === 'image') {
-        try {
-          // 日志：开始图片压缩
-          logStore.addInfo(i18n.global.t('logMessages.compressionStartedImage', { name: task.file.name }), { taskId: task.id, inputPath: task.file.path, outputPath, settings: backendSettings });
-
-          const result = await invoke<CompressionResult>('compress_image', {
-            taskId: task.id,
-            inputPath: task.file.path,
-            outputPath: outputPath,
-            settings: backendSettings
-          });
-
-          if (result.success) {
-            task.status = 'completed';
-            task.progress = 100;
-            task.originalSize = result.originalSize;
-            task.compressedSize = result.compressedSize || 0;
-            task.completedAt = new Date();
-            task.file.compressedPath = result.outputPath;
-            task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
-            task.outputDirectory = outputDir;
-            if (currentFile.value && currentFile.value.id === task.file.id) {
-              currentFile.value = { ...task.file };
-            }
-            // 日志：完成
-            logStore.addSuccess(i18n.global.t('logMessages.compressionCompletedImage', { name: task.file.name }), { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
-          } else {
-            task.status = 'failed';
-            task.error = result.error || 'Compression failed';
-            logStore.addError(i18n.global.t('logMessages.compressionFailedImage', { name: task.file.name }), { taskId: task.id, error: result.error });
-          }
-        } catch (compressionError) {
-          const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
-          task.status = 'failed';
-          task.error = errorMessage;
-          logStore.addError(i18n.global.t('logMessages.compressionFailedImage', { name: task.file.name }), { taskId: task.id, error: errorMessage });
-        } finally {
-          isProcessing.value = false;
-        }
-        return; // 图片路径已完成
+        result = await invoke<CompressionResult>('compress_image', {
+          taskId: task.id,
+          inputPath,
+          outputPath,
+          settings: payloadSettings,
+        });
+      } else {
+        result = await invoke<CompressionResult>('compress_video', {
+          taskId: task.id,
+          inputPath,
+          outputPath,
+          settings: payloadSettings,
+        });
       }
-      
-      // 设置进度监听器（仅视频）
-      console.log(`Setting up progress listener for task: ${task.file.name} (${task.file.path})`);
-      const unlisten = await listen(`compression-progress-${task.id}`, (event: any) => {
-        const { taskId, progress } = event.payload;
-        if (taskId === task.id) {
-          task.progress = Math.min(100, Math.max(0, Math.round(progress)));
-          console.log(`Progress ${task.progress}% for ${task.file.name}`);
+
+      // 清理监听器
+      try { unlistenProg && unlistenProg(); } catch {}
+      activeProgressListeners.delete(task.id);
+      const unlistenCancelEnd = activeCancelListeners.get(task.id); if (unlistenCancelEnd) { try { unlistenCancelEnd(); } catch {} activeCancelListeners.delete(task.id); }
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
+
+      if (cancelledTasks.has(task.id)) {
+        console.log('[CANCEL] Task was cancelled during start, skip completion:', task.id);
+        return;
+      }
+
+      if (result.success) {
+        const live = taskStore.getTaskById(task.id) || task;
+        const updatedTask: CompressionTask = {
+          ...live,
+          status: 'completed',
+          progress: 100,
+          originalSize: result.originalSize,
+          compressedSize: result.compressedSize ?? live.compressedSize ?? 0,
+          compressedMetadata: result.compressedMetadata,
+          completedAt: new Date(),
+          outputDirectory: outDir || live.outputDirectory,
+          file: {
+            ...live.file,
+            compressedPath: result.outputPath,
+            compressedUrl: result.outputPath ? convertFileSrc(result.outputPath) : undefined
+          }
+        };
+        taskStore.updateTask(updatedTask);
+        if (currentFile.value && currentFile.value.id === updatedTask.file.id) {
+          currentFile.value = { ...updatedTask.file };
         }
-      });
-      // 记录监听器
-      activeProgressListeners.set(task.id, unlisten);
-
-      // 日志：监听后端命令与错误事件
-      try {
-        const unlistenCmd = await listen(`compression-command-${task.id}`, (event: any) => {
-          const { command, args } = (event && event.payload) || {};
-          logStore.addInfo(i18n.global.t('logMessages.ffmpegCommand', { name: task.file.name }), { taskId: task.id, command, args });
-        });
-        activeCommandListeners.set(task.id, unlistenCmd);
-      } catch {}
-      try {
-        const unlistenErr = await listen(`compression-error-${task.id}`, (event: any) => {
-          const { error, stderr } = (event && event.payload) || {};
-          logStore.addError(i18n.global.t('logMessages.compressionError', { name: task.file.name, error: error || '未知错误' }), { taskId: task.id, stderr });
-        });
-        activeErrorListeners.set(task.id, unlistenErr);
-      } catch {}
-
-      // 先设置取消监听器（清理旧的，重置标记）
-      const existingCancelUnlisten = activeCancelListeners.get(task.id);
-      if (existingCancelUnlisten) { try { existingCancelUnlisten(); } catch {} activeCancelListeners.delete(task.id); }
-      cancelledTasks.delete(task.id);
-      const unlistenCancel = await listen(`compression-cancelled-${task.id}`, () => {
-        if (cancelledTasks.has(task.id)) return;
-        console.log('[CANCEL] Received cancel event during start:', task.id);
-        cancelledTasks.add(task.id);
-        task.status = 'cancelled';
-        isProcessing.value = false;
-        // 清理进度监听器
-        const unlistenProg = activeProgressListeners.get(task.id);
-        if (unlistenProg) { try { unlistenProg(); } catch {} activeProgressListeners.delete(task.id); }
-        // 清理日志监听器
-        const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
-        const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
-        // 清理自身取消监听器
-        try { unlistenCancel(); } catch {}
-        activeCancelListeners.delete(task.id);
-        // 日志
-        logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
-      });
-      activeCancelListeners.set(task.id, unlistenCancel);
-
-      try {
-         // 初始化进度
-         task.progress = 0;
-
-         // 日志：开始视频压缩
-         logStore.addInfo(`开始压缩（视频）：${task.file.name}`, { taskId: task.id, inputPath: task.file.path, outputPath, settings: backendSettings });
-
-         // Call backend compression
-         const result = await invoke<CompressionResult>('compress_video', {
-           taskId: task.id,
-           inputPath: task.file.path,
-           outputPath: outputPath,
-           settings: backendSettings
-         });
-
-         // 压缩成功后才清理事件监听器
-         unlisten();
-         activeProgressListeners.delete(task.id);
-         const unlistenCancelEnd = activeCancelListeners.get(task.id);
-         if (unlistenCancelEnd) { try { unlistenCancelEnd(); } catch {} activeCancelListeners.delete(task.id); }
-         const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
-         const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
-
-         if (cancelledTasks.has(task.id)) {
-           console.log('[CANCEL] Task was cancelled during start, skip completion:', task.id);
-           return;
-         }
-
-         if (result.success) {
-           task.status = 'completed';
-           task.progress = 100;
-           task.originalSize = result.originalSize; // Update with actual file size from backend
-           task.compressedSize = result.compressedSize || 0;
-           task.compressedMetadata = result.compressedMetadata; // 添加压缩后的元数据
-           task.completedAt = new Date();
-           // Set both compressed path and URL
-           task.file.compressedPath = result.outputPath;
-           task.file.compressedUrl = result.outputPath ? convertFileSrc(result.outputPath) : undefined;
-           // Save output directory for the "open folder" button
-           task.outputDirectory = outputDir;
-           
-           // Update currentFile if it matches this task
-           if (currentFile.value && currentFile.value.id === task.file.id) {
-             currentFile.value = { ...task.file };
-           }
-           // 日志：完成
-           logStore.addSuccess(`压缩完成（视频）：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
-         } else {
-           task.status = 'failed';
-           task.error = result.error || 'Compression failed';
-           logStore.addError(`压缩失败（视频）：${task.file.name}`, { taskId: task.id, error: result.error });
-         }
-       } catch (compressionError) {
-         // 当压缩被暂停或失败时，必须清理监听器，避免遗留
-         try { unlisten(); } catch {}
-         activeProgressListeners.delete(task.id);
-         const unlistenCancelErr = activeCancelListeners.get(task.id);
-         if (unlistenCancelErr) { try { unlistenCancelErr(); } catch {} activeCancelListeners.delete(task.id); }
-         const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
-         const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
-
-         const errorMessage = compressionError instanceof Error ? compressionError.message : String(compressionError);
-         
-         if (errorMessage.includes('Process was interrupted')) {
-            if (cancelledTasks.has(task.id)) {
-              task.status = 'cancelled';
-              console.log('[CANCEL] Interrupted due to cancellation during start:', task.id);
-              logStore.addWarning(`已取消：${task.file.name}`, { taskId: task.id });
-            } else {
-              // 边界处理：如果进程在完成时被中断，但输出文件已生成，则判定为完成
-              try {
-                const size = await invoke<number>('get_file_size', { filePath: outputPath });
-                if (size && size > 0) {
-                  let compressedMetadata: VideoMetadata | undefined = undefined;
-                  try {
-                    compressedMetadata = await invoke<VideoMetadata>('get_video_metadata', { videoPath: outputPath });
-                  } catch {}
-                  task.status = 'completed';
-                  task.progress = 100;
-                  task.compressedSize = size;
-                  task.compressedMetadata = compressedMetadata;
-                  task.completedAt = new Date();
-                  task.file.compressedPath = outputPath;
-                  task.file.compressedUrl = outputPath ? convertFileSrc(outputPath) : undefined;
-                  // Update currentFile if it matches this task
-                  if (currentFile.value && currentFile.value.id === task.file.id) {
-                    currentFile.value = { ...task.file };
-                  }
-                  console.log('[FALLBACK] Output exists after interruption, marking as completed:', task.id);
-                  logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, compressedSize: size, outputPath });
-                } else {
-                  console.log('Task was paused, setting status to paused:', task.id);
-                  task.status = 'paused';
-                  logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id });
-                }
-              } catch (postCheckErr) {
-                console.log('Task was paused, setting status to paused:', task.id, 'post-check error:', postCheckErr);
-                task.status = 'paused';
-                logStore.addWarning(`已暂停：${task.file.name}`, { taskId: task.id, error: String(postCheckErr) });
-              }
-            }
-         } else {
-            // Real error
-            task.status = 'failed';
-            task.error = errorMessage;
-            logStore.addError(`压缩失败（视频）：${task.file.name}`, { taskId: task.id, error: errorMessage });
-         }
-       }
+        if (task.type === 'image') {
+          logStore.addSuccess(i18n.global.t('logMessages.compressionCompletedImage', { name: task.file.name }), { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        } else {
+          logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        }
+      } else {
+        const live = taskStore.getTaskById(task.id) || task;
+        taskStore.updateTask({ ...live, status: 'failed', error: result.error || 'Compression failed' });
+        if (task.type === 'image') {
+          logStore.addError(i18n.global.t('logMessages.compressionFailedImage', { name: task.file.name }), { taskId: task.id, error: result.error });
+        } else {
+          logStore.addError(i18n.global.t('logMessages.compressionFailedVideo', { name: task.file.name }), { taskId: task.id, error: result.error });
+        }
+      }
     } catch (error) {
-      console.error('Compression setup error:', error);
-      task.status = 'failed';
-      task.error = error instanceof Error ? error.message : String(error);
-      logStore.addError(`压缩启动失败：${task.file.name}`, { taskId: task.id, error: task.error });
+      // 确保在任何错误情况下都清理监听器
+      try { unlistenProg && unlistenProg(); } catch {}
+      activeProgressListeners.delete(task.id);
+      const unlistenCancelErr = activeCancelListeners.get(task.id);
+      if (unlistenCancelErr) { try { unlistenCancelErr(); } catch {} activeCancelListeners.delete(task.id); }
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
+      const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const live = taskStore.getTaskById(task.id) || task;
+      taskStore.updateTask({ ...live, status: 'failed', error: errorMessage });
+      if (task.type === 'image') {
+        logStore.addError(i18n.global.t('logMessages.compressionFailedImage', { name: task.file.name }), { taskId: task.id, error: errorMessage });
+      } else {
+        logStore.addError(i18n.global.t('logMessages.compressionFailedVideo', { name: task.file.name }), { taskId: task.id, error: errorMessage });
+      }
     } finally {
       isProcessing.value = false;
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+    const formatFileSize = (bytes: number): string => {
+      if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
 
-  const getCompressionRatio = (task: CompressionTask): string => {
-    if (!task.compressedSize || !task.originalSize || isNaN(task.compressedSize) || isNaN(task.originalSize)) return '0%';
-    const ratio = ((task.originalSize - task.compressedSize) / task.originalSize) * 100;
-    return Math.round(ratio) + '%';
-  };
+    const getCompressionRatio = (task: CompressionTask): string => {
+      if (!task.compressedSize || !task.originalSize || isNaN(task.compressedSize) || isNaN(task.originalSize)) return '0%';
+      const ratio = ((task.originalSize - task.compressedSize) / task.originalSize) * 100;
+      return Math.round(ratio) + '%';
+    };
 
-  return {
-    selectedFiles,
-    tasks,
-    currentFile,
-    isUploaderVisible,
-    isProcessing,
-    handleFiles,
-    resetUploader,
-    startCompression,
-    formatFileSize,
-    getCompressionRatio,
-    switchToTask,
-    deleteTask,
-    resumeCompression
-  };
-}
+    return {
+      selectedFiles,
+      tasks,
+      currentFile,
+      isUploaderVisible,
+      isProcessing,
+      handleFiles,
+      resetUploader,
+      startCompression,
+      formatFileSize,
+      getCompressionRatio,
+      switchToTask,
+      deleteTask,
+      resumeCompression
+    };
+  }

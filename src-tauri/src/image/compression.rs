@@ -1,6 +1,7 @@
 use tokio::process::Command;
 use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary};
 use tauri::Manager; // 引入 Manager trait 以便使用 AppHandle.path()
+use tauri::Emitter; // 新增：引入 Emitter 以启用 app_handle.emit()
 
 fn map_jpeg_quality(crf_value: Option<u8>) -> u8 {
     // ffmpeg mjpeg quality range: 2(best) - 31(worst)
@@ -261,10 +262,24 @@ pub async fn compress_image(
     // 输出路径
     cmd.arg(&outputPath);
     args_for_log.push(outputPath.clone());
+    // 新增：通过事件发送 FFmpeg 命令到前端（与视频一致）
+    let args_joined = args_for_log
+        .iter()
+        .map(|a| if a.contains(' ') { format!("\"{}\"", a) } else { a.clone() })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let _ = app_handle.emit(
+        &format!("compression-command-{}", taskId),
+        serde_json::json!({
+            "taskId": taskId,
+            "command": format!("{:?} {}", ffmpeg_path, args_joined),
+            "args": args_for_log,
+        }),
+    );
 
-    println!("[Image] ffmpeg command: {} {}",
-        ffmpeg_path.display(),
-        args_for_log.join(" ")
+    println!("[Image] ffmpeg command: {:?} {}",
+        ffmpeg_path,
+        args_joined
     );
 
     let status = cmd.status().await.map_err(|e| format!("Failed to execute ffmpeg: {}", e))?;
