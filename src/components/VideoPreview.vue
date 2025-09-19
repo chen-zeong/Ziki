@@ -64,6 +64,7 @@
       >
         
         <div 
+          ref="modalContentRef"
           class="modal-content relative w-full h-full overflow-hidden"
           @click.stop
         >
@@ -232,6 +233,10 @@ const isDraggingFullscreen = computed(() => videoPreviewStore.isDraggingFullscre
 const hasAfter = computed(() => !!props.afterImage);
 
 const fullscreenSliderRef = ref<HTMLElement | null>(null);
+const modalContentRef = ref<HTMLElement | null>(null);
+
+// 判断是否运行在 Tauri 环境
+const isTauriEnv = () => typeof (window as any).__TAURI__ !== 'undefined';
 
 // requestIdleCallback 兼容封装与任务ID
 const requestIdle = (cb: () => void, timeout = 500) => {
@@ -246,26 +251,62 @@ let initialPreviewIdleId: number | null = null;
 // 新增：选择帧的防抖定时器
 let selectFrameDebounceTimer: number | null = null;
 
-// 新增：全屏和滑块交互相关方法
+// 新增：全屏和滑块交互相关方法（使用浏览器官方全屏 API）
 const toggleFullscreen = async () => {
-  try {
-    const appWindow = getCurrentWindow();
-    await appWindow.setFullscreen(true);
-  } catch (e) {
-    // 浏览器环境或权限不足时，仍回退为应用内全屏蒙层
-    console.warn('调用系统级全屏失败，回退为应用内全屏:', e);
-  }
+  // 先显示应用内全屏模态，避免先放大主窗口导致视觉突变
   videoPreviewStore.toggleFullscreen();
+  await nextTick();
+
+  if (isTauriEnv()) {
+    try {
+      const appWindow = getCurrentWindow();
+      // 放到下一轮事件循环，确保模态已完成展示再切主窗口全屏
+      setTimeout(() => {
+        appWindow.setFullscreen(true).catch(() => {});
+      }, 0);
+      return;
+    } catch {}
+  }
+  // 非 Tauri 环境：回退为浏览器元素全屏（仅模态内容）
+  const el: any = modalContentRef.value || fullscreenSliderRef.value;
+  if (el) {
+    try {
+      const req =
+        el.requestFullscreen ||
+        el.webkitRequestFullscreen ||
+        el.mozRequestFullScreen ||
+        el.msRequestFullscreen;
+      if (typeof req === 'function') await req.call(el);
+    } catch {}
+  }
 };
 
 const closeFullscreen = async () => {
-  try {
-    const appWindow = getCurrentWindow();
-    await appWindow.setFullscreen(false);
-  } catch (e) {
-    console.warn('退出系统级全屏失败（可能在浏览器环境）:', e);
+  if (isTauriEnv()) {
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.setFullscreen(false);
+    } catch {}
+  } else {
+    try {
+      const exit =
+        (document as any).exitFullscreen ||
+        (document as any).webkitExitFullscreen ||
+        (document as any).mozCancelFullScreen ||
+        (document as any).msExitFullscreen;
+      if (document.fullscreenElement && typeof exit === 'function') {
+        await exit.call(document);
+      }
+    } catch {}
   }
   videoPreviewStore.closeFullscreen();
+};
+
+// 当用户用系统手势或ESC退出浏览器全屏时，同步关闭覆盖层
+const handleFullscreenChange = () => {
+  if (!document.fullscreenElement && isFullscreen.value) {
+    videoPreviewStore.closeFullscreen();
+  }
 };
 
 const updateFullscreenSliderPosition = (e: MouseEvent) => {
@@ -501,6 +542,8 @@ onMounted(() => {
       videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, props.afterImage);
     }
   }
+  // 监听浏览器全屏变化
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
 });
 
 // 根据全屏状态动态绑定/解绑全局事件，避免非全屏阶段阻断点击
@@ -643,6 +686,8 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown as EventListener);
   document.removeEventListener('mousemove', handleFullscreenMouseMove as EventListener);
   document.removeEventListener('mouseup', stopFullscreenDragging as EventListener);
+  // 监听器解绑
+  document.removeEventListener('fullscreenchange', handleFullscreenChange as EventListener);
   // 清理防抖定时器
   if (selectFrameDebounceTimer) {
     clearTimeout(selectFrameDebounceTimer);
