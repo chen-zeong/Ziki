@@ -303,16 +303,30 @@ pub async fn compress_image(
         return Err(format!("ffmpeg exited with status: {}", status));
     }
 
+    // 检查输出文件是否存在
+    println!("[Image] Checking output file existence...");
+    println!("[Image] Output path: {}", outputPath);
+    println!("[Image] Output path exists: {}", std::path::Path::new(&outputPath).exists());
+    
+    if !std::path::Path::new(&outputPath).exists() {
+        return Err(format!("Output file was not created: {}", outputPath));
+    }
+
     // 计算压缩前后的文件大小
     let compressed_size = std::fs::metadata(&outputPath)
         .map_err(|e| format!("Failed to get compressed file size: {}", e))?
         .len();
 
+    println!("[Image] Compression completed successfully!");
+    println!("[Image] Original size: {} bytes", original_size);
+    println!("[Image] Compressed size: {} bytes", compressed_size);
+    println!("[Image] Final output path: {}", outputPath);
+
     // 移除：permit 释放（已不存在）
 
     Ok(CompressionResult {
         success: true,
-        output_path: Some(outputPath),
+        output_path: Some(outputPath.clone()),
         error: None,
         original_size,
         compressed_size: Some(compressed_size),

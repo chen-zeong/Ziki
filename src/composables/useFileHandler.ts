@@ -7,6 +7,7 @@ import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useLogStore } from '../stores/useLogStore';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 import i18n from '../i18n';
+import { join, normalize } from '@tauri-apps/api/path';
 
 
 
@@ -267,14 +268,14 @@ export function useFileHandler() {
           }
         };
         taskStore.updateTask(updatedTask);
-        
-        // Update currentFile if it matches this task
         if (currentFile.value && currentFile.value.id === updatedTask.file.id) {
-          currentFile.value = { ...updatedTask.file };
+          currentFile.value = { ...updatedTask.file } as any;
         }
-        
-        console.log('Task completed successfully:', taskId);
-        logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${updatedTask.file.name}`, { taskId: updatedTask.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        if (task.type === 'image') {
+          logStore.addSuccess(i18n.global.t('logMessages.compressionCompletedImage', { name: task.file.name }), { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        } else {
+          logStore.addSuccess(`${i18n.global.t('success.compressionCompleted')}：${task.file.name}`, { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });
+        }
       } else {
         const live = taskStore.getTaskById(task.id) || task;
         taskStore.updateTask({ ...live, status: 'failed', error: result.error || 'Resume failed' });
@@ -309,7 +310,7 @@ export function useFileHandler() {
               try { outDir = await invoke<string>('get_desktop_path'); } catch {}
             }
             if (outDir) {
-              const expectedPath = `${outDir}/${outputFileName}`;
+              const expectedPath = await normalize(await join(outDir, outputFileName));
               const size = await invoke<number>('get_file_size', { filePath: expectedPath });
               if (size && size > 0) {
                 let compressedMetadata: VideoMetadata | undefined = undefined;
@@ -679,8 +680,15 @@ export function useFileHandler() {
     // 计算输出文件路径
     const ext = (normalizedSettings as any).format;
     const outputFileName = globalSettings.generateOutputFileName(task.file.name, ext);
-    const outputPath = outDir ? `${outDir}/${outputFileName}` : undefined;
-
+    let outputPath: string | undefined = undefined;
+    if (outDir) {
+      try {
+        outputPath = await normalize(await join(outDir, outputFileName));
+      } catch (e) {
+        // fallback to join only if normalize fails
+        try { outputPath = await join(outDir, outputFileName); } catch {}
+      }
+    }
     const inputPath = task.file.path;
 
     // 构建后端所需的 settings 结构（字段名与 Rust 对齐）
@@ -738,6 +746,28 @@ export function useFileHandler() {
       }
 
       if (result.success) {
+        console.log('[Image] Compression result received:', {
+          success: result.success,
+          outputPath: result.outputPath,
+          originalSize: result.originalSize,
+          compressedSize: result.compressedSize
+        });
+        
+        let normalizedOutputPath: string | undefined = undefined;
+        if (result.outputPath) {
+          try {
+            normalizedOutputPath = await normalize(result.outputPath);
+          } catch (e) {
+            normalizedOutputPath = result.outputPath;
+          }
+        }
+        const convertedUrl = normalizedOutputPath ? convertFileSrc(normalizedOutputPath) : undefined;
+        console.log('[Image] Path conversion:', {
+          originalPath: result.outputPath,
+          normalizedPath: normalizedOutputPath,
+          convertedUrl: convertedUrl
+        });
+        
         const live = taskStore.getTaskById(task.id) || task;
         const updatedTask: CompressionTask = {
           ...live,
@@ -751,12 +781,20 @@ export function useFileHandler() {
           file: {
             ...live.file,
             compressedPath: result.outputPath,
-            compressedUrl: result.outputPath ? convertFileSrc(result.outputPath) : undefined
+            compressedUrl: convertedUrl
           }
         };
+        
+        console.log('[Image] Updated task file:', {
+          id: updatedTask.file.id,
+          name: updatedTask.file.name,
+          originalUrl: updatedTask.file.originalUrl,
+          compressedPath: updatedTask.file.compressedPath,
+          compressedUrl: updatedTask.file.compressedUrl
+        });
         taskStore.updateTask(updatedTask);
         if (currentFile.value && currentFile.value.id === updatedTask.file.id) {
-          currentFile.value = { ...updatedTask.file };
+          currentFile.value = { ...updatedTask.file } as any;
         }
         if (task.type === 'image') {
           logStore.addSuccess(i18n.global.t('logMessages.compressionCompletedImage', { name: task.file.name }), { taskId: task.id, originalSize: result.originalSize, compressedSize: result.compressedSize, outputPath: result.outputPath });

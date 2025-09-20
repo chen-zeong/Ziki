@@ -537,9 +537,21 @@ onMounted(() => {
       beforeImgRef.value.src = props.beforeImage;
       videoPreviewStore.setFullscreenImages(props.beforeImage, fullscreenAfterSrc.value);
     }
-    if (props.afterImage && afterImgRef.value) {
-      afterImgRef.value.src = props.afterImage;
-      videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, props.afterImage);
+    if (props.afterImage) {
+      if (afterImgRef.value) {
+        afterImgRef.value.src = props.afterImage;
+        videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, props.afterImage);
+      } else {
+        // 由于 after 区域使用 v-if 渲染，首次出现时 ref 可能尚未就绪，延迟到 nextTick 设置
+        nextTick(() => {
+          if (afterImgRef.value) {
+            afterImgRef.value.src = props.afterImage as string;
+          } else {
+            console.warn('[VideoPreview] afterImgRef not available on nextTick during mount');
+          }
+          videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, props.afterImage as string);
+        });
+      }
     }
   }
   // 监听浏览器全屏变化
@@ -565,15 +577,40 @@ watch(isFullscreen, (val) => {
 
 // 监听beforeImage和afterImage变化（图片模式）
 watch(() => [props.beforeImage, props.afterImage], ([newBefore, newAfter]) => {
+  console.log('[VideoPreview] Image props changed:', {
+    videoPath: props.videoPath,
+    beforeImage: newBefore,
+    afterImage: newAfter,
+    isImageMode: !props.videoPath
+  });
+  
   if (!props.videoPath) {
     // 图片模式：直接更新图片显示
+    console.log('[VideoPreview] Image mode: updating images');
     if (newBefore && beforeImgRef.value) {
+      console.log('[VideoPreview] Setting before image:', newBefore);
       beforeImgRef.value.src = newBefore;
       videoPreviewStore.setFullscreenImages(newBefore, fullscreenAfterSrc.value);
     }
-    if (newAfter && afterImgRef.value) {
-      afterImgRef.value.src = newAfter;
-      videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, newAfter);
+    if (newAfter) {
+      if (afterImgRef.value) {
+        console.log('[VideoPreview] Setting after image:', newAfter);
+        afterImgRef.value.src = newAfter;
+        videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, newAfter);
+      } else {
+        console.log('[VideoPreview] afterImgRef not ready, scheduling on nextTick');
+        nextTick(() => {
+          if (afterImgRef.value) {
+            console.log('[VideoPreview] Setting after image (nextTick):', newAfter);
+            afterImgRef.value.src = newAfter;
+          } else {
+            console.warn('[VideoPreview] afterImgRef still not available after nextTick');
+          }
+          videoPreviewStore.setFullscreenImages(fullscreenBeforeSrc.value, newAfter);
+        });
+      }
+    } else {
+      console.log('[VideoPreview] No after image provided');
     }
   }
 });

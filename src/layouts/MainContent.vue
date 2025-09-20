@@ -45,7 +45,15 @@ const beforeImage = computed(() => {
 });
 
 const afterImage = computed(() => {
-  return props.currentFile?.compressedUrl || '';
+  const result = props.currentFile?.compressedUrl || '';
+  console.log('[MainContent] afterImage computed:', {
+    currentFileId: props.currentFile?.id,
+    currentFileName: props.currentFile?.name,
+    compressedUrl: props.currentFile?.compressedUrl,
+    compressedPath: props.currentFile?.compressedPath,
+    result: result
+  });
+  return result;
 });
 
 const computedTimeRange = computed(() => {
