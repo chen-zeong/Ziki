@@ -67,37 +67,39 @@ const handleClose = async () => {
 <template>
   <!-- 顶部标题栏 -->
   <div class="h-9 flex-shrink-0 bg-[#f5f5f5] dark:bg-[#2d2d2d] flex items-center justify-between px-2 pr-4 border-b border-gray-200 dark:border-gray-700" data-tauri-drag-region>
-    <!-- 左侧：Windows 自定义窗口控制按钮（最左侧） -->
-    <div v-if="isWindows" class="flex items-center space-x-1">
-      <!-- 最小化 -->
-      <button
-        class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
-        @click="handleMinimize"
-        :data-tauri-drag-region="false"
-        :title="$t('window.minimize') || '最小化'"
-      >
-        <Minus class="w-4 h-4" />
-      </button>
-      <!-- 最大化/还原 -->
-      <button
-        class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
-        @click="handleMaximize"
-        :data-tauri-drag-region="false"
-        :title="$t('window.maximize') || '最大化'"
-      >
-        <Square class="w-4 h-4" />
-      </button>
-      <!-- 关闭 -->
-      <button
-        class="h-6 w-8 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
-        @click="handleClose"
-        :data-tauri-drag-region="false"
-        :title="$t('window.close') || '关闭'"
-      >
-        <X class="w-4 h-4" />
-      </button>
-    </div>
-
+     <div v-if="isWindows" class="flex items-center space-x-1">
+       <!-- 关闭（放到最左侧，突出视觉层级） -->
+       <button
+-        class="h-7 w-7 flex items-center justify-center transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15"
+         @click="handleClose"
+         :data-tauri-drag-region="false"
+         :title="$t('window.close') || '关闭'"
+         aria-label="Close"
+       >
+         <X class="w-4 h-4" />
+       </button>
+       <!-- 最小化 -->
+       <button
+         class="h-7 w-7 flex items-center justify-center transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15"
+         @click="handleMinimize"
+         :data-tauri-drag-region="false"
+         :title="$t('window.minimize') || '最小化'"
+         aria-label="Minimize"
+       >
+         <Minus class="w-4 h-4" />
+       </button>
+       <!-- 最大化/还原 -->
+       <button
+         class="h-7 w-7 flex items-center justify-center transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15"
+         @click="handleMaximize"
+         :data-tauri-drag-region="false"
+         :title="$t('window.maximize') || '最大化'"
+         aria-label="Maximize/Restore"
+       >
+         <Square class="w-4 h-4" />
+       </button>
+     </div>
+    
     <!-- 中间：标题留白（不显示任何文字） -->
     <div class="flex-1" />
 
