@@ -1,9 +1,32 @@
 use std::path::PathBuf;
-use std::process::Command;
 use tauri::Manager;
 use crate::video::types::VideoMetadata;
 // Add for caching hardware support
 use std::time::{SystemTime, UNIX_EPOCH};
+#[cfg(windows)]
+use std::os::windows::process::CommandExt; // same trait works for both std and tokio Command
+
+// Helper: create a std::process::Command that does not pop a console window on Windows
+pub fn command_with_no_window<P: AsRef<std::ffi::OsStr>>(program: P) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
+
+// Add: Helper for tokio::process::Command to avoid console window on Windows
+pub fn tokio_command_with_no_window<P: AsRef<std::ffi::OsStr>>(program: P) -> tokio::process::Command {
+    let mut cmd = tokio::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
 
 pub fn get_desktop_directory() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
@@ -37,7 +60,7 @@ pub fn get_ffmpeg_binary() -> &'static str {
     #[cfg(target_os = "windows")]
     {
         #[cfg(target_arch = "x86_64")]
-        return "ffmpeg-x86_64-pc-win64.exe";
+        return "ffmpeg-x86_64-pc-windows-msvc.exe";
     }
     
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -197,7 +220,7 @@ pub fn get_video_metadata(app_handle: tauri::AppHandle, videoPath: String) -> Re
         return Err(format!("FFprobe binary not found at: {:?}", ffprobe_path));
     }
 
-    let output = Command::new(&ffprobe_path)
+    let output = command_with_no_window(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -270,10 +293,10 @@ pub fn detect_all_codecs(app_handle: tauri::AppHandle) -> Result<Vec<Codec>, Str
     let mut all_codecs = Vec::new();
     
     // 获取所有编码器
-    let encoders_output = Command::new(&ffmpeg_path)
-        .args(["-encoders"])
+    let encoders_output = command_with_no_window(&ffmpeg_path)
+        .args(["-hide_banner", "-v", "error", "-encoders"])
         .output()
-        .map_err(|e| format!("Failed to execute ffmpeg -encoders: {}", e))?;
+        .map_err(|e| format!("Failed to list encoders: {}", e))?;
     
     if encoders_output.status.success() {
         let output_str = String::from_utf8(encoders_output.stdout)
@@ -313,10 +336,10 @@ pub fn detect_all_codecs(app_handle: tauri::AppHandle) -> Result<Vec<Codec>, Str
     }
     
     // 获取所有解码器
-    let decoders_output = Command::new(&ffmpeg_path)
-        .args(["-decoders"])
+    let decoders_output = command_with_no_window(&ffmpeg_path)
+        .args(["-hide_banner", "-v", "error", "-decoders"])
         .output()
-        .map_err(|e| format!("Failed to execute ffmpeg -decoders: {}", e))?;
+        .map_err(|e| format!("Failed to list decoders: {}", e))?;
     
     if decoders_output.status.success() {
         let output_str = String::from_utf8(decoders_output.stdout)
@@ -570,7 +593,7 @@ fn resolve_test_video_path(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
 // Helper: Log available HW encoders from `ffmpeg -encoders`
 fn log_available_hw_encoders(ffmpeg_path: &PathBuf) {
   if !cfg!(debug_assertions) { return; }
-  let out = Command::new(ffmpeg_path)
+  let out = command_with_no_window(ffmpeg_path)
     .arg("-hide_banner")
     .arg("-v").arg("error")
     .arg("-encoders")
@@ -607,7 +630,7 @@ fn test_encoder(ffmpeg_path: &PathBuf, input: &TestInput, encoder: &str) -> (boo
   }
 
   // 单次最小参数检测：仅设置编码器与码率，输出到 null，处理 1 帧
-  let mut cmd = Command::new(ffmpeg_path);
+  let mut cmd = command_with_no_window(ffmpeg_path);
   cmd
     .arg("-hide_banner")
     .arg("-nostdin")

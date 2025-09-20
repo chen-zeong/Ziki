@@ -1,7 +1,9 @@
-use tokio::process::Command;
 use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary};
 use tauri::Manager; // 引入 Manager trait 以便使用 AppHandle.path()
 use tauri::Emitter; // 新增：引入 Emitter 以启用 app_handle.emit()
+use crate::video::utils::tokio_command_with_no_window;
+// use std::sync::{Arc, OnceLock};
+// use tokio::sync::Semaphore;
 
 fn map_jpeg_quality(crf_value: Option<u8>) -> u8 {
     // ffmpeg mjpeg quality range: 2(best) - 31(worst)
@@ -76,6 +78,19 @@ pub async fn compress_image(
     settings: CompressionSettings,
     app_handle: tauri::AppHandle,
 ) -> Result<CompressionResult, String> {
+    // 移除：进入排队逻辑
+    // let sem = image_compress_semaphore().clone();
+    // let permit = match sem.clone().try_acquire_owned() {
+    //     Ok(p) => p,
+    //     Err(_) => {
+    //         let _ = app_handle.emit(
+    //             &format!("image-compression-queued-{}", taskId),
+    //             serde_json::json!({ "taskId": taskId })
+    //         );
+    //         sem.acquire_owned().await.map_err(|e| format!("Failed to queue image compression: {}", e))?
+    //     }
+    // };
+
     // Resolve ffmpeg path (reuse logic from video module)
     let ffmpeg_path = if cfg!(debug_assertions) {
         let current_exe = std::env::current_exe().unwrap();
@@ -154,8 +169,8 @@ pub async fn compress_image(
         .map_err(|e| format!("Failed to get file size: {}", e))?
         .len();
 
-    // Prepare ffmpeg command
-    let mut cmd = Command::new(&ffmpeg_path);
+    // Prepare ffmpeg command（仅改为无窗口，参数保持不变）
+    let mut cmd = tokio_command_with_no_window(&ffmpeg_path);
     let mut args_for_log: Vec<String> = Vec::new();
     cmd.arg("-y");
     args_for_log.push("-y".to_string());
@@ -262,7 +277,7 @@ pub async fn compress_image(
     // 输出路径
     cmd.arg(&outputPath);
     args_for_log.push(outputPath.clone());
-    // 新增：通过事件发送 FFmpeg 命令到前端（与视频一致）
+    // 可选：通过事件发送 FFmpeg 命令到前端（若不需要可删除）
     let args_joined = args_for_log
         .iter()
         .map(|a| if a.contains(' ') { format!("\"{}\"", a) } else { a.clone() })
@@ -292,6 +307,8 @@ pub async fn compress_image(
     let compressed_size = std::fs::metadata(&outputPath)
         .map_err(|e| format!("Failed to get compressed file size: {}", e))?
         .len();
+
+    // 移除：permit 释放（已不存在）
 
     Ok(CompressionResult {
         success: true,

@@ -2,12 +2,13 @@ use std::process::Stdio;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::process::{Command, Child};
+use tokio::process::{Child};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tauri::{Manager, Emitter};
 use crate::video::{CompressionSettings, CompressionResult, get_ffmpeg_binary, get_video_metadata};
 use crate::video::utils::get_ffprobe_binary;
 use crate::video::utils::get_hardware_encoder_support;
+use crate::video::utils::tokio_command_with_no_window;
 use serde_json::json;
 
 // 任务信息结构
@@ -227,7 +228,7 @@ pub async fn compress_video(
         return Err(format!("FFprobe binary not found. Tried: {}", tried.join(" | ")));
     }
     
-    let duration_cmd = Command::new(&ffprobe_path)
+    let duration_cmd = tokio_command_with_no_window(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -278,7 +279,7 @@ pub async fn compress_video(
     
     println!("Actual compression duration: {} seconds", actual_compression_duration);
     
-    let mut cmd = Command::new(&ffmpeg_path);
+    let mut cmd = tokio_command_with_no_window(&ffmpeg_path);
     let mut args_for_log: Vec<String> = Vec::new();
     
     // Add time range parameters if specified

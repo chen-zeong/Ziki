@@ -1,7 +1,7 @@
 use std::process::Command;
 use tauri::Manager;
 use base64::{Engine as _, engine::general_purpose};
-use crate::video::{get_ffmpeg_binary, get_ffprobe_binary};
+use crate::video::{get_ffmpeg_binary, get_ffprobe_binary, command_with_no_window};
 
 // 获取视频时长的单独函数 - 使用ffprobe快速获取
 #[allow(non_snake_case)]
@@ -44,7 +44,7 @@ pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle
     };
     
     // 使用ffprobe快速获取视频时长，比FFmpeg快得多
-    let output = Command::new(&ffprobe_path)
+    let output = command_with_no_window(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -162,7 +162,7 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
     let ffmpeg_start = std::time::Instant::now();
     // 使用优化的FFmpeg参数来提高帧生成速度
     println!("[Thumbnail] Creating ffmpeg command for {}", videoPath);
-    let output = Command::new(&ffmpeg_path)
+    let output = command_with_no_window(&ffmpeg_path)
         .arg("-ss").arg(&timestamp_str)  // 输入级别跳转，更快
         .arg("-i").arg(&videoPath)
         .arg("-vframes").arg("1")        // 只生成一帧
@@ -360,7 +360,7 @@ pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handl
         }
     };
 
-    let duration_output = Command::new(&ffprobe_path)
+    let duration_output = command_with_no_window(&ffprobe_path)
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -663,7 +663,7 @@ pub async fn generate_thumbnail(videoPath: String, app_handle: tauri::AppHandle)
         let output_path = std::env::temp_dir().join(format!("{}_thumb.jpg", file_stem));
 
         let timestamp_str = format!("{:.2}", middle_timestamp);
-        let output_result = Command::new(&ffmpeg_path)
+        let output_result = command_with_no_window(&ffmpeg_path)
             .arg("-ss").arg(&timestamp_str)
             .arg("-i").arg(&videoPath)
             .arg("-an")
