@@ -301,6 +301,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
   window: {
     minimize: '最小化',
     maximizeRestore: '最大化/还原',
+    maximize: '最大化',
     close: '关闭'
   }
 };

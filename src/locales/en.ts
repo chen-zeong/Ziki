@@ -300,6 +300,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
   window: {
     minimize: 'Minimize',
     maximizeRestore: 'Maximize/Restore',
+    maximize: 'Maximize',
     close: 'Close'
   },
 

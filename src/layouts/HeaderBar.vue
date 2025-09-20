@@ -70,7 +70,7 @@ const handleClose = async () => {
      <div v-if="isWindows" class="flex items-center space-x-1">
        <!-- 关闭（放到最左侧，突出视觉层级） -->
        <button
--        class="h-7 w-7 flex items-center justify-center transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15"
+         class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-red-500/90 hover:text-white focus:outline-none focus:ring-0"
          @click="handleClose"
          :data-tauri-drag-region="false"
          :title="$t('window.close') || '关闭'"
@@ -80,7 +80,7 @@ const handleClose = async () => {
        </button>
        <!-- 最小化 -->
        <button
-         class="h-7 w-7 flex items-center justify-center transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15"
+         class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0"
          @click="handleMinimize"
          :data-tauri-drag-region="false"
          :title="$t('window.minimize') || '最小化'"
@@ -90,7 +90,7 @@ const handleClose = async () => {
        </button>
        <!-- 最大化/还原 -->
        <button
-         class="h-7 w-7 flex items-center justify-center transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15"
+         class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0"
          @click="handleMaximize"
          :data-tauri-drag-region="false"
          :title="$t('window.maximize') || '最大化'"
