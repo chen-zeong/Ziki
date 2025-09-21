@@ -53,7 +53,7 @@
                 <input 
                   v-model="globalSettings.outputPath"
                   type="text" 
-                   class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                   class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:border-amber-500"
                    :placeholder="$t('outputFolder.selectFolder') || '选择输出路径...'"
                    readonly
                  />

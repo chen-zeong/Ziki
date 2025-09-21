@@ -351,7 +351,7 @@ pub async fn compress_video(
             }
         } else if cfg!(target_os = "windows") {
             println!("Platform: Windows, selecting HW encoder by availability");
-            // Windows: 根据检测到的硬件能力优先选择 AMD AMF -> Intel QSV -> NVIDIA NVENC
+            // Windows: 根据检测到的硬件能力优先选择 NVIDIA NVENC -> AMD AMF -> Intel QSV
             let base = match settings.codec.as_str() {
                 "H.264" | "libx264" | "h264" => "h264",
                 "H.265" | "HEVC" | "libx265" | "hevc" => "hevc",
@@ -363,9 +363,9 @@ pub async fn compress_video(
                 if let Ok(hs) = get_hardware_encoder_support(app_handle.clone()) {
                     let have = |name: &str| hs.encoders.iter().any(|e| e.name == name);
                     let candidates = vec![
+                        format!("{}_nvenc", base),
                         format!("{}_amf", base),
                         format!("{}_qsv", base),
-                        format!("{}_nvenc", base),
                     ];
                     for c in &candidates {
                         if have(c) {

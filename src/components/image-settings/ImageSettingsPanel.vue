@@ -29,7 +29,7 @@
                     <span class="text-xs font-semibold text-gray-600 dark:text-dark-secondary opacity-80">{{ t('videoSettings.custom') }}</span>
                      <button
                        type="button"
-                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
                        :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
                        :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
                        @click="toggleCustomResolution"
