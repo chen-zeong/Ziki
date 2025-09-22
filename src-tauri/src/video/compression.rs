@@ -352,7 +352,7 @@ pub async fn compress_video(
              }
          } else if cfg!(target_os = "windows") {
                 info!("Platform: Windows, selecting HW encoder by availability");
-             // Windows: 根据检测到的硬件能力优先选择 NVIDIA NVENC -> AMD AMF -> Intel QSV
+             // Windows: 从检测到的“可用硬件编码器”中选择当前 codec 对应的一个，而不是按厂商顺序逐个尝试
              let base = match settings.codec.as_str() {
                  "H.264" | "libx264" | "h264" => "h264",
                  "H.265" | "HEVC" | "libx265" | "hevc" => "hevc",
@@ -362,19 +362,23 @@ pub async fn compress_video(
              let mut selected: Option<String> = None;
              if !base.is_empty() {
                  if let Ok(hs) = get_hardware_encoder_support(app_handle.clone()) {
-                     let have = |name: &str| hs.encoders.iter().any(|e| e.name == name);
-                     let candidates = vec![
-                         format!("{}_nvenc", base),
-                         format!("{}_amf", base),
-                         format!("{}_qsv", base),
-                     ];
-                     for c in &candidates {
-                         if have(c) {
-                             selected = Some(c.clone());
-                             break;
-                         }
-                     }
-                        debug!("Detected HW encoders: {:?}", hs.encoders.iter().map(|e| e.name.clone()).collect::<Vec<_>>());
+                     // 过滤出支持且与当前 codec 匹配的编码器，例如 h264_amf / h264_nvenc / h264_qsv
+                      let candidates: Vec<_> = hs
+                          .encoders
+                          .iter()
+                          .filter(|e| e.supported && e.codec == base)
+                          .collect();
+                      debug!("Detected HW encoders (all): {:?}", hs.encoders.iter().map(|e| (e.name.clone(), e.codec.clone(), e.supported, e.vendor.clone())).collect::<Vec<_>>());
+                      debug!("Available HW encoders for {}: {:?}", base, candidates.iter().map(|e| (&e.name, &e.vendor)).collect::<Vec<_>>());
+                      // 若有多个可用，按优先级 NVIDIA > AMD > Intel 选择
+                      if let Some(best) = candidates.into_iter().max_by_key(|e| match e.vendor.as_str() {
+                          "NVIDIA" => 3,
+                          "AMD" => 2,
+                          "Intel" => 1,
+                          _ => 0,
+                      }) {
+                          selected = Some(best.name.clone());
+                      }
                  } else {
                         warn!("Hardware support detection failed; falling back to defaults");
                  }
