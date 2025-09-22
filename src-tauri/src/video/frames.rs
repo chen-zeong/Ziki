@@ -8,7 +8,7 @@ use crate::video::{get_ffmpeg_binary, get_ffprobe_binary, command_with_no_window
 #[tauri::command]
 pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle) -> Result<f64, String> {
     let start_time = std::time::Instant::now();
-    println!("[Rust Debug] 开始获取视频时长: {}", videoPath);
+    tracing::debug!(target: "frames", "开始获取视频时长: {}", videoPath);
     
     // 解析 ffprobe 路径（开发/生产均可用，含多路径回退）
     let ffprobe_path = if cfg!(debug_assertions) {
@@ -70,7 +70,7 @@ pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle
         .and_then(|d| d.parse::<f64>().ok())
         .ok_or("Failed to extract duration from ffprobe output")?;
     
-    println!("[Rust Debug] 视频时长获取完成: {}s, 总耗时: {:?}", duration, start_time.elapsed());
+    tracing::debug!(target: "frames", "视频时长获取完成: {}s, 总耗时: {:?}", duration, start_time.elapsed());
     Ok(duration)
 }
 
@@ -80,7 +80,7 @@ pub async fn get_video_duration(videoPath: String, _app_handle: tauri::AppHandle
 pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex: u32, timeRangeStart: f64, timeRangeEnd: f64, app_handle: tauri::AppHandle) -> Result<String, String> {
     let start_time = std::time::Instant::now();
     let time_range_duration = timeRangeEnd - timeRangeStart;
-    println!("[Rust Debug] 开始生成帧 {} for {}, 时间范围: {}s - {}s (时长: {}s)", frameIndex, videoPath, timeRangeStart, timeRangeEnd, time_range_duration);
+    tracing::debug!(target: "frames", "开始生成帧 {} for {}, 时间范围: {}s - {}s (时长: {}s)", frameIndex, videoPath, timeRangeStart, timeRangeEnd, time_range_duration);
     
     // 简化验证逻辑，避免重复调用get_video_duration
     if time_range_duration <= 0.0 {
@@ -91,7 +91,7 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
     }
     
     let path_check_start = std::time::Instant::now();
-    println!("[Rust Debug] 检查FFmpeg路径...");
+    tracing::debug!(target: "frames", "检查FFmpeg路径...");
     
     // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
@@ -125,7 +125,7 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
             ));
         }
     };
-    println!("[Rust Debug] FFmpeg路径获取完成, 耗时: {:?}, 路径: {:?}", path_check_start.elapsed(), ffmpeg_path);
+    tracing::debug!(target: "frames", "FFmpeg路径获取完成, 耗时: {:?}, 路径: {:?}", path_check_start.elapsed(), ffmpeg_path);
     
     // Calculate timestamp within the custom time range
     let timestamp_calc_start = std::time::Instant::now();
@@ -151,17 +151,17 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
     }
     if timestamp > timeRangeEnd {
         // 允许时间戳等于结束时间，因为ffmpeg的-ss参数是寻找该时间点之前的关键帧
-        println!("[Rust Warning] Timestamp {} for frame {} slightly exceeds end time {}, clamping to end time.", timestamp, frameIndex, timeRangeEnd);
+        tracing::debug!(target: "frames", "Timestamp {} for frame {} slightly exceeds end time {}, clamping to end time.", timestamp, frameIndex, timeRangeEnd);
     }
     
     let timestamp_str = format!("{:.2}", timestamp);
-    println!("[Rust Debug] 时间戳计算完成, 耗时: {:?}, 帧索引: {}, 时间戳: {} (在范围 {}-{} 内), 时间范围长度: {}", timestamp_calc_start.elapsed(), frameIndex, timestamp_str, timeRangeStart, timeRangeEnd, time_range_duration);
+    tracing::debug!(target: "frames", "时间戳计算完成, 耗时: {:?}, 帧索引: {}, 时间戳: {} (在范围 {}-{} 内), 时间范围长度: {}", timestamp_calc_start.elapsed(), frameIndex, timestamp_str, timeRangeStart, timeRangeEnd, time_range_duration);
     
-    println!("[Rust Debug] 开始执行FFmpeg命令生成帧 {} at timestamp {}", frameIndex, timestamp_str);
+    tracing::debug!(target: "frames", "开始执行FFmpeg命令生成帧 {} at timestamp {}", frameIndex, timestamp_str);
     
     let ffmpeg_start = std::time::Instant::now();
     // 使用优化的FFmpeg参数来提高帧生成速度
-    println!("[Thumbnail] Creating ffmpeg command for {}", videoPath);
+    tracing::debug!(target: "frames", "[Thumbnail] Creating ffmpeg command for {}", videoPath);
     let output = command_with_no_window(&ffmpeg_path)
         .arg("-ss").arg(&timestamp_str)  // 输入级别跳转，更快
         .arg("-i").arg(&videoPath)
@@ -173,22 +173,22 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
         .arg("-")
         .output()
         .map_err(|e| format!("Failed to generate frame {}: {}", frameIndex, e))?;
-    println!("[Rust Debug] FFmpeg命令执行完成, 帧 {} 耗时: {:?}", frameIndex, ffmpeg_start.elapsed());
+    tracing::debug!(target: "frames", "FFmpeg命令执行完成, 帧 {} 耗时: {:?}", frameIndex, ffmpeg_start.elapsed());
     
     if output.status.success() {
         if !output.stdout.is_empty() {
             let base64_start = std::time::Instant::now();
             let base64_data = general_purpose::STANDARD.encode(&output.stdout);
-            println!("[Rust Debug] Base64编码完成, 帧 {} 耗时: {:?}, 数据大小: {} bytes", frameIndex, base64_start.elapsed(), output.stdout.len());
-            println!("[Rust Debug] 帧 {} 生成完成, 总耗时: {:?}", frameIndex, start_time.elapsed());
+            tracing::debug!(target: "frames", "Base64编码完成, 帧 {} 耗时: {:?}, 数据大小: {} bytes", frameIndex, base64_start.elapsed(), output.stdout.len());
+            tracing::info!(target: "frames", "帧 {} 生成完成, 总耗时: {:?}", frameIndex, start_time.elapsed());
             Ok(format!("data:image/jpeg;base64,{}", base64_data))
         } else {
-            println!("[Rust Debug] FFmpeg输出为空, 帧 {}", frameIndex);
+            tracing::warn!(target: "frames", "FFmpeg输出为空, 帧 {}", frameIndex);
             Err(format!("No frame data generated for frame {}", frameIndex))
         }
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("[Rust Debug] FFmpeg执行失败, 帧 {}, 错误: {}", frameIndex, stderr);
+        tracing::error!(target: "frames", "FFmpeg执行失败, 帧 {}, 错误: {}", frameIndex, stderr);
         Err(format!("FFmpeg failed to generate frame {}: {}", frameIndex, stderr))
     }
 }
@@ -198,10 +198,10 @@ pub async fn generate_single_frame_with_time_range(videoPath: String, frameIndex
 #[tauri::command]
 pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: u32, duration: f64, app_handle: tauri::AppHandle) -> Result<String, String> {
     let start_time = std::time::Instant::now();
-    println!("[Rust Debug] 开始生成帧 {} for {}, 视频时长: {}s", frameIndex, videoPath, duration);
+    tracing::debug!(target: "frames", "开始生成帧 {} for {}, 视频时长: {}s", frameIndex, videoPath, duration);
     
     let path_check_start = std::time::Instant::now();
-    println!("[Rust Debug] 检查FFmpeg路径...");
+    tracing::debug!(target: "frames", "检查FFmpeg路径...");
     
     // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
@@ -235,7 +235,7 @@ pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: 
             ));
         }
     };
-    println!("[Rust Debug] FFmpeg路径获取完成, 耗时: {:?}, 路径: {:?}", path_check_start.elapsed(), ffmpeg_path);
+    tracing::debug!(target: "frames", "FFmpeg路径获取完成, 耗时: {:?}, 路径: {:?}", path_check_start.elapsed(), ffmpeg_path);
     
     // Calculate timestamp for the specific frame (跳过获取时长步骤)
     let timestamp_calc_start = std::time::Instant::now();
@@ -249,9 +249,9 @@ pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: 
         (duration * frameIndex as f64) / 9.0
     };
     let timestamp_str = format!("{:.2}", timestamp);
-    println!("[Rust Debug] 时间戳计算完成, 耗时: {:?}, 帧索引: {}, 时间戳: {}", timestamp_calc_start.elapsed(), frameIndex, timestamp_str);
+    tracing::debug!(target: "frames", "时间戳计算完成, 耗时: {:?}, 帧索引: {}, 时间戳: {}", timestamp_calc_start.elapsed(), frameIndex, timestamp_str);
     
-    println!("[Rust Debug] 开始执行FFmpeg命令生成帧 {} at timestamp {}", frameIndex, timestamp_str);
+    tracing::debug!(target: "frames", "开始执行FFmpeg命令生成帧 {} at timestamp {}", frameIndex, timestamp_str);
     
     let ffmpeg_start = std::time::Instant::now();
     // 使用管道输出和优化参数来提高跳转性能
@@ -265,22 +265,22 @@ pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: 
         .arg("-")
         .output()
         .map_err(|e| format!("Failed to generate frame {}: {}", frameIndex, e))?;
-    println!("[Rust Debug] FFmpeg命令执行完成, 帧 {} 耗时: {:?}", frameIndex, ffmpeg_start.elapsed());
+    tracing::debug!(target: "frames", "FFmpeg命令执行完成, 帧 {} 耗时: {:?}", frameIndex, ffmpeg_start.elapsed());
     
     if output.status.success() {
         if !output.stdout.is_empty() {
             let base64_start = std::time::Instant::now();
             let base64_data = general_purpose::STANDARD.encode(&output.stdout);
-            println!("[Rust Debug] Base64编码完成, 帧 {} 耗时: {:?}, 数据大小: {} bytes", frameIndex, base64_start.elapsed(), output.stdout.len());
-            println!("[Rust Debug] 帧 {} 生成完成, 总耗时: {:?}", frameIndex, start_time.elapsed());
+            tracing::debug!(target: "frames", "Base64编码完成, 帧 {} 耗时: {:?}, 数据大小: {} bytes", frameIndex, base64_start.elapsed(), output.stdout.len());
+            tracing::info!(target: "frames", "帧 {} 生成完成, 总耗时: {:?}", frameIndex, start_time.elapsed());
             Ok(format!("data:image/jpeg;base64,{}", base64_data))
         } else {
-            println!("[Rust Debug] FFmpeg输出为空, 帧 {}", frameIndex);
+            tracing::warn!(target: "frames", "FFmpeg输出为空, 帧 {}", frameIndex);
             Err(format!("No frame data generated for frame {}", frameIndex))
         }
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("[Rust Debug] FFmpeg执行失败, 帧 {}, 错误: {}", frameIndex, stderr);
+        tracing::error!(target: "frames", "FFmpeg执行失败, 帧 {}, 错误: {}", frameIndex, stderr);
         Err(format!("FFmpeg failed to generate frame {}: {}", frameIndex, stderr))
     }
 }
@@ -289,7 +289,7 @@ pub async fn generate_single_frame_with_duration(videoPath: String, frameIndex: 
 #[tauri::command]
 pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handle: tauri::AppHandle) -> Result<String, String> {
     let start_time = std::time::Instant::now();
-    println!("[Rust Debug] 开始生成帧 {} for {}", frameIndex, videoPath);
+    tracing::debug!(target: "frames", "开始生成帧 {} for {}", frameIndex, videoPath);
     
     // 获取 FFmpeg 路径（含多路径回退）
     let ffmpeg_path = if cfg!(debug_assertions) {
@@ -326,7 +326,7 @@ pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handl
     
     // 先用 ffprobe 获取时长（含多路径回退）
     let duration_start = std::time::Instant::now();
-    println!("[Rust Debug] 开始获取视频时长 for 帧 {}", frameIndex);
+    tracing::debug!(target: "frames", "开始获取视频时长 for 帧 {}", frameIndex);
 
     let ffprobe_path = if cfg!(debug_assertions) {
         let current_exe = std::env::current_exe().unwrap();
@@ -384,7 +384,7 @@ pub async fn generate_single_frame(videoPath: String, frameIndex: u32, app_handl
         .as_str()
         .and_then(|d| d.parse::<f64>().ok())
         .ok_or("Failed to extract duration from ffprobe output")?;
-    println!("[Rust Debug] 获取视频时长完成 for 帧 {}, 耗时: {:?}", frameIndex, duration_start.elapsed());
+    tracing::debug!(target: "frames", "获取视频时长完成 for 帧 {}, 耗时: {:?}", frameIndex, duration_start.elapsed());
     
     // Calculate timestamp for the specific frame
     let timestamp = if frameIndex == 0 {

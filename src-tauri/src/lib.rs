@@ -6,6 +6,9 @@ use image::*;
 use tauri::{Manager, WindowEvent};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+// logging
+use tracing_subscriber::{EnvFilter, fmt};
+
 struct CloseTracker(AtomicBool);
 impl Default for CloseTracker {
     fn default() -> Self { Self(AtomicBool::new(false)) }
@@ -19,6 +22,18 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 初始化 tracing 日志：默认 info 级别，可通过环境变量 RUST_LOG 或 TAURI_LOG 覆盖
+    let _ = fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .or_else(|_| EnvFilter::try_new("info"))
+                .unwrap()
+        )
+        .with_target(true)
+        .with_thread_ids(false)
+        .with_thread_names(false)
+        .try_init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

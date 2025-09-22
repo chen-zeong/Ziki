@@ -10,6 +10,7 @@ use crate::video::utils::get_ffprobe_binary;
 use crate::video::utils::get_hardware_encoder_support;
 use crate::video::utils::tokio_command_with_no_window;
 use serde_json::json;
+use tracing::{info, warn, debug};
 
 // 任务信息结构
 #[derive(Clone, Debug)]
@@ -315,95 +316,89 @@ pub async fn compress_video(
     }
     
     // 添加调试日志
-    println!("Hardware acceleration setting: {:?}", settings.hardware_acceleration);
-    println!("Video codec: {}", settings.codec);
+    debug!("Hardware acceleration setting: {:?}", settings.hardware_acceleration);
+    info!("Video codec: {}", settings.codec);
     
     // Set video codec (映射为FFmpeg编码器名称，考虑硬件加速)
     let ffmpeg_codec: String = if settings.hardware_acceleration == Some("gpu".to_string()) {
-        println!("Using GPU acceleration");
-        // 检查当前平台并使用相应的硬件加速编码器
-        if cfg!(target_os = "macos") {
-            // Intel 架构禁用硬件加速，ARM 使用 VideoToolbox
-            if cfg!(target_arch = "x86_64") {
-                println!("Platform: macOS (Intel), hardware acceleration disabled; falling back to software");
-                map_codec_to_ffmpeg(&settings.codec).to_string()
-            } else {
-                println!("Platform: macOS (ARM), using VideoToolbox");
-                // macOS 使用 VideoToolbox（ARM）
-                match settings.codec.as_str() {
-                    "H.264" | "libx264" | "h264" => {
-                        println!("Selected h264_videotoolbox encoder");
-                        "h264_videotoolbox".to_string()
-                    },
-                    "H.265" | "HEVC" | "libx265" | "hevc" => {
-                        println!("Selected hevc_videotoolbox encoder");
-                        "hevc_videotoolbox".to_string()
-                    },
-                    "ProRes" | "prores" => {
-                        println!("Selected prores_videotoolbox encoder");
-                        "prores_videotoolbox".to_string()
-                    },
-                    _ => {
-                        println!("Codec {} not supported for hardware acceleration, falling back to software", settings.codec);
-                        map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
-                    }
-                }
-            }
-        } else if cfg!(target_os = "windows") {
-            println!("Platform: Windows, selecting HW encoder by availability");
-            // Windows: 根据检测到的硬件能力优先选择 NVIDIA NVENC -> AMD AMF -> Intel QSV
-            let base = match settings.codec.as_str() {
-                "H.264" | "libx264" | "h264" => "h264",
-                "H.265" | "HEVC" | "libx265" | "hevc" => "hevc",
-                "AV1" | "libsvtav1" | "av1" => "av1",
-                _ => "",
-            };
-            let mut selected: Option<String> = None;
-            if !base.is_empty() {
-                if let Ok(hs) = get_hardware_encoder_support(app_handle.clone()) {
-                    let have = |name: &str| hs.encoders.iter().any(|e| e.name == name);
-                    let candidates = vec![
-                        format!("{}_nvenc", base),
-                        format!("{}_amf", base),
-                        format!("{}_qsv", base),
-                    ];
-                    for c in &candidates {
-                        if have(c) {
-                            selected = Some(c.clone());
-                            break;
-                        }
-                    }
-                    println!(
-                        "Detected HW encoders: {:?}",
-                        hs.encoders.iter().map(|e| e.name.clone()).collect::<Vec<_>>()
-                    );
-                } else {
-                    println!("Hardware support detection failed; falling back to defaults");
-                }
-            }
-            match selected {
-                Some(s) => {
-                    println!("Selected Windows HW encoder: {}", s);
-                    s
-                }
-                None => {
-                    println!(
-                        "Codec {} not supported by available HW encoders on Windows, falling back to software",
-                        settings.codec
-                    );
+        info!("Using GPU acceleration");
+         // 检查当前平台并使用相应的硬件加速编码器
+         if cfg!(target_os = "macos") {
+             // Intel 架构禁用硬件加速，ARM 使用 VideoToolbox
+             if cfg!(target_arch = "x86_64") {
+                    warn!("Platform: macOS (Intel), hardware acceleration disabled; falling back to software");
+                 map_codec_to_ffmpeg(&settings.codec).to_string()
+             } else {
+                    info!("Platform: macOS (ARM), using VideoToolbox");
+                 // macOS 使用 VideoToolbox（ARM）
+                 match settings.codec.as_str() {
+                        "H.264" | "libx264" | "h264" => {
+                            info!("Selected h264_videotoolbox encoder");
+                         "h264_videotoolbox".to_string()
+                     },
+                        "H.265" | "HEVC" | "libx265" | "hevc" => {
+                            info!("Selected hevc_videotoolbox encoder");
+                         "hevc_videotoolbox".to_string()
+                     },
+                        "ProRes" | "prores" => {
+                            info!("Selected prores_videotoolbox encoder");
+                         "prores_videotoolbox".to_string()
+                     },
+                     _ => {
+                            warn!("Codec {} not supported for hardware acceleration, falling back to software", settings.codec);
+                         map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
+                     }
+                 }
+             }
+         } else if cfg!(target_os = "windows") {
+                info!("Platform: Windows, selecting HW encoder by availability");
+             // Windows: 根据检测到的硬件能力优先选择 NVIDIA NVENC -> AMD AMF -> Intel QSV
+             let base = match settings.codec.as_str() {
+                 "H.264" | "libx264" | "h264" => "h264",
+                 "H.265" | "HEVC" | "libx265" | "hevc" => "hevc",
+                 "AV1" | "libsvtav1" | "av1" => "av1",
+                 _ => "",
+             };
+             let mut selected: Option<String> = None;
+             if !base.is_empty() {
+                 if let Ok(hs) = get_hardware_encoder_support(app_handle.clone()) {
+                     let have = |name: &str| hs.encoders.iter().any(|e| e.name == name);
+                     let candidates = vec![
+                         format!("{}_nvenc", base),
+                         format!("{}_amf", base),
+                         format!("{}_qsv", base),
+                     ];
+                     for c in &candidates {
+                         if have(c) {
+                             selected = Some(c.clone());
+                             break;
+                         }
+                     }
+                        debug!("Detected HW encoders: {:?}", hs.encoders.iter().map(|e| e.name.clone()).collect::<Vec<_>>());
+                 } else {
+                        warn!("Hardware support detection failed; falling back to defaults");
+                 }
+             }
+             match selected {
+                 Some(s) => {
+                        info!("Selected Windows HW encoder: {}", s);
+                     s
+                 }
+                 None => {
+                    warn!("Codec {} not supported by available HW encoders on Windows, falling back to software", settings.codec);
                     map_codec_to_ffmpeg(&settings.codec).to_string() // 回退到软件编码
-                }
-            }
-        } else {
-            println!("Platform not supported for hardware acceleration, falling back to software");
-            // 其他平台回退到软件编码
-            map_codec_to_ffmpeg(&settings.codec).to_string()
-        }
-    } else {
-        println!("Using CPU encoding");
-        map_codec_to_ffmpeg(&settings.codec).to_string()
-    };
-    
+                 }
+             }
+         } else {
+           warn!("Platform not supported for hardware acceleration, falling back to software");
+             // 其他平台回退到软件编码
+             map_codec_to_ffmpeg(&settings.codec).to_string()
+         }
+     } else {
+            info!("Using CPU encoding");
+         map_codec_to_ffmpeg(&settings.codec).to_string()
+     };
+     
     println!("Final FFmpeg codec: {}", ffmpeg_codec);
     cmd.arg("-c:v").arg(&ffmpeg_codec);
     args_for_log.push("-c:v".to_string());
