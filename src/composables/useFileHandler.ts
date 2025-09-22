@@ -571,8 +571,8 @@ export function useFileHandler() {
           try { unlistenOther(); } catch {}
           activeProgressListeners.delete(other.id);
         }
-        // 同步前端状态：进入排队而非暂停
-        taskStore.updateTaskStatus(other.id, 'queued');
+        // 同步前端状态：标记为已暂停
+        taskStore.updateTaskStatus(other.id, 'paused');
       }
     }
 

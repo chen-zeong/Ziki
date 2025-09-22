@@ -69,6 +69,7 @@ interface Emits {
   (e: 'update-task', task: CompressionTask): void;
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
+  (e: 'pause-task', taskId: string): void;
   (e: 'select-task', taskId: string): void;
   (e: 'clear-all-tasks'): void;
 }
@@ -170,22 +171,8 @@ const pauseTask = async (taskId: string) => {
     const task = tasks.value.find(t => t.id === taskId);
     console.log('Pause task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
     if (task && task.status === 'processing') {
-      console.log('Calling pause_task for:', taskId);
-      try {
-        await invoke('pause_task', { taskId });
-        console.log('Task paused successfully:', taskId);
-      } catch (pauseError) {
-        // 检查是否是因为进程被中断而失败
-        const errorMessage = String(pauseError);
-        if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
-          console.log('Task was interrupted/killed, treating as paused:', taskId);
-        } else {
-          throw pauseError; // 重新抛出其他类型的错误
-        }
-      }
-      // 无论是成功暂停还是进程被中断，都更新状态为paused
-      const updatedTask = { ...task, status: 'paused' as const };
-      emit('update-task', updatedTask);
+      // 上抛给父组件处理暂停（统一由控制器/上层管理）
+      emit('pause-task', taskId);
     } else {
       console.log('Task not in processing state or not found:', taskId, task?.status);
     }
@@ -258,77 +245,59 @@ const handleTauriFileDrop = async (filePaths: string[]) => {
         value: fileSize,
         writable: false,
         enumerable: true,
-        configurable: false
       });
       files.push(mockFile);
     }
-  
-    if (files.length > 0) {
-      const fileList = {
-        length: files.length,
-        item: (index: number) => files[index] || null,
-        [Symbol.iterator]: function* () {
-          for (let i = 0; i < files.length; i++) {
-            yield files[i];
-          }
+    // 构造一个 FileList-like 对象，避免与数组的 length 冲突
+    const indexed = Object.fromEntries(files.map((f, i) => [i, f]));
+    const fileList = {
+      ...indexed,
+      length: files.length,
+      item: (index: number) => files[index] || null,
+      [Symbol.iterator]: function* () {
+        for (let i = 0; i < files.length; i++) {
+          yield files[i];
         }
-      } as FileList;
-      files.forEach((file, index) => {
-        (fileList as any)[index] = file;
-      });
-      emit('files-selected', fileList);
-    }
+      }
+    } as unknown as FileList;
+    emit('files-selected', fileList);
   }
 };
 
-// Setup Tauri event listeners globally (so drag-drop works even when uploader is hidden)
 onMounted(async () => {
-  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-    try {
-      unlistenDragEnter = await listen('tauri://drag-enter', () => {
-        isDragOver.value = true;
-      });
-      unlistenDragOver = await listen('tauri://drag-over', () => {
-        isDragOver.value = true;
-      });
-      unlistenDragLeave = await listen('tauri://drag-leave', () => {
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    const appWindow = getCurrentWindow();
+    // 注册 Tauri 原生拖拽事件
+    unlistenDragDrop = await listen('tauri://file-drop', (event) => {
+      const filePaths = (event.payload as string[]) || [];
+      handleTauriFileDrop(filePaths);
+    });
+    unlistenDragEnter = await listen('tauri://file-drop-hover', () => {
+      isDragOver.value = true;
+    });
+    unlistenDragLeave = await listen('tauri://file-drop-cancelled', () => {
+      isDragOver.value = false;
+    });
+    unlistenDragOver = await listen('tauri://drag-over', () => {
+      isDragOver.value = true;
+    });
+
+    // 监听窗口焦点变化，失焦时清理拖拽样式
+    appWindow.onFocusChanged(({ payload }: { payload: boolean }) => {
+      if (!payload) {
         isDragOver.value = false;
-      });
-      unlistenDragDrop = await listen('tauri://drag-drop', (event: any) => {
-        isDragOver.value = false;
-        if (event?.payload?.paths) {
-          handleTauriFileDrop(event.payload.paths);
-        }
-      });
-    } catch (error) {
-      console.error('Failed to register Tauri drag-drop listeners:', error);
-    }
+      }
+    });
+  } catch (error) {
+    console.warn('Failed to register Tauri drag-drop listeners:', error);
   }
 });
 
 onUnmounted(() => {
-  if (unlistenDragDrop) unlistenDragDrop();
-  if (unlistenDragEnter) unlistenDragEnter();
-  if (unlistenDragLeave) unlistenDragLeave();
-  if (unlistenDragOver) unlistenDragOver();
+  try { unlistenDragDrop && unlistenDragDrop(); } catch {}
+  try { unlistenDragEnter && unlistenDragEnter(); } catch {}
+  try { unlistenDragLeave && unlistenDragLeave(); } catch {}
+  try { unlistenDragOver && unlistenDragOver(); } catch {}
 });
-
-// 监听任务变化，自动清理已删除任务的展开状态
-watch(tasks, (newTasks) => {
-  const taskIds = new Set(newTasks.map(task => task.id));
-  
-  // 清理已删除任务的展开状态
-  for (const taskId of expandedTasks.value) {
-    if (!taskIds.has(taskId)) {
-      expandedTasks.value.delete(taskId);
-    }
-  }
-  
-  // 清理已删除任务的选中状态
-  for (const taskId of selectedTasks.value) {
-    if (!taskIds.has(taskId)) {
-      selectedTasks.value.delete(taskId);
-    }
-  }
-}, { deep: true });
 </script>

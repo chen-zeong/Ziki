@@ -33,6 +33,7 @@ const emit = defineEmits([
   'update-task',
   'delete-task',
   'resume-compression',
+  'pause-task',
   'select-task',
   'clear-all-tasks'
 ]);
@@ -159,6 +160,7 @@ defineExpose({
           @update-task="emit('update-task', $event)"
           @delete-task="emit('delete-task', $event)"
           @resume-compression="emit('resume-compression', $event)"
+          @pause-task="emit('pause-task', $event)"
           @select-task="emit('select-task', $event)"
           @clear-all-tasks="emit('clear-all-tasks')"
         />

@@ -8,7 +8,10 @@ use std::os::windows::process::CommandExt; // same trait works for both std and 
 
 // Helper: create a std::process::Command that does not pop a console window on Windows
 pub fn command_with_no_window<P: AsRef<std::ffi::OsStr>>(program: P) -> std::process::Command {
+    #[cfg(windows)]
     let mut cmd = std::process::Command::new(program);
+    #[cfg(not(windows))]
+    let cmd = std::process::Command::new(program);
     #[cfg(windows)]
     {
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -19,7 +22,10 @@ pub fn command_with_no_window<P: AsRef<std::ffi::OsStr>>(program: P) -> std::pro
 
 // Add: Helper for tokio::process::Command to avoid console window on Windows
 pub fn tokio_command_with_no_window<P: AsRef<std::ffi::OsStr>>(program: P) -> tokio::process::Command {
+    #[cfg(windows)]
     let mut cmd = tokio::process::Command::new(program);
+    #[cfg(not(windows))]
+    let cmd = tokio::process::Command::new(program);
     #[cfg(windows)]
     {
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;

@@ -18,6 +18,7 @@
     @update-task="updateTask"
     @delete-task="deleteTask"
     @resume-compression="handleResumeCompression"
+    @pause-task="handlePauseTask"
     @select-task="selectTask"
     @clear-all-tasks="handleClearAllTasks"
     @toggle-output-folder-popup="toggleOutputFolderPopup"
@@ -45,6 +46,7 @@ import { useFileHandler } from './composables/useFileHandler';
 import { useBatchProcessor } from './composables/useBatchProcessor';
 import type { CompressionSettings, CompressionTask } from './types';
 import { useI18n } from 'vue-i18n';
+import { useTaskStateController } from './composables/useTaskStateController';
 const { t } = useI18n();
 
 // 全局缓存清理函数
@@ -78,6 +80,14 @@ const {
 
 const tasks = computed(() => taskStore.tasks);
 
+// 初始化任务状态控制器（用于统一调度与暂停后的续航）
+const taskController = useTaskStateController({
+  startCompression,
+  resumeCompression,
+  getOutputDirectory: () => outputPath.value,
+  switchToTask,
+});
+
 // 包装deleteTask方法，添加缓存清理
 const deleteTask = (taskId: string) => {
   const task = tasks.value.find(t => t.id === taskId);
@@ -97,6 +107,27 @@ const deleteTask = (taskId: string) => {
       (appLayoutRef.value as any).refreshPreview();
     }
   });
+};
+
+// 处理暂停单个任务（集中处理，避免子组件直接调用后端）
+const handlePauseTask = async (taskId: string) => {
+  const task = tasks.value.find(t => t.id === taskId);
+  if (!task || task.status !== 'processing') return;
+  try {
+    await invoke('pause_task', { taskId });
+  } catch (e) {
+    const msg = String(e);
+    if (msg.includes('Process was interrupted') || msg.includes('not found')) {
+      // 进程已中断/不存在，视为已暂停
+    } else {
+      console.warn('Failed to pause task:', e);
+    }
+  } finally {
+    // 同步前端状态为 paused，并尝试调度下一个
+    taskStore.updateTaskStatus(taskId, 'paused');
+    // 若有排队任务，继续调度
+    void taskController.scheduleNext();
+  }
 };
 
 // 批量处理器
@@ -333,13 +364,20 @@ const handleBatchCompress = async () => {
     return;
   }
 
-  await startBatchCompression(
-    filteredTasks,
-    startCompression,
-    switchToTask,
-    outputPath.value,
-    currentTaskSettings.value
-  );
+  // 暂停队列调度，避免在批量开始前由 scheduleNext 启动排队任务导致并发/重复启动
+  taskController.pauseQueue();
+  try {
+    await startBatchCompression(
+      filteredTasks,
+      startCompression,
+      switchToTask,
+      outputPath.value,
+      currentTaskSettings.value
+    );
+  } finally {
+    // 批量完成或中断后恢复队列调度
+    taskController.resumeQueue();
+  }
 };
 
 // AppLayout组件引用
@@ -421,13 +459,19 @@ const handleResumeCompression = async (taskId: string) => {
       const remainingPending = tasks.value.filter(t => t.status === 'pending');
       const hasProcessing = tasks.value.some(t => t.status === 'processing');
       if (remainingPending.length > 0 && !hasProcessing && !isProcessingBatch.value) {
-         await startBatchCompression(
-           tasks.value,
-           startCompression,
-           switchToTask,
-           outputPath.value,
-           currentTaskSettings.value
-         );
+        // 暂停队列调度，避免恢复批量时 scheduleNext 抢先启动其它 queued 任务
+        taskController.pauseQueue();
+        try {
+          await startBatchCompression(
+            tasks.value,
+            startCompression,
+            switchToTask,
+            outputPath.value,
+            currentTaskSettings.value
+          );
+        } finally {
+          taskController.resumeQueue();
+        }
       }
     }
   } catch (e) {

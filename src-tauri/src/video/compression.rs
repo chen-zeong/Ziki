@@ -572,7 +572,7 @@ pub async fn compress_video(
     let stderr_handle = tokio::spawn(async move {
         let mut lines = stderr_reader.lines();
         while let Some(line) = lines.next_line().await.unwrap_or(None) {
-            println!("FFmpeg stderr: {}", line);
+            // println!("FFmpeg stderr: {}", line); // muted noisy stderr lines
             let mut acc = stderr_acc_clone.lock().await;
             acc.push_str(&line);
             acc.push('\n');
@@ -617,7 +617,7 @@ pub async fn compress_video(
         let mut lines = reader.lines();
         println!("🚀 Starting progress monitoring for task: {}", display_name_clone);
         while let Some(line) = lines.next_line().await.unwrap_or(None) {
-            println!("FFmpeg stdout line: {}", line);
+            // println!("FFmpeg stdout line: {}", line); // muted noisy stdout lines
             // 解析进度信息
             if let Some(progress) = parse_ffmpeg_progress(&line, actual_compression_duration) {
                 println!("✅ Parsed progress: {}% for {}", progress, display_name_clone);

@@ -86,19 +86,6 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  const updateTask = (updatedTask: CompressionTask) => {
-    const index = tasks.value.findIndex(task => task.id === updatedTask.id)
-    if (index !== -1) {
-      tasks.value[index] = updatedTask
-      
-      // 同步更新批量队列中的任务
-      const batchIndex = batchQueue.value.findIndex(task => task.id === updatedTask.id)
-      if (batchIndex !== -1) {
-        batchQueue.value[batchIndex] = updatedTask
-      }
-    }
-  }
-
   const selectTask = (taskId: string) => {
     const task = tasks.value.find(t => t.id === taskId)
     if (task) {
@@ -118,9 +105,53 @@ export const useTaskStore = defineStore('task', () => {
     return tasks.value.find(task => task.id === taskId)
   }
 
+  // 状态流转校验：
+  // - 等待中(pending) 只能变为 排队中(queued)、压缩中(processing)、取消(cancelled)
+  // - 压缩中(processing) 只能变为 暂停(paused)、完成(completed)、失败(failed)、取消(cancelled)，不可回到排队中(queued)
+  const isValidStatusTransition = (
+    from: CompressionTask['status'],
+    to: CompressionTask['status']
+  ): boolean => {
+    if (from === to) return true
+    if (from === 'pending') {
+      return to === 'queued' || to === 'processing' || to === 'cancelled'
+    }
+    if (from === 'processing') {
+      // 已有进度，不允许回到排队中
+      return to === 'paused' || to === 'completed' || to === 'failed' || to === 'cancelled'
+    }
+    return true
+  }
+
+  const updateTask = (updatedTask: CompressionTask) => {
+    const index = tasks.value.findIndex(task => task.id === updatedTask.id)
+    if (index !== -1) {
+      const prev = tasks.value[index]
+      let nextTask = updatedTask
+      // 若涉及状态变更，先做校验
+      if (updatedTask.status && prev.status && updatedTask.status !== prev.status) {
+        if (!isValidStatusTransition(prev.status, updatedTask.status)) {
+          console.warn(`[TaskStore] Illegal status transition in updateTask: ${prev.status} -> ${updatedTask.status} for ${updatedTask.id}`)
+          nextTask = { ...updatedTask, status: prev.status }
+        }
+      }
+      tasks.value[index] = nextTask
+      
+      // 同步更新批量队列中的任务
+      const batchIndex = batchQueue.value.findIndex(task => task.id === updatedTask.id)
+      if (batchIndex !== -1) {
+        batchQueue.value[batchIndex] = nextTask
+      }
+    }
+  }
+
   const updateTaskStatus = (taskId: string, status: CompressionTask['status']) => {
     const task = getTaskById(taskId)
     if (task) {
+      if (!isValidStatusTransition(task.status, status)) {
+        console.warn(`[TaskStore] Illegal status transition: ${task.status} -> ${status} for ${taskId}`)
+        return
+      }
       const updatedTask = { ...task, status }
       updateTask(updatedTask)
     }

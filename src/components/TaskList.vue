@@ -7,6 +7,7 @@
     @update-task="$emit('update-task', $event)"
     @delete-task="$emit('delete-task', $event)"
     @resume-compression="$emit('resume-compression', $event)"
+    @pause-task="$emit('pause-task', $event)"
     @select-task="$emit('select-task', $event)"
     @clear-all-tasks="$emit('clear-all-tasks')"
   />
@@ -27,6 +28,7 @@ interface Emits {
   (e: 'update-task', task: CompressionTask): void;
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
+  (e: 'pause-task', taskId: string): void;
   (e: 'select-task', taskId: string): void;
   (e: 'clear-all-tasks'): void;
 }

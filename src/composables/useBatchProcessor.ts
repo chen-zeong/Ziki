@@ -120,6 +120,12 @@ export function useBatchProcessor() {
           // 为该任务计算本次实际生效的设置：批量统一使用 batchBaseSettings
           const liveTask = taskStore.getTaskById(task.id);
           const effectiveSettings: CompressionSettings = { ...batchBaseSettings } as CompressionSettings;
+          
+          // 优先使用每条任务自身的 timeRange（如有）；否则沿用批量基准的 timeRange
+          const taskTimeRange = liveTask?.settings?.timeRange;
+          if (taskTimeRange !== undefined) {
+            (effectiveSettings as any).timeRange = taskTimeRange as any;
+          }
 
           // 同步更新 store 中该任务的 settings（便于 UI 显示与后续恢复一致）
           if (liveTask) {
