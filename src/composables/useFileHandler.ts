@@ -328,27 +328,32 @@ export function useFileHandler() {
 
   // 新增：导入文件并创建任务
   const handleFiles = async (fileList: FileList) => {
-    console.log('handleFiles received fileList:', fileList);
-    if (!fileList || fileList.length === 0) return;
+    console.log('[DD] handleFiles received fileList:', fileList);
+    if (!fileList || fileList.length === 0) {
+      console.log('[DD] handleFiles empty or invalid fileList');
+      return;
+    }
 
     const files = Array.from(fileList);
-    console.log('Converted to array:', files);
+    console.log('[DD] handleFiles converted to array with', files.length, 'items:', files.map(f => ({ name: f.name, type: f.type, path: (f as any).path })));
 
     const prevTaskCount = tasks.value.length;
     const hadSelected = !!(taskStore as any).selectedTaskId;
 
     for (const file of files) {
+      console.log('[DD] Processing file:', { name: file.name, type: file.type, size: file.size, path: (file as any).path });
       if (file.type.startsWith('video/') || file.type.startsWith('image/')) {
         const filePath = (file as any).path || (file as any).webkitRelativePath || file.name;
-        const displayName = (filePath ? String(filePath).split(/[\\/]/).pop() : file.name) || file.name;
+        const displayName = (filePath ? String(filePath).split(/[\\\/]/).pop() : file.name) || file.name;
 
         let actualSize = file.size || 0;
         try {
           if (filePath) {
             actualSize = await invoke<number>('get_file_size', { filePath });
+            console.log('[DD] Resolved size via Tauri:', actualSize);
           }
         } catch (error) {
-          console.warn('Failed to get file size from Tauri, using file.size:', error);
+          console.warn('[DD] Failed to get file size from Tauri, using file.size:', error);
         }
 
         const videoFile: VideoFile = {

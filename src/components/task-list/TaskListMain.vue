@@ -4,7 +4,7 @@
     :class="isDragOver ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent' : ''"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
-    @drop.prevent="handleDrop"
+    @drop="handleDrop"
   >
     <!-- 工具栏 -->
     <TaskListToolbar
@@ -93,6 +93,7 @@ let unlistenDragDrop: UnlistenFn | null = null;
 let unlistenDragEnter: UnlistenFn | null = null;
 let unlistenDragLeave: UnlistenFn | null = null;
 let unlistenDragOver: UnlistenFn | null = null;
+let unlistenFileDrop: UnlistenFn | null = null;
 
 // 计算属性
 const filteredTasks = computed(() => {
@@ -202,20 +203,51 @@ const handleClearAllTasks = () => {
 };
 
 // DOM drag handlers for visual feedback
-const handleDragOver = () => {
+const handleDragOver = (event: DragEvent) => {
+  console.log('[DD] DOM dragover');
+  if (event && event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy';
+  }
   isDragOver.value = true;
 };
-const handleDragLeave = () => {
-  isDragOver.value = false;
-};
-const handleDrop = (event: DragEvent) => {
-  isDragOver.value = false;
-  event.preventDefault();
-  event.stopPropagation();
-};
+ const handleDragLeave = () => {
+   console.log('[DD] DOM dragleave');
+   isDragOver.value = false;
+ };
+ const handleDrop = (event: DragEvent) => {
+   console.log('[DD] DOM drop captured');
+   isDragOver.value = false;
+   const dt = event.dataTransfer;
+   if (!dt) {
+     console.log('[DD] DOM drop: no dataTransfer');
+     return;
+   }
+   console.log('[DD] DOM drop: types=', dt.types);
+   if (dt.files && dt.files.length > 0) {
+     const files = Array.from(dt.files);
+     console.log('[DD] DOM drop: files length=', files.length, files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+     // Convert File[] to FileList-like object
+     const indexed = Object.fromEntries(files.map((f, i) => [i, f]));
+     const fileList = {
+       ...indexed,
+       length: files.length,
+       item: (index: number) => files[index] || null,
+       [Symbol.iterator]: function* () {
+         for (let i = 0; i < files.length; i++) {
+           yield files[i];
+         }
+       }
+     } as unknown as FileList;
+     console.log('[DD] DOM drop: emitting files-selected with length:', fileList.length);
+     emit('files-selected', fileList);
+   } else {
+     console.log('[DD] DOM drop: no files in dataTransfer');
+   }
+ };
 
 // Handle Tauri file drop events (global)
 const handleTauriFileDrop = async (filePaths: string[]) => {
+  console.log('[DD] handleTauriFileDrop payload:', filePaths);
   if (filePaths && Array.isArray(filePaths)) {
     const files: File[] = [];
     for (const filePath of filePaths) {
@@ -241,13 +273,12 @@ const handleTauriFileDrop = async (filePaths: string[]) => {
       }
       const mockFile = new File([], fileName, { type: mimeType });
       (mockFile as any).path = filePath;
-      Object.defineProperty(mockFile, 'size', {
-        value: fileSize,
-        writable: false,
-        enumerable: true,
-      });
+      // 注意：不要强行覆盖 File.size（该属性为只读且不可重新定义），否则会在某些 WebView 中抛出错误，
+      // 从而导致整个拖拽回调静默失败。实际的文件大小会在后续 handleFiles 中通过 Tauri 获取。
+      // Object.defineProperty(mockFile, 'size', { value: fileSize, writable: false, enumerable: true });
       files.push(mockFile);
     }
+    console.log('[DD] Prepared files for emission:', files.map(f => ({ name: f.name, type: f.type, path: (f as any).path })));
     // 构造一个 FileList-like 对象，避免与数组的 length 冲突
     const indexed = Object.fromEntries(files.map((f, i) => [i, f]));
     const fileList = {
@@ -260,31 +291,89 @@ const handleTauriFileDrop = async (filePaths: string[]) => {
         }
       }
     } as unknown as FileList;
+    console.log('[DD] Emitting files-selected with length:', fileList.length);
     emit('files-selected', fileList);
+  } else {
+    console.log('[DD] handleTauriFileDrop called with non-array payload');
   }
 };
+
+// 文档级别后备监听器，避免组件未能捕获到 drop
+let unlistenWindowFileDrop: (() => void) | null = null;
 
 onMounted(async () => {
   try {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     const appWindow = getCurrentWindow();
-    // 注册 Tauri 原生拖拽事件
-    unlistenDragDrop = await listen('tauri://file-drop', (event) => {
-      const filePaths = (event.payload as string[]) || [];
-      handleTauriFileDrop(filePaths);
+    // 注册 Tauri 原生拖拽事件（全局）
+    unlistenDragDrop = await listen('tauri://drag-drop', (event) => {
+      console.log('[DD] tauri://drag-drop event fired with payload:', event?.payload);
+      const payload: any = (event as any)?.payload;
+      const filePaths: string[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.paths)
+          ? payload.paths
+          : [];
+      if (filePaths.length) {
+        handleTauriFileDrop(filePaths);
+      } else {
+        console.log('[DD] drag-drop payload does not include paths, skipping');
+      }
     });
-    unlistenDragEnter = await listen('tauri://file-drop-hover', () => {
+    // 兼容旧版事件名（某些平台/打包环境可能仍发出 tauri://file-drop）
+    unlistenFileDrop = await listen('tauri://file-drop', (event) => {
+      console.log('[DD] tauri://file-drop event fired with payload:', event?.payload);
+      const payload: any = (event as any)?.payload;
+      const filePaths: string[] = Array.isArray(payload) ? payload : [];
+      if (filePaths.length) {
+        handleTauriFileDrop(filePaths);
+      } else {
+        console.log('[DD] file-drop payload not array, skipping');
+      }
+    });
+    unlistenDragEnter = await listen('tauri://drag-enter', () => {
+      console.log('[DD] tauri://drag-enter');
       isDragOver.value = true;
     });
-    unlistenDragLeave = await listen('tauri://file-drop-cancelled', () => {
+    unlistenDragLeave = await listen('tauri://drag-leave', () => {
+      console.log('[DD] tauri://drag-leave');
       isDragOver.value = false;
     });
     unlistenDragOver = await listen('tauri://drag-over', () => {
+      console.log('[DD] tauri://drag-over');
       isDragOver.value = true;
     });
 
+    // 额外后备：窗口级别文件拖拽事件（如果可用）
+    try {
+      const winAny = appWindow as unknown as { onFileDropEvent?: (cb: (e: any) => void) => Promise<() => void> };
+      if (winAny.onFileDropEvent) {
+        unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
+          console.log('[DD] appWindow.onFileDropEvent:', e);
+          const ty = e?.payload?.type;
+          const paths = e?.payload?.paths || e?.payload || [];
+          if (ty === 'hover') {
+            isDragOver.value = true;
+          } else if (ty === 'cancel') {
+            isDragOver.value = false;
+          } else if (ty === 'drop') {
+            isDragOver.value = false;
+            if (Array.isArray(paths)) handleTauriFileDrop(paths);
+          }
+        });
+        console.log('[DD] Registered window-level file-drop listener');
+      } else {
+        console.log('[DD] appWindow.onFileDropEvent not available in this Tauri version');
+      }
+    } catch (werr) {
+      console.warn('[DD] Failed to register window-level file-drop listener:', werr);
+    }
+
+    console.log('[DD] Registered Tauri drag-drop listeners');
+
     // 监听窗口焦点变化，失焦时清理拖拽样式
     appWindow.onFocusChanged(({ payload }: { payload: boolean }) => {
+      console.log('[DD] window focus changed:', payload);
       if (!payload) {
         isDragOver.value = false;
       }
@@ -299,5 +388,8 @@ onUnmounted(() => {
   try { unlistenDragEnter && unlistenDragEnter(); } catch {}
   try { unlistenDragLeave && unlistenDragLeave(); } catch {}
   try { unlistenDragOver && unlistenDragOver(); } catch {}
+  try { unlistenFileDrop && unlistenFileDrop(); } catch {}
+  if (unlistenWindowFileDrop) try { unlistenWindowFileDrop(); } catch {}
 });
+
 </script>

@@ -72,10 +72,27 @@ const currentTaskStatus = computed(() => {
   return task?.status || 'pending';
 });
 
+// 根据文件名/路径推断任务类型，避免初次渲染时误判为视频
+const inferTaskTypeFromFile = (file: any): 'video' | 'image' | null => {
+  if (!file) return null;
+  const name: string = file.name || file.path || '';
+  const lower = name.toLowerCase();
+  if (!lower) return null;
+  const videoExts = ['mp4','mov','m4v','mkv','avi','wmv','flv','webm','mpeg','mpg','3gp','ogv'];
+  const imageExts = ['jpg','jpeg','png','gif','bmp','tiff','tif','webp','svg','ico','heic','heif','avif','jxl'];
+  const dot = lower.lastIndexOf('.');
+  const ext = dot >= 0 ? lower.slice(dot + 1) : '';
+  if (imageExts.includes(ext)) return 'image';
+  if (videoExts.includes(ext)) return 'video';
+  return null;
+};
+
 // 根据当前文件匹配任务类型（video/image）
 const currentTaskType = computed(() => {
   const task = tasks.value.find(t => t.file.id === props.currentFile?.id);
-  return (task as any)?.type || 'video';
+  if ((task as any)?.type) return (task as any).type as 'video' | 'image';
+  // 当任务尚未建立（例如首次添加文件时），根据当前文件名/路径进行推断，默认回退到 image，避免误触发视频帧提取
+  return inferTaskTypeFromFile(props.currentFile) || 'image';
 });
 
 // 根据当前文件匹配任务ID

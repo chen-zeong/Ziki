@@ -224,7 +224,9 @@ const handleOutputPathUpdate = (path: string) => {
 };
 
 const onFilesSelected = async (files: FileList) => {
+  console.log('[DD] App.vue onFilesSelected received length:', files?.length, files);
   await handleFiles(files);
+  console.log('[DD] App.vue onFilesSelected finished handleFiles');
 };
 
 const onCompress = async (settings: CompressionSettings) => {

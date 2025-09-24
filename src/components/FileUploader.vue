@@ -9,7 +9,7 @@
       @click="triggerFileInput"
       @dragover.prevent="handleDragOver"
       @dragleave.prevent="handleDragLeave"
-      @drop.prevent="handleDrop"
+      @drop="handleDrop"
     >
       <CloudUpload class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
       <p class="mt-4 text-gray-600 dark:text-gray-300">
@@ -32,7 +32,6 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { CloudUpload } from 'lucide-vue-next';
 
 const emit = defineEmits<{
@@ -41,15 +40,9 @@ const emit = defineEmits<{
 
 const isDragOver = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
-// Replace UnlistenFn-typed vars with any to avoid dependency on event API here
-let unlistenDragDrop: any = null;
-let unlistenDragEnter: any = null;
-let unlistenDragLeave: any = null;
-let unlistenDragOver: any = null;
 
 const triggerFileInput = async () => {
   try {
-    // Use Tauri's file dialog to get proper file paths
     const selected = await open({
       multiple: true,
       filters: [{
@@ -59,12 +52,9 @@ const triggerFileInput = async () => {
     });
     
     if (selected && Array.isArray(selected)) {
-      // Create File objects with proper paths
       const files: File[] = [];
       for (const filePath of selected) {
-        // Create a mock File object with the real path
         const fileName = filePath.split('/').pop() || 'unknown';
-        // Determine file type based on extension
         const extension = fileName.split('.').pop()?.toLowerCase() || '';
         let mimeType = 'application/octet-stream';
         if (['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'].includes(extension)) {
@@ -73,7 +63,6 @@ const triggerFileInput = async () => {
           mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
         }
         
-        // Get file size using Tauri API
         let fileSize = 0;
         try {
           fileSize = await invoke<number>('get_file_size', { filePath });
@@ -82,18 +71,12 @@ const triggerFileInput = async () => {
         }
         
         const mockFile = new File([], fileName, { type: mimeType });
-        (mockFile as any).path = filePath; // Add the real path
-        // Override the size property
-        Object.defineProperty(mockFile, 'size', {
-          value: fileSize,
-          writable: false,
-          enumerable: true,
-          configurable: false
-        });
+        (mockFile as any).path = filePath;
+        // 注意：不要强行覆盖 File.size（该属性为只读且不可重新定义），否则会在某些 WebView 中抛出错误。
+        // 实际的文件大小会在后续 handleFiles 中通过 Tauri 获取。
         files.push(mockFile);
       }
       
-      // Create a FileList-like object
       const fileList = {
         item: (index: number) => files[index] || null,
         ...files,
@@ -104,7 +87,6 @@ const triggerFileInput = async () => {
     }
   } catch (error) {
     console.error('Error selecting files:', error);
-    // Fallback to regular file input
     fileInputRef.value?.click();
   }
 };
@@ -124,31 +106,17 @@ const handleDragLeave = () => {
   isDragOver.value = false;
 };
 
-const handleDrop = async (event: DragEvent) => {
+const handleDrop = async (_event: DragEvent) => {
+  console.log('[FileUploader] DOM drop captured (will be processed by TaskListMain)');
   isDragOver.value = false;
-  // Prevent default behavior to avoid conflicts with Tauri's file drop
-  event.preventDefault();
-  event.stopPropagation();
+  // 不阻止默认行为，避免拦截 Tauri 的 tauri://drag-drop 事件
 };
 
-// Neutralize previous Tauri drag-drop listener registration here; now handled in TaskList
 onMounted(async () => {
   console.log('FileUploader mounted - drag & drop handled globally by TaskList.');
 });
 
-// Cleanup (kept for safety; no-ops if listeners not set)
 onUnmounted(() => {
-  if (unlistenDragDrop) {
-    unlistenDragDrop();
-  }
-  if (unlistenDragEnter) {
-    unlistenDragEnter();
-  }
-  if (unlistenDragLeave) {
-    unlistenDragLeave();
-  }
-  if (unlistenDragOver) {
-    unlistenDragOver();
-  }
+  // no-op
 });
 </script>
