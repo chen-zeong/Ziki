@@ -1,4 +1,4 @@
-<p align="right"><strong>English</strong> | <a href="./README.zh.md">中文</a></p>
+<p align="left"><strong>English</strong> | <a href="./README.zh.md">中文</a></p>
 
 <p align="center">
   <img src="./assets/icon.svg" width="96" alt="App Icon" />
@@ -12,15 +12,15 @@
 </p>
 
 
-> Simple, fast, and private. Compress images and videos locally and offline, balancing quality and size—perfect for daily sharing and archiving.
+> Simple, fast, private. Compress images and videos locally and offline.
 
 ---
 
 ## ✨ Key Features
 
-- Image and video compression: Optimize size and transcode common image and video formats
+- Image and video compression: Optimize size and transcode common image and video formats, including compression to animated AVIF
 - Batch processing and task queue: Add multiple files at once, with queueing, status filtering, and cleanup
-- Quality presets and customization: Flexibly balance size and clarity (presets + manual parameters)
+- customization: Flexibly balance size and clarity
 - Hardware acceleration detection: Automatically detects available hardware encoders and prioritizes them
 - Local and offline: All processing is done locally; no files are uploaded
 - Drag-and-drop and native dialogs: Drag to add files, or use the system's native picker
@@ -31,12 +31,19 @@
 
 ## 🖼️ Screenshots
 
+### Demo
 <div>
   <img src="./assets/demo.avif" alt="Demo" width="100%" />
 </div>
 
+### macOS
 <div>
   <img src="./assets/screenshots/macOS.webp" alt="macOS UI" width="100%" />
+</div>
+
+### Windows
+<div>
+  <img src="./assets/screenshots/win.webp" alt="Windows UI" width="100%" />
 </div>
 
 ## 🚀 Development
@@ -62,3 +69,4 @@ pnpm tauri build
 - CompressO (open-source cross-platform video compression app): https://github.com/codeforreal1/compressO
 - Rotato Video Compressor (FFmpeg-based online/offline compression tool): https://tools.rotato.app/compress
 - HandBrake: https://github.com/HandBrake/HandBrake
+- FFmpeg binary downloads: https://ffmpeg.martin-riedl.de/

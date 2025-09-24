@@ -9,15 +9,15 @@
   <img alt="Platform" src="https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-444" />
 </p>
 
-> 简洁、快速、私密。本地离线完成图片与视频压缩，兼顾画质与体积，适合日常分享与归档。
+> 简洁、快速、私密。本地离线完成图片与视频压缩。
 
 ---
 
 ## ✨ 功能亮点
 
-- 图片与视频压缩：支持常见图片、视频格式的体积优化与转码
+- 图片与视频压缩：支持常见图片、视频格式的压缩与转码，支持生成 AVIF 动图
 - 批量处理与任务队列：一次添加多文件，支持队列、状态筛选与清理
-- 质量预设与自定义：在体积与清晰度之间灵活平衡（预设 + 手动参数）
+- 自定义参数：在体积与清晰度之间灵活平衡
 - 硬件加速检测：自动检测可用的硬件编码能力并优先使用
 - 本地离线：所有处理均在本地完成，不上传任何文件
 - 拖拽与原生对话框：拖拽添加文件，或使用系统原生选择器
@@ -28,12 +28,19 @@
 
 ## 🖼️ 截图
 
+### Demo
 <div>
   <img src="./assets/demo.avif" alt="Demo" width="100%" />
 </div>
 
+### macOS
 <div>
   <img src="./assets/screenshots/macOS.webp" alt="macOS UI" width="100%" />
+</div>
+
+### Windows
+<div>
+  <img src="./assets/screenshots/win.webp" alt="Windows UI" width="100%" />
 </div>
 
 ## 🚀 开发
@@ -52,15 +59,10 @@ pnpm install
 pnpm tauri build
 ```
 
-## 🖍️ 图标
-
-项目图标文件位于 `src-tauri/icons/`，顶部展示的图标来自 `./assets/icon.svg`：
-- 源文件（SVG）：`src-tauri/icons/icon.svg`
-- macOS（ICNS）：`src-tauri/icons/icon.icns`
-- Windows（ICO）：`src-tauri/icons/icon.ico`
 
 ## 🙏 参考
 
 - CompressO（开源跨平台视频压缩 App）：https://github.com/codeforreal1/compressO
 - Rotato Video Compressor（基于 FFmpeg 的在线/离线压缩工具）：https://tools.rotato.app/compress
 - HandBrake：https://github.com/HandBrake/HandBrake
+- FFmpeg 二进制下载：https://ffmpeg.martin-riedl.de/
