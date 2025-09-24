@@ -156,7 +156,7 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
     bitDepth: s.bitDepth
   };
   // 硬件加速
-  const accel = s.hardwareAcceleration ?? (platform.value === 'macos' ? 'gpu' : 'cpu');
+  const accel = s.hardwareAcceleration ?? 'cpu';
   hardwareSettings.value = accel === 'gpu' 
     ? { value: 'gpu', name: platform.value === 'macos' ? '显卡加速' : 'GPU加速' }
     : { value: 'cpu', name: 'CPU编码' };

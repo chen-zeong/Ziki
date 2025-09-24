@@ -143,9 +143,8 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     tagOldFormat: '老牌格式',
     tagLargeSize: '体积大',
     tagWindowsOptimized: 'Windows优化',
-    pngPaletteWarning: '使用调色板压缩，可能缺失部分色彩'
-  },
-
+    pngPaletteWarning: '使用调色板压缩，可能缺失部分色彩（若追求更小体积，建议改用JPG或WebP格式）'
+   },
   // 任务列表
   taskList: {
     title: '任务列表',
@@ -293,6 +292,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     compressionFailedVideo: '压缩失败（视频）：{name}',
     compressionStartFailed: '压缩启动失败：{name}',
     compressionStartedImage: '开始压缩（图片）：{name}',
+    compressionStartedVideo: '开始压缩（视频）：{name}',
     compressionCompletedImage: '压缩完成（图片）：{name}',
     compressionError: '压缩错误：{name} - {error}'
   },

@@ -45,7 +45,7 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     },
     hardware: {
       paramType: 'qv',
-      values: [40, 55, 70, 75, 80], // -q:v 值（数值越大质量越高）
+      values: [40, 55, 70, 75, 80], // -q:v 值（数值越大画质越高）
       defaultIndex: 2 // 默认值改为 q:v 70
     },
     hardwareVendors: {
@@ -107,12 +107,12 @@ export const ENCODER_QUALITY_MAPPINGS: Record<string, EncoderConfig> = {
     }
   },
 
-  // WMV9 编码器（-q:v 0-100，100最高，默认80）
+  // WMV9 编码器（-q:v 0-31，0最高，默认5）
   'wmv9': {
     software: {
       paramType: 'qv',
-      values: [0, 25, 50, 80, 100], // 连续映射范围 0-100，默认高质量 80
-      defaultIndex: 3
+      values: [31, 24, 16, 8, 5], // 质量等级映射到 0-31（数值越小画质越高）
+      defaultIndex: 4 // 默认使用 5（高质量）
     }
   }
 };
@@ -173,6 +173,16 @@ export function getEncoderQualityParam(
     };
   }
   
+  // 对于 WMV9 的 -q:v（0-31，数值越小质量越高），需要反向映射
+  if (normalizedCodec === 'wmv9' && mapping.paramType === 'qv') {
+    const worst = 31; // 最差
+    const best = 0;  // 最好（支持到0）
+    const normalizedSlider = (sliderValue - 2) / 96; // 0-1
+    const interpolatedValue = worst + (best - worst) * normalizedSlider; // 滑块越大，值越小
+    const roundedValue = Math.max(0, Math.min(31, Math.round(interpolatedValue)));
+    return { paramType: mapping.paramType, value: roundedValue };
+  }
+  
   // 对于数值参数（CRF、qv），使用线性插值实现连续调节
   const values = mapping.values as number[];
   // 根据参数类型选择映射方向
@@ -219,6 +229,11 @@ export function getDefaultQualityParam(
     if (vendor && encoderConfig.hardwareVendors[vendor]) {
       mapping = encoderConfig.hardwareVendors[vendor];
     }
+  }
+  
+  // WMV9 默认值：-q:v 5，对应滑块位置约 83
+  if (normalizedCodec === 'wmv9' && mapping.paramType === 'qv') {
+    return { paramType: 'qv', value: 5, sliderValue: 83 };
   }
   
   const defaultIndex = mapping.defaultIndex;

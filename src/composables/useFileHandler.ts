@@ -41,6 +41,8 @@ export function useFileHandler() {
   const activeErrorListeners = new Map<string, () => void>();
   // 新增：记录上一次的进度值，用于去重日志与更新
   const lastProgressMap = new Map<string, number>();
+  // 新增：记录每个任务的命令事件监听器
+  const activeCommandListeners = new Map<string, () => void>();
 
   // 监听任务状态变化：当任务不再是 processing（例如 paused/completed/failed/queued/cancelled）时，清理它的进度/取消/错误监听器
   watch(tasks, (newTasks) => {
@@ -60,6 +62,12 @@ export function useFileHandler() {
         if (unlistenErr) { try { unlistenErr(); } catch (e) { console.warn('Failed to unlisten error listener:', e); } activeErrorListeners.delete(t.id); }
         // 额外：清除进度缓存，避免内存泄露
         lastProgressMap.delete(t.id);
+        // 新增：清理命令监听器
+        const unlistenCmd = activeCommandListeners.get(t.id);
+        if (unlistenCmd) {
+          try { unlistenCmd(); } catch (e) { console.warn('Failed to unlisten command listener:', e); }
+          activeCommandListeners.delete(t.id);
+        }
       }
     });
   }, { deep: true });
@@ -91,6 +99,9 @@ export function useFileHandler() {
       }
       const unlistenErr = activeErrorListeners.get(taskId);
       if (unlistenErr) { try { unlistenErr(); } catch {} activeErrorListeners.delete(taskId); }
+      // 新增：清理命令监听器
+      const unlistenCmd = activeCommandListeners.get(taskId);
+      if (unlistenCmd) { try { unlistenCmd(); } catch {} activeCommandListeners.delete(taskId); }
       cancelledTasks.delete(taskId);
 
       // 使用store删除任务
@@ -539,6 +550,26 @@ export function useFileHandler() {
       if (!outputPath) throw new Error('No output directory available');
 
       let result: CompressionResult;
+      // 将“开始压缩日志 + 命令监听 + 单次调用”统一放到下方，避免重复调用与提前清理监听器
+      // 注：此处不再提前调用后端，也不提前清理监听器
+      // 新增：开始压缩前端日志
+      logStore.addInfo(
+        task.type === 'image'
+          ? i18n.global.t('logMessages.compressionStartedImage', { name: task.file.name }) as string
+          : i18n.global.t('logMessages.compressionStartedVideo', { name: task.file.name }) as string,
+        { taskId: task.id, settings: normalizedSettings }
+      );
+      // 新增：监听后端发送的命令事件
+      try {
+        const uCmd = await listen(`compression-command-${task.id}`, (event: any) => {
+          const { command, args } = (event && event.payload) || {};
+          if (command) {
+            logStore.addInfo(i18n.global.t('logMessages.ffmpegCommand', { name: command }) as string, { taskId: task.id, args });
+          }
+        });
+        activeCommandListeners.set(task.id, uCmd);
+      } catch {}
+
       if (task.type === 'image') {
         const payloadSettings: any = {
           format: (normalizedSettings as any).format,
@@ -551,6 +582,14 @@ export function useFileHandler() {
           hardwareAcceleration: (normalizedSettings as any).hardwareAcceleration,
           bitDepth: (normalizedSettings as any).bitDepth,
         };
+        // 新增：PNG质量滑到98即使用无损参数（前端映射为crf=100）
+        try {
+          const fmt = (normalizedSettings as any).format;
+          const vRaw = Number((normalizedSettings as any).crfValue ?? 80);
+          if (fmt === 'png' && vRaw >= 98) {
+            payloadSettings.crf_value = 100;
+          }
+        } catch {}
         result = await invoke<CompressionResult>('compress_image', { taskId: task.id, inputPath, outputPath, settings: payloadSettings });
       } else {
         const payloadSettings: any = {
@@ -573,6 +612,8 @@ export function useFileHandler() {
       activeProgressListeners.delete(task.id);
       const unlistenCancelEnd = activeCancelListeners.get(task.id); if (unlistenCancelEnd) { try { unlistenCancelEnd(); } catch {} activeCancelListeners.delete(task.id); }
       const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
+      // 新增：清理命令事件监听器
+      const uCmd = activeCommandListeners.get(task.id); if (uCmd) { try { uCmd(); } catch {} activeCommandListeners.delete(task.id); }
 
       if (cancelledTasks.has(task.id)) {
         console.log('[CANCEL] Task was cancelled during start, skip completion:', task.id);
@@ -629,11 +670,13 @@ export function useFileHandler() {
       if (unlistenCancelErr) { try { unlistenCancelErr(); } catch {} activeCancelListeners.delete(task.id); }
       const uErr = activeErrorListeners.get(task.id); if (uErr) { try { uErr(); } catch {} activeErrorListeners.delete(task.id); }
 
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       const live = taskStore.getTaskById(task.id) || task;
       const isCallbackIdMissing = errorMessage.includes("Couldn't find callback id");
       const alreadyCompleted = live.status === 'completed' || (live as any).outputPath || (typeof (live as any).progress === 'number' && (live as any).progress >= 100);
       if (isCallbackIdMissing || alreadyCompleted) {
+        // 开发模式或页面重载导致的回调丢失，或任务已通过事件完成：不把任务置为失败
         logStore.addWarning(`[INVOCATION] Ignored invoke error after completion`, { taskId: task.id, error: errorMessage });
       } else {
         taskStore.updateTask({ ...live, status: 'failed', error: errorMessage });

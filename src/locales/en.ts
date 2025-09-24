@@ -142,8 +142,8 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     tagOldFormat: 'Legacy',
     tagLargeSize: 'Large Size',
     tagWindowsOptimized: 'Windows',
-    pngPaletteWarning: 'Palette compression may cause color loss'
-  },
+    pngPaletteWarning: 'Palette compression may cause color loss (for smaller file size, consider using JPG or WebP)'
+   },
 
   // Task List
   taskList: {
@@ -292,6 +292,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     compressionFailedVideo: 'Compression failed (video): {name}',
     compressionStartFailed: 'Failed to start compression: {name}',
     compressionStartedImage: 'Started compression (image): {name}',
+    compressionStartedVideo: 'Started compression (video): {name}',
     compressionCompletedImage: 'Compression completed (image): {name}',
     compressionError: 'Compression error: {name} - {error}'
   },
@@ -302,7 +303,5 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     maximizeRestore: 'Maximize/Restore',
     maximize: 'Maximize',
     close: 'Close'
-  },
-
-  importFailed: 'Import failed: Unable to parse video metadata.\nFile: {name}\nReason: {reason}'
+  }
 };

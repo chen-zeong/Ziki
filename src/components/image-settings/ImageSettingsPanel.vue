@@ -323,7 +323,7 @@ const qualityText = computed(() => {
   const v = qualityValue.value;
   const format = currentFormat.value;
   
-  if (v === 100 && format === 'png') {
+  if (format === 'png' && v >= 98) {
     return t('videoSettings.qualityLossless');
   }
   
@@ -351,15 +351,16 @@ const qualityHintText = computed(() => {
     // WebP：显示 -q:v 值（0-100，数值越大画质越高）
     paramHint = `-q:v ${v}`;
   } else if (format === 'png') {
-    if (v === 100) {
+    if (v >= 98) {
+      // 顶端近似无损：直接显示无损方法提示
       paramHint = t('videoSettings.qualityLossless');
     } else {
       // PNG：显示色彩位数
       const colors = v >= 80 ? 256 : v >= 60 ? 128 : v >= 40 ? 96 : 64;
       paramHint = `${colors} ${t('videoSettings.colors')}`;
       
-      // PNG 画质 80 以下警告
-      if (v < 80) {
+      // 当选择 256 及以下色彩数时，增加更多提示
+      if (colors <= 256) {
         colorWarning = t('videoSettings.pngPaletteWarning');
       }
     }
