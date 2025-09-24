@@ -29,6 +29,12 @@
 - Multi-language and theme: Supports Chinese/English, light/dark/auto themes
 - Cross-platform: macOS, Windows
 
+## 📋 System Requirements
+
+- **macOS**: 10.15 (Catalina) or later
+- **Windows**: 8 or later
+- **FFmpeg**: Integrated FFmpeg 7.1 - no local installation required
+
 ## 🖼️ Screenshots
 
 ### Demo
