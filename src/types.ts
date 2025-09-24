@@ -38,6 +38,9 @@ export interface CompressionTask {
   compressedMetadata?: VideoMetadata; // 压缩后的视频元数据（图片任务可忽略）
   settings: CompressionSettings;
   outputDirectory?: string; // 输出文件夹路径
+  // 新增：缓存期望输出路径与文件名，便于恢复与调试
+  expectedOutputPath?: string;
+  expectedOutputFileName?: string;
   createdAt: Date;
   startedAt?: Date; // 开始压缩的时间
   completedAt?: Date;

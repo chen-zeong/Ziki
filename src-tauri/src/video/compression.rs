@@ -11,6 +11,7 @@ use crate::video::utils::get_hardware_encoder_support;
 use crate::video::utils::tokio_command_with_no_window;
 use serde_json::json;
 use tracing::{info, warn, debug};
+use std::path::Path; // for existence checks
 
 // 任务信息结构
 #[derive(Clone, Debug)]
@@ -685,7 +686,12 @@ pub async fn compress_video(
         let compressed_size = std::fs::metadata(&outputPath)
             .map(|m| m.len())
             .ok();
-        
+        println!(
+            "[COMPLETE] Output path = {:?}, exists? {} size={:?}",
+            outputPath,
+            Path::new(&outputPath).exists(),
+            compressed_size
+        );
         // 获取压缩后文件的元数据
         let compressed_metadata = match get_video_metadata(app_handle.clone(), outputPath.clone()) {
             Ok(metadata) => Some(metadata),
@@ -694,6 +700,21 @@ pub async fn compress_video(
                 None
             }
         };
+        
+        // 兜底：发送一次100%的进度事件 & 完成事件
+        let _ = app_handle.emit(&format!("compression-progress-{}", taskId), json!({
+            "taskId": taskId,
+            "progress": 100.0
+        }));
+        let completed_payload = json!({
+            "taskId": taskId,
+            "output_path": outputPath.clone(),
+            "original_size": original_size,
+            "compressed_size": compressed_size,
+            "compressed_metadata": compressed_metadata
+        });
+        let _ = app_handle.emit(&format!("compression-completed-{}", taskId), completed_payload.clone());
+        let _ = app_handle.emit(&format!("compression-finished-{}", taskId), completed_payload.clone());
             
         Ok(CompressionResult {
             success: true,
@@ -798,7 +819,7 @@ fn resume_process(pid: u32) -> Result<(), String> {
 
 #[allow(non_snake_case)]
 #[tauri::command]
-pub async fn pause_task(taskId: String) -> Result<(), String> {
+pub async fn pause_task(taskId: String, app_handle: tauri::AppHandle) -> Result<(), String> {
     println!("Pausing task: {}", taskId);
     
     let process_manager = get_process_manager();
@@ -818,6 +839,10 @@ pub async fn pause_task(taskId: String) -> Result<(), String> {
                 match output {
                     Ok(result) if result.status.success() => {
                         println!("Successfully paused task: {} (PID: {})", taskId, pid);
+                        // 广播暂停事件
+                        let _ = app_handle.emit(&format!("compression-paused-{}", taskId), json!({
+                            "taskId": taskId
+                        }));
                         Ok(())
                     }
                     Ok(result) => {
@@ -836,6 +861,9 @@ pub async fn pause_task(taskId: String) -> Result<(), String> {
                 match suspend_process(pid) {
                     Ok(_) => {
                         println!("Successfully suspended task: {} (PID: {})", taskId, pid);
+                        let _ = app_handle.emit(&format!("compression-paused-{}", taskId), json!({
+                            "taskId": taskId
+                        }));
                         Ok(())
                     }
                     Err(e) => {
@@ -883,6 +911,10 @@ pub async fn resume_task(
                 match output {
                     Ok(result) if result.status.success() => {
                         println!("Successfully resumed task: {} (PID: {})", taskId, pid);
+                        // 恢复事件
+                        let _ = app_handle.emit(&format!("compression-resumed-{}", taskId), json!({
+                            "taskId": taskId
+                        }));
                         // 恢复后，我们需要像compress_video一样等待它完成
                     }
                     Ok(result) => {
@@ -901,6 +933,9 @@ pub async fn resume_task(
                 match resume_process(pid) {
                     Ok(_) => {
                         println!("Successfully resumed task: {} (PID: {})", taskId, pid);
+                        let _ = app_handle.emit(&format!("compression-resumed-{}", taskId), json!({
+                            "taskId": taskId
+                        }));
                     }
                     Err(e) => {
                         println!("Failed to resume task {}: {}", taskId, e);
@@ -930,8 +965,29 @@ pub async fn resume_task(
              let compressed_size = std::fs::metadata(&task_info.output_path)
                 .map(|m| m.len())
                 .ok();
+             println!(
+                "[RESUME-NOT-RUNNING] Output path = {:?}, exists? {} size={:?}",
+                task_info.output_path,
+                Path::new(&task_info.output_path).exists(),
+                compressed_size
+             );
              let compressed_metadata = get_video_metadata(task_info.app_handle.clone(), task_info.output_path.clone()).ok();
 
+             // 兜底：广播完成事件
+             let _ = task_info.app_handle.emit(&format!("compression-progress-{}", taskId), json!({
+                "taskId": taskId,
+                "progress": 100.0
+             }));
+             let completed_payload = json!({
+                "taskId": taskId,
+                "output_path": task_info.output_path.clone(),
+                "original_size": original_size,
+                "compressed_size": compressed_size,
+                "compressed_metadata": compressed_metadata
+             });
+             let _ = task_info.app_handle.emit(&format!("compression-completed-{}", taskId), completed_payload.clone());
+             let _ = task_info.app_handle.emit(&format!("compression-finished-{}", taskId), completed_payload.clone());
+ 
              return Ok(CompressionResult {
                 success: true,
                 output_path: Some(task_info.output_path.clone()),
@@ -996,6 +1052,21 @@ pub async fn resume_task(
                 None
             }
         };
+        
+        // 兜底：广播完成事件
+        let _ = task_info.app_handle.emit(&format!("compression-progress-{}", taskId), json!({
+            "taskId": taskId,
+            "progress": 100.0
+        }));
+        let completed_payload = json!({
+            "taskId": taskId,
+            "output_path": task_info.output_path.clone(),
+            "original_size": std::fs::metadata(&task_info.input_path).map(|m| m.len()).unwrap_or(0),
+            "compressed_size": compressed_size,
+            "compressed_metadata": compressed_metadata
+        });
+        let _ = task_info.app_handle.emit(&format!("compression-completed-{}", taskId), completed_payload.clone());
+        let _ = task_info.app_handle.emit(&format!("compression-finished-{}", taskId), completed_payload.clone());
             
         Ok(CompressionResult {
             success: true,

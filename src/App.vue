@@ -135,7 +135,9 @@ const {
   isProcessingBatch,
   startBatchCompression,
   stopBatchCompression,
-  resumeBatchCompression
+  resumeBatchCompression,
+  getBatchCachedSettings,
+  clearBatchSettingsCache,
 } = useBatchProcessor();
 
 // 当前选中任务
@@ -424,42 +426,50 @@ const handleResumeCompression = async (taskId: string) => {
     }
 
     if (task.status === 'queued' || task.status === 'pending') {
-      // 如果正在批量处理，则优先处理该任务：先暂停当前任务并停止批量队列，防止并发压缩/重复监听
       if (isProcessingBatch.value) {
-
-        // 尝试暂停当前正在处理的任务
         const processingTask = tasks.value.find(t => t.status === 'processing');
         if (processingTask) {
-          try {
-            await invoke('pause_task', { taskId: processingTask.id });
-          } catch (pauseError) {
-            const errorMessage = String(pauseError);
-            if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
-              // 当前任务进程已中断/不存在，视为已暂停
-            }
-          }
-          // 同步前端状态为 paused
+          try { await invoke('pause_task', { taskId: processingTask.id }); } catch {}
           const updatedTask = { ...processingTask, status: 'paused' as const };
           updateTask(updatedTask);
         }
-
-        // 停止批量队列（重置 isProcessingBatch 和队列）
         stopBatchCompression();
       }
+
+      // 优先使用批量缓存的参数（统一性）
+      const cached = getBatchCachedSettings(taskId);
 
       // 切到该任务以确保 startCompression 针对正确的 currentFile
       taskStore.selectTask(taskId);
       switchToTask(taskId);
       applyTaskTimeRangeToUI(task);
 
-      // 使用该任务自身的设置启动压缩，传入 isBatchMode=false 来允许重新启动
-      await startCompression(task.settings, outputPath.value, false);
+      const fallbackDefaults: CompressionSettings = task.type === 'video'
+        ? taskSettingsStore.getDefaultVideoSettings()
+        : taskSettingsStore.getDefaultImageSettings();
 
-      // 自动恢复批量处理：当该任务完成或暂停后，如仍有待处理任务且当前未处于批量模式，则自动继续批量
+      // 如果缓存存在，用缓存；否则回退到任务自身或默认
+      const baseSettings = (cached
+        ? { ...cached }
+        : (task.settings ? { ...task.settings } : { ...fallbackDefaults })) as CompressionSettings;
+
+      const effectiveSettings: CompressionSettings = { ...baseSettings } as CompressionSettings;
+      const taskTimeRange = task.settings?.timeRange;
+      if (taskTimeRange !== undefined) {
+        (effectiveSettings as any).timeRange = taskTimeRange as any;
+      }
+
+      const liveTask = taskStore.getTaskById(taskId);
+      if (liveTask) {
+        taskStore.updateTask({ ...liveTask, settings: effectiveSettings });
+        taskSettingsStore.setTaskSettings(taskId, effectiveSettings);
+      }
+
+      await startCompression(effectiveSettings, outputPath.value, false);
+
       const remainingPending = tasks.value.filter(t => t.status === 'pending');
       const hasProcessing = tasks.value.some(t => t.status === 'processing');
       if (remainingPending.length > 0 && !hasProcessing && !isProcessingBatch.value) {
-        // 暂停队列调度，避免恢复批量时 scheduleNext 抢先启动其它 queued 任务
         taskController.pauseQueue();
         try {
           await startBatchCompression(
@@ -597,4 +607,10 @@ watch(tasks, (newTasks) => {
 
 
 </script>
+
+
+// 在窗口关闭时清空批量参数缓存
+onUnmounted(() => {
+  try { clearBatchSettingsCache(); } catch {}
+});
 

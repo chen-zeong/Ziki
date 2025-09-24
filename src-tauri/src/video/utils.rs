@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use tauri::Manager;
 use crate::video::types::VideoMetadata;
-// Add for caching hardware support
+use std::path::Path; // 新增: 路径检查所需
 use std::time::{SystemTime, UNIX_EPOCH};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt; // same trait works for both std and tokio Command
@@ -179,6 +179,22 @@ pub async fn open_output_folder(folder_path: String) -> Result<(), String> {
 #[allow(non_snake_case)]
 #[tauri::command]
 pub fn get_video_metadata(app_handle: tauri::AppHandle, videoPath: String) -> Result<VideoMetadata, String> {
+    // 先输出调试日志，明确传入的目标路径与存在性、文件大小
+    println!(
+        "[METADATA] get_video_metadata called with videoPath = {:?}",
+        videoPath
+    );
+    let p = Path::new(&videoPath);
+    let exists = p.exists();
+    let size = std::fs::metadata(&videoPath).map(|m| m.len()).ok();
+    println!(
+        "[METADATA] target exists? {} size={:?} parent={:?} parent_exists? {}",
+        exists,
+        size,
+        p.parent(),
+        p.parent().map(|pp| pp.exists()).unwrap_or(false)
+    );
+
     // In development mode, use the bin directory in src-tauri
     // In production, use the resource directory with robust fallbacks
     let ffprobe_path = if cfg!(debug_assertions) {
@@ -238,6 +254,13 @@ pub fn get_video_metadata(app_handle: tauri::AppHandle, videoPath: String) -> Re
         .map_err(|e| format!("Failed to execute ffprobe: {}", e))?;
 
     if !output.status.success() {
+        // 在 ffprobe 报错时，追加我们所看到的路径存在性信息，帮助定位 ENOENT
+        println!(
+            "[METADATA][FFPROBE_ERROR] videoPath={:?} exists? {} size={:?}",
+            videoPath,
+            exists,
+            size
+        );
         return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&output.stderr)));
     }
 

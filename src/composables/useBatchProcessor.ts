@@ -9,6 +9,27 @@ export function useBatchProcessor() {
   const batchQueue = ref<CompressionTask[]>([]);
   const taskStore = useTaskStore();
 
+  // 批量参数缓存：taskId -> 生效设置（来源于批量启动时右侧面板参数）
+  const batchSettingsCache = ref<Record<string, CompressionSettings>>({});
+  const cacheSettingsForTasks = (tasks: CompressionTask[], base: CompressionSettings) => {
+    const next: Record<string, CompressionSettings> = { ...batchSettingsCache.value };
+    for (const t of tasks) {
+      const eff: CompressionSettings = { ...base } as CompressionSettings;
+      const tr = t.settings?.timeRange;
+      if (tr !== undefined) {
+        (eff as any).timeRange = tr as any;
+      }
+      next[t.id] = eff;
+    }
+    batchSettingsCache.value = next;
+  };
+  const getBatchCachedSettings = (taskId: string): CompressionSettings | undefined => {
+    return batchSettingsCache.value[taskId];
+  };
+  const clearBatchSettingsCache = () => {
+    batchSettingsCache.value = {};
+  };
+
   // 批量处理状态
   const batchProgress = computed(() => {
     if (batchQueue.value.length === 0) return 0;
@@ -71,12 +92,15 @@ export function useBatchProcessor() {
 
     isProcessingBatch.value = true;
 
+    // 在批量开始时，为所有候选任务缓存一份基准设置（并覆盖各自 timeRange）
+    cacheSettingsForTasks(candidates, batchBaseSettings);
+
     // 构建批量队列：不包含当前 processing 任务
     batchQueue.value = [...candidates];
     currentBatchIndex.value = 0;
 
-    // 如果当前存在同类型的 processing 任务，则将候选任务全部进入排队状态，等待其结束
-    const currentProcessing = tasks.find(t => t.status === 'processing');
+    // 使用最新的 store 状态来检测是否已有 processing，避免使用调用方传入的快照导致的竞态
+    const currentProcessing = taskStore.tasks.find(t => t.status === 'processing');
     if (currentProcessing) {
       // 标记所有候选为排队
       batchQueue.value.forEach(task => taskStore.updateTaskStatus(task.id, 'queued'));
@@ -109,37 +133,44 @@ export function useBatchProcessor() {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
-          // 将当前任务设为 processing
-          taskStore.updateTaskStatus(task.id, 'processing');
+          // 如果任务已在其他地方启动（例如自动调度），则不再重复启动
+          const latest = taskStore.getTaskById(task.id);
+          if (latest?.status === 'processing') {
+            console.log(`[BATCH_LOG] Task already processing, skip duplicate start: ${task.file.name}`);
+          } else {
+            // 将当前任务设为 processing
+            taskStore.updateTaskStatus(task.id, 'processing');
 
-          // 如果有下一个任务，将其设置为排队状态（幂等）
-          if (i + 1 < batchQueue.value.length) {
-            taskStore.updateTaskStatus(batchQueue.value[i + 1].id, 'queued');
-          }
-
-          // 为该任务计算本次实际生效的设置：批量统一使用 batchBaseSettings
-          const liveTask = taskStore.getTaskById(task.id);
-          const effectiveSettings: CompressionSettings = { ...batchBaseSettings } as CompressionSettings;
-          
-          // 优先使用每条任务自身的 timeRange（如有）；否则沿用批量基准的 timeRange
-          const taskTimeRange = liveTask?.settings?.timeRange;
-          if (taskTimeRange !== undefined) {
-            (effectiveSettings as any).timeRange = taskTimeRange as any;
-          }
-
-          // 同步更新 store 中该任务的 settings（便于 UI 显示与后续恢复一致）
-          if (liveTask) {
-            taskStore.updateTask({ ...liveTask, settings: effectiveSettings });
-          }
-
-          // 启动压缩（批量模式）
-          startCompressionFn(effectiveSettings, outputDirectory, true).catch((error) => {
-            console.error(`startCompressionFn error for ${task.file.name}:`, error);
-            const t = taskStore.getTaskById(task.id);
-            if (t && t.status !== 'paused' && t.status !== 'completed') {
-              taskStore.updateTaskStatus(task.id, 'failed');
+            // 如果有下一个任务，将其设置为排队状态（幂等）
+            if (i + 1 < batchQueue.value.length) {
+              taskStore.updateTaskStatus(batchQueue.value[i + 1].id, 'queued');
             }
-          });
+
+            // 从缓存中读取本次生效设置（保证与手动播放一致）
+            const liveTask = taskStore.getTaskById(task.id);
+            const cached = getBatchCachedSettings(task.id);
+            const effectiveSettings: CompressionSettings = (cached ? { ...cached } : { ...batchBaseSettings }) as CompressionSettings;
+
+            // 优先使用每条任务自身的 timeRange（如有）；否则沿用缓存/基准的 timeRange
+            const taskTimeRange = liveTask?.settings?.timeRange;
+            if (taskTimeRange !== undefined) {
+              (effectiveSettings as any).timeRange = taskTimeRange as any;
+            }
+
+            // 同步更新 store 中该任务的 settings（便于 UI 显示与后续恢复一致）
+            if (liveTask) {
+              taskStore.updateTask({ ...liveTask, settings: effectiveSettings });
+            }
+
+            // 启动压缩（批量模式）
+            startCompressionFn(effectiveSettings, outputDirectory, true).catch((error) => {
+              console.error(`startCompressionFn error for ${task.file.name}:`, error);
+              const t = taskStore.getTaskById(task.id);
+              if (t && t.status !== 'paused' && t.status !== 'completed') {
+                taskStore.updateTaskStatus(task.id, 'failed');
+              }
+            });
+          }
 
           // 等待任务进入终止状态（完成/失败/暂停），再处理下一个
           await waitUntilTaskSettled(task.id);
@@ -163,7 +194,7 @@ export function useBatchProcessor() {
     }
   };
 
-  // 停止批量处理
+  // 停止批量处理（不清空参数缓存，保证手动播放一致性）
   const stopBatchCompression = () => {
     isProcessingBatch.value = false;
     currentBatchIndex.value = 0;
@@ -202,13 +233,22 @@ export function useBatchProcessor() {
   };
 
   return {
+    // 状态
     isProcessingBatch,
     currentBatchIndex,
     batchQueue,
     batchProgress,
+
+    // 批量控制
     startBatchCompression,
     stopBatchCompression,
     resumeBatchCompression,
-    getBatchStats
+
+    // 统计
+    getBatchStats,
+
+    // 参数缓存 API
+    getBatchCachedSettings,
+    clearBatchSettingsCache,
   };
 }
