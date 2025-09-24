@@ -63,7 +63,7 @@
          
          <!-- 进度文字覆盖层 -->
          <div class="absolute inset-0 flex items-center justify-between px-3 text-xs font-semibold text-purple-500 dark:text-[#d9c8f5] tracking-wide">
-           <span>{{ $t('taskList.statusProcessing') }} {{ Math.round(task.progress || 0) }}%</span>
+           <span>{{ $t('taskList.statusProcessing') }} {{ (task.progress || 0).toFixed(1) }}%</span>
           <span v-if="getEstimatedTimeRemaining(task)" class="text-xs opacity-80">
             {{ getEstimatedTimeRemaining(task) }}
           </span>
@@ -215,7 +215,7 @@
         
         <!-- 进度文字覆盖层 -->
         <div class="absolute inset-0 flex items-center justify-between px-3 text-xs font-semibold text-orange-700 dark:text-orange-100 tracking-wide">
-          <span>{{ $t('status.paused') }} {{ Math.round(task.progress || 0) }}%</span>
+          <span>{{ $t('status.paused') }} {{ (task.progress || 0).toFixed(1) }}%</span>
           <span v-if="getEstimatedTimeRemaining(task)" class="text-xs opacity-80">
             {{ getEstimatedTimeRemaining(task) }}
           </span>

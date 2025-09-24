@@ -186,7 +186,7 @@ export function useFileHandler() {
     const unlisten = await listen(`compression-progress-${task.id}`, (event: any) => {
       const { taskId, progress } = event.payload;
       if (taskId === task.id) {
-        const progressValue = Math.min(100, Math.max(0, Math.round(progress)));
+        const progressValue = Math.min(100, Math.max(0, parseFloat((progress as number).toFixed(1))));
         const prev = lastProgressMap.get(task.id);
         if (prev !== progressValue) {
           taskStore.updateTaskProgress(task.id, progressValue);
@@ -506,7 +506,7 @@ export function useFileHandler() {
     unlistenProg = await listen(`compression-progress-${task.id}`, (event: any) => {
       const { taskId, progress } = event?.payload || {};
       if (taskId === task.id) {
-        const progressValue = Math.min(100, Math.max(0, Math.round(progress)));
+        const progressValue = Math.min(100, Math.max(0, parseFloat((progress as number).toFixed(1))));
         const prev = lastProgressMap.get(task.id);
         if (prev !== progressValue) {
           taskStore.updateTaskProgress(task.id, progressValue);
