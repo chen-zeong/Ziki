@@ -26,23 +26,14 @@
 - 多语言与主题：支持中文/英文，明暗/自动主题
 - 跨平台：macOS、Windows
 
-## 🖼️ 截图（占位）
+## 🖼️ 截图
 
-> 请将实际截图放到 `assets/screenshots/` 后替换以下占位路径。占位图将以全屏宽度展示。
-
-### 主界面（占位）
 <div>
-  <img src="./assets/screenshots/main-ui.png" alt="Main UI" width="100%" />
+  <img src="./assets/demo.avif" alt="Demo" width="100%" />
 </div>
 
-### 任务列表（占位）
 <div>
-  <img src="./assets/screenshots/task-list.png" alt="Task List" width="100%" />
-</div>
-
-### 设置面板（占位）
-<div>
-  <img src="./assets/screenshots/settings.png" alt="Settings" width="100%" />
+  <img src="./assets/screenshots/macOS.webp" alt="macOS UI" width="100%" />
 </div>
 
 ## 🚀 开发
@@ -72,3 +63,4 @@ pnpm tauri build
 
 - CompressO（开源跨平台视频压缩 App）：https://github.com/codeforreal1/compressO
 - Rotato Video Compressor（基于 FFmpeg 的在线/离线压缩工具）：https://tools.rotato.app/compress
+- HandBrake：https://github.com/HandBrake/HandBrake
