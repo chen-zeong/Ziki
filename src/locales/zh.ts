@@ -52,7 +52,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
 
   // 视频设置
   videoSettings: {
-    format: '视频格式',
+    format: '输出格式',
     videoCodec: '视频编码',
     audioCodec: '音频编码',
     audioSampleRate: '音频采样率',
