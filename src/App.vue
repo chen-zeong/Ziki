@@ -27,6 +27,7 @@
     @time-validation-change="handleTimeValidationChange"
     @batch-compress="handleBatchCompress"
     @bottom-compress="handleBottomCompress"
+    @undo-compress="handleUndoCompress"
     @update:timeRangeSettings="handleTimeRangeSettingsUpdate"
   />
 </template>
@@ -394,6 +395,71 @@ const handleBottomCompress = () => {
   }
 };
 
+// 撤销压缩处理
+const handleUndoCompress = async () => {
+  if (!selectedTask.value || selectedTask.value.status !== 'completed') {
+    return;
+  }
+
+  const task = selectedTask.value;
+
+  try {
+    // 1. 删除压缩后的文件(如果存在)
+    if (task.file.compressedPath) {
+      try {
+        await invoke('remove_file', { path: task.file.compressedPath });
+      } catch (error) {
+        console.warn('删除压缩文件失败:', error);
+      }
+    }
+
+    // 2. 清理视频预览缓存
+    if (appLayoutRef.value) {
+      if (task.file.path) {
+        appLayoutRef.value.clearTaskCache(task.file.path);
+      }
+      if (task.file.compressedPath) {
+        appLayoutRef.value.clearTaskCache(task.file.compressedPath);
+      }
+    }
+
+    // 3. 重置任务状态为pending
+    const updatedTask: CompressionTask = {
+      ...task,
+      status: 'pending',
+      progress: 0,
+      compressedSize: 0,
+      startedAt: undefined,
+      completedAt: undefined,
+      file: {
+        ...task.file,
+        compressedPath: undefined,
+        compressedUrl: undefined
+      }
+    };
+
+    // 4. 更新任务store
+    taskStore.updateTask(updatedTask);
+
+    // 5. 更新当前文件的显示
+    if (currentFile.value && currentFile.value.id === task.file.id) {
+      currentFile.value = {
+        ...currentFile.value,
+        compressedPath: undefined,
+        compressedUrl: undefined
+      };
+    }
+
+    // 6. 刷新预览
+    await nextTick();
+    if (appLayoutRef.value && (appLayoutRef.value as any).refreshPreview) {
+      (appLayoutRef.value as any).refreshPreview();
+    }
+  } catch (error) {
+    console.error('撤销压缩失败:', error);
+  }
+};
+
 
 
 // 处理任务状态更新
@@ -416,13 +482,10 @@ const selectTask = (taskId: string) => {
 // 处理恢复单个任务（支持 paused 与 queued）
 const handleResumeCompression = async (taskId: string) => {
   const task = tasks.value.find(t => t.id === taskId);
-  if (!task) {
-    return;
-  }
+  if (!task) return;
 
   try {
     if (task.status === 'paused') {
-      // 直接调用已有的恢复逻辑
       await resumeCompression(taskId);
       return;
     }
@@ -502,6 +565,17 @@ watch(
   { immediate: true }
 );
 
+// 删除压缩文件的公共函数
+const deleteCompressedFile = async (task: CompressionTask) => {
+  if (globalSettingsStore.deleteCompressedFileOnTaskDelete && task.file.compressedPath) {
+    try {
+      await invoke('remove_file', { path: task.file.compressedPath });
+    } catch (error) {
+      console.error('Failed to delete compressed file:', error);
+    }
+  }
+};
+
 // 清空所有任务
 const handleClearAllTasks = async () => {
   const activeTasks = tasks.value.filter(task => 
@@ -557,6 +631,13 @@ const handleClearAllTasks = async () => {
   for (const taskId of allTaskIds) {
     try {
       await invoke('delete_task', { taskId });
+      
+      // 删除压缩文件
+      const task = tasks.value.find(t => t.id === taskId);
+      if (task) {
+        await deleteCompressedFile(task);
+      }
+      
       deleteTask(taskId);
     } catch (error) {
       // Failed to delete task during clear all

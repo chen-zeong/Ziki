@@ -85,6 +85,8 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     qualityLossless: 'Lossless',
     compress: 'Compress',
     compressing: 'Compressing...',
+    resumeCompress: 'Continue',
+    undo: 'Undo',
     original: 'Original',
     colorDepth: 'Color Depth',
     colors: 'colors',
@@ -204,7 +206,9 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     optionWithRandom: 'Original\n+Random',
     descOriginal: 'Keep original file name',
     descWithTime: 'filename_20240101_120000',
-    descWithRandom: 'filename_abc123'
+    descWithRandom: 'filename_abc123',
+    deleteCompressedFileOnTaskDelete: 'Sync delete compressed files',
+    deleteCompressedFileOnTaskDeleteDesc: 'Delete compressed files when deleting task records'
   },
 
   // Video Comparison

@@ -32,6 +32,8 @@ const emit = defineEmits([
   'time-validation-change',
   'batch-compress',
   'bottom-compress',
+  'undo-compress',
+  'resume-compression',
   'update:timeRangeSettings'
 ]);
 
@@ -61,7 +63,8 @@ const batchButtonText = computed(() => {
 // 底部压缩按钮的文本
 const compressButtonText = computed(() => {
   if (selectedTask.value?.status === 'processing') return t('videoSettings.compressing');
-  if (selectedTask.value?.status === 'completed') return t('taskList.statusCompleted');
+  if (selectedTask.value?.status === 'completed') return t('videoSettings.undo');
+  if (selectedTask.value?.status === 'paused') return t('videoSettings.resumeCompress');
   return t('videoSettings.compress');
 });
 
@@ -69,7 +72,24 @@ const compressButtonText = computed(() => {
 const isCompressButtonDisabled = computed(() => {
   if (!props.currentFile) return true;
   const status = selectedTask.value?.status;
-  return status === 'processing' || status === 'completed';
+  // 压缩中时禁用,完成状态改为可点击(用于撤销)
+  return status === 'processing';
+});
+
+// 底部压缩按钮的样式类
+const compressButtonColorClass = computed(() => {
+  const status = selectedTask.value?.status;
+  if (status === 'processing') return 'bg-purple-400 dark:bg-[#6c52a1]';
+  if (status === 'paused') return 'bg-orange-500';
+  return '';
+});
+
+// 底部压缩按钮的内联样式
+const compressButtonStyle = computed(() => {
+  const status = selectedTask.value?.status;
+  if (status === 'completed') return { backgroundColor: '#fbbf24' };
+  if (status === 'pending' && !isCompressButtonDisabled.value) return { backgroundColor: '#578ae6' };
+  return {};
 });
 
 // 当前任务是否锁定（完成或排队/压缩中不可更改设置）
@@ -90,13 +110,19 @@ const handleTimeValidationChange = (isValid: boolean) => {
 };
 
 const handleBatchCompress = () => {
-  console.log('🚀 FooterBar handleBatchCompress clicked!');
   emit('batch-compress');
-  console.log('📡 batch-compress event emitted');
 };
 
 const handleBottomCompress = () => {
-  emit('bottom-compress');
+  const status = selectedTask.value?.status;
+
+  if (status === 'completed') {
+    emit('undo-compress');
+  } else if (status === 'paused' && selectedTask.value) {
+    emit('resume-compression', selectedTask.value.id);
+  } else {
+    emit('bottom-compress');
+  }
 };
 
 const toggleOutputFolderPopup = () => {
@@ -199,19 +225,16 @@ const toggleTimeRangePopup = () => {
         </span>
       </button>
       
-      <button 
+      <button
         class="relative overflow-hidden text-white text-sm font-semibold rounded-md transition-all duration-300 px-4 py-1.5 min-w-[100px]"
-        :class="{
-          'bg-gray-400 text-gray-200 cursor-not-allowed': isCompressButtonDisabled && selectedTask?.status !== 'completed',
-          'ripple-button': !isCompressButtonDisabled
-        }"
-        :style="
-          (selectedTask?.status === 'processing')
-            ? { backgroundColor: '#578ae6' }
-            : (selectedTask?.status === 'completed')
-              ? { backgroundColor: '#449062' }
-              : (!isCompressButtonDisabled ? { backgroundColor: '#578ae6' } : {})
-        "
+        :class="[
+          {
+            'bg-gray-400 text-gray-200 cursor-not-allowed': isCompressButtonDisabled,
+            'ripple-button': !isCompressButtonDisabled && !compressButtonColorClass
+          },
+          compressButtonColorClass
+        ]"
+        :style="compressButtonStyle"
         :disabled="isCompressButtonDisabled"
         @click="handleBottomCompress"
       >

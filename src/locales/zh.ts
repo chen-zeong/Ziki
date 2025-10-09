@@ -86,6 +86,8 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     qualityLossless: '无损',
     compress: '开始压缩',
     compressing: '压缩中...',
+    resumeCompress: '继续压缩',
+    undo: '撤销',
     original: '原始',
     colorDepth: '色彩深度',
     colors: '色',
@@ -204,7 +206,9 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     optionWithRandom: '原文件名\n+随机编号',
     descOriginal: '保持原始文件名',
     descWithTime: '文件名_20240101_120000',
-    descWithRandom: '文件名_abc123'
+    descWithRandom: '文件名_abc123',
+    deleteCompressedFileOnTaskDelete: '同步删除压缩文件',
+    deleteCompressedFileOnTaskDeleteDesc: '删除任务记录时同时删除对应的压缩文件'
   },
 
   // 视频对比

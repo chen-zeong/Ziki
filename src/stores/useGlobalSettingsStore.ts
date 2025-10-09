@@ -20,6 +20,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   // 默认语言与 i18n 的默认语言保持一致（根据系统语言自动判定）
   const language = ref<Language>(i18n.global.locale.value as Language)
   const isInitialized = ref(false)
+  // 删除记录时同步删除压缩文件开关
+  const deleteCompressedFileOnTaskDelete = ref(false)
 
   const { t } = i18n.global
 
@@ -59,6 +61,11 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     saveSettings()
   }
 
+  const setDeleteCompressedFileOnTaskDelete = (enabled: boolean) => {
+    deleteCompressedFileOnTaskDelete.value = enabled
+    saveSettings()
+  }
+
   const toggleTheme = () => {
     // 只在 light 和 dark 之间切换，不包含 auto
     if (theme.value === 'light') {
@@ -91,7 +98,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
         const HH = String(now.getHours()).padStart(2, '0')
         const mm = String(now.getMinutes()).padStart(2, '0')
         const ss = String(now.getSeconds()).padStart(2, '0')
-        const timeStr = `${yyyy}${MM}${dd}_${HH}${mm}${ss}`
+        const ms = String(now.getMilliseconds()).padStart(3, '0')
+        const timeStr = `${yyyy}${MM}${dd}_${HH}${mm}${ss}${ms}`
         return `${baseName}_${timeStr}.${extension}`
       }
       case 'with-random': {
@@ -128,7 +136,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
       outputPath: outputPath.value,
       outputFileNameFormat: outputFileNameFormat.value,
       theme: theme.value,
-      language: language.value
+      language: language.value,
+      deleteCompressedFileOnTaskDelete: deleteCompressedFileOnTaskDelete.value
     }
     localStorage.setItem('globalSettings', JSON.stringify(settings))
   }
@@ -144,6 +153,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
         theme.value = settings.theme || 'auto'
         // 未保存语言时，回退到按系统自动判定的 i18n 默认语言
         language.value = settings.language || (i18n.global.locale.value as Language)
+        // 加载删除压缩文件设置，默认为 false
+        deleteCompressedFileOnTaskDelete.value = settings.deleteCompressedFileOnTaskDelete || false
       } else {
         // 没有任何保存记录时，使用 i18n 的默认语言（系统语言）
         language.value = i18n.global.locale.value as Language
@@ -194,6 +205,7 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     theme,
     language,
     isInitialized,
+    deleteCompressedFileOnTaskDelete,
     
     // 计算属性
     isDarkMode,
@@ -204,6 +216,7 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     setOutputFileNameFormat,
     setTheme,
     setLanguage,
+    setDeleteCompressedFileOnTaskDelete,
     toggleTheme,
     generateOutputFileName,
     initialize,

@@ -50,6 +50,7 @@ import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useTaskStore } from '../../stores/useTaskStore';
+import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
 import type { CompressionTask } from '../../types';
@@ -153,6 +154,19 @@ const deleteTask = async (taskId: string) => {
 
     // 调用后端删除任务
     await invoke('delete_task', { taskId });
+    
+    // 如果启用了删除压缩文件选项，在前端删除压缩文件
+    const globalSettings = useGlobalSettingsStore();
+    if (globalSettings.deleteCompressedFileOnTaskDelete) {
+      const task = tasks.value.find(t => t.id === taskId);
+      if (task?.file.compressedPath) {
+        try {
+          await invoke('remove_file', { path: task.file.compressedPath });
+        } catch (error) {
+          console.error('Failed to delete compressed file:', error);
+        }
+      }
+    }
     
     // 通知父组件删除任务
     emit('delete-task', taskId);
