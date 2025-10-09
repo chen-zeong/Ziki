@@ -127,6 +127,13 @@ pub fn get_file_size(filePath: String) -> Result<u64, String> {
 }
 
 #[tauri::command]
+pub async fn remove_file(path: String) -> Result<(), String> {
+    std::fs::remove_file(&path)
+        .map_err(|e| format!("Failed to remove file {}: {}", path, e))?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_platform() -> Result<String, String> {
     #[cfg(target_os = "macos")]
     return Ok("macos".to_string());

@@ -502,6 +502,17 @@ watch(
   { immediate: true }
 );
 
+// 删除压缩文件的公共函数
+const deleteCompressedFile = async (task: CompressionTask) => {
+  if (globalSettingsStore.deleteCompressedFileOnTaskDelete && task.file.compressedPath) {
+    try {
+      await invoke('remove_file', { path: task.file.compressedPath });
+    } catch (error) {
+      console.error('Failed to delete compressed file:', error);
+    }
+  }
+};
+
 // 清空所有任务
 const handleClearAllTasks = async () => {
   const activeTasks = tasks.value.filter(task => 
@@ -557,6 +568,13 @@ const handleClearAllTasks = async () => {
   for (const taskId of allTaskIds) {
     try {
       await invoke('delete_task', { taskId });
+      
+      // 删除压缩文件
+      const task = tasks.value.find(t => t.id === taskId);
+      if (task) {
+        await deleteCompressedFile(task);
+      }
+      
       deleteTask(taskId);
     } catch (error) {
       // Failed to delete task during clear all

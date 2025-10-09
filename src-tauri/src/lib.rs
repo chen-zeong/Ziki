@@ -85,6 +85,7 @@ pub fn run() {
             get_hardware_encoder_support,
             refresh_hardware_encoder_support,
             terminate_all_tasks,
+            remove_file,
             // image
             compress_image
         ])
