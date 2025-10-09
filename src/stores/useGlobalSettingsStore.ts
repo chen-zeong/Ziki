@@ -98,7 +98,8 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
         const HH = String(now.getHours()).padStart(2, '0')
         const mm = String(now.getMinutes()).padStart(2, '0')
         const ss = String(now.getSeconds()).padStart(2, '0')
-        const timeStr = `${yyyy}${MM}${dd}_${HH}${mm}${ss}`
+        const ms = String(now.getMilliseconds()).padStart(3, '0')
+        const timeStr = `${yyyy}${MM}${dd}_${HH}${mm}${ss}${ms}`
         return `${baseName}_${timeStr}.${extension}`
       }
       case 'with-random': {

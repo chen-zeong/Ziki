@@ -44,7 +44,7 @@ const emit = defineEmits([
   'output-path-update',
   'time-validation-change',
   'batch-compress',
-  'compress',
+  'undo-compress',
   'update:timeRangeSettings'
 ]);
 
@@ -125,6 +125,8 @@ defineExpose({
       @time-validation-change="emit('time-validation-change', $event)"
       @batch-compress="emit('batch-compress')"
       @bottom-compress="triggerCompress"
+      @undo-compress="emit('undo-compress')"
+      @resume-compression="emit('resume-compression', $event)"
       @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
     />
   </div>
