@@ -86,6 +86,11 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
+  // 为兼容旧代码，提供别名方法
+  const deleteTask = (taskId: string) => {
+    removeTask(taskId)
+  }
+
   const selectTask = (taskId: string) => {
     const task = tasks.value.find(t => t.id === taskId)
     if (task) {
@@ -216,6 +221,7 @@ export const useTaskStore = defineStore('task', () => {
     addTask,
     addTasks,
     removeTask,
+    deleteTask,
     updateTask,
     selectTask,
     clearAllTasks,

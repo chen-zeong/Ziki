@@ -16,6 +16,7 @@ interface Props {
   isProcessingBatch?: boolean;
   selectedTaskId?: string | null;
   timeRangeSettings: any;
+  outputPath?: string; // 兼容 FooterBar 传入
 }
 
 const props = defineProps<Props>();
@@ -43,7 +44,9 @@ const emit = defineEmits([
   'update:timeRangeSettings',
   'time-validation-change',
   // 新增：输出文件夹弹窗转发
-  'toggle-output-folder-popup'
+  'toggle-output-folder-popup',
+  // 兼容 FooterBar 的批量压缩事件
+  'batch-compress'
 ]);
 
 const showOutputFolder = ref(false);
@@ -160,9 +163,9 @@ defineExpose({
 
 <template>
   <!-- 主内容区域 -->
-  <main class="flex-grow flex pr-3 space-x-3 overflow-hidden bg-white dark:bg-dark-primary pt-3" style="pointer-events: auto;">
+  <main class="flex-grow flex pr-3 space-x-3 overflow-hidden bg-transparent dark:bg-transparent pt-4" style="pointer-events: auto;">
     <!-- 左侧面板: 任务队列 -->
-    <div class="w-1/3 flex flex-col border-r border-gray-200 dark:border-transparent">
+    <div class="w-1/3 flex flex-col border-r border-gray-200/50 dark:border-dark-border/60">
       <div class="flex-grow overflow-hidden">
         <!-- Output Folder Settings (Expandable) -->
         <OutputFolder
@@ -195,8 +198,12 @@ defineExpose({
     <!-- 右侧面板: 预览和设置 -->
     <div class="w-2/3 flex flex-col overflow-hidden" :class="isUploaderVisible ? 'space-y-6' : 'space-y-3'">
       <!-- File Upload (Visible by default) -->
-      <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-[#1e1e1e] rounded-md flex items-center justify-center mt-3">
-        <FileUploader @files-selected="emit('files-selected', $event)" />
+      <div v-if="isUploaderVisible" class="flex-grow mt-4">
+        <div class="h-full rounded-2xl bg-white/80 dark:bg-dark-primary/80 backdrop-blur-md soft-shadow transition-colors">
+          <div class="h-full p-3 rounded-xl bg-white dark:bg-[#1e1e1e] flex items-center justify-center">
+            <FileUploader @files-selected="emit('files-selected', $event)" />
+          </div>
+        </div>
       </div>
 
       <!-- Quality Comparison & Settings (Hidden by default) -->
@@ -223,4 +230,16 @@ defineExpose({
       />
     </div>
   </main>
+
+  <!-- 底部状态栏（保持原文件，样式在 FooterBar 中处理） -->
+  <FooterBar
+    :selected-task-id="selectedTaskId"
+    :tasks="tasks"
+    :output-path="props.outputPath || ''"
+    :time-range-settings="props.timeRangeSettings"
+    @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
+    @time-validation-change="emit('time-validation-change', $event)"
+    @start-compress="emit('start-compress')"
+    @batch-compress="emit('batch-compress')"
+  />
 </template>

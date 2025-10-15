@@ -78,7 +78,7 @@ defineExpose({
 
 <template>
   <!-- 整个应用窗口容器 -->
-  <div class="w-full h-[100dvh] min-h-[100dvh] bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden transition-colors duration-300">
+  <div class="w-full h-[100dvh] min-h-[100dvh] bg-transparent dark:bg-transparent flex flex-col overflow-hidden transition-colors duration-300">
     <!-- 顶部标题栏（改为绝对定位覆盖层，透明背景，不占据布局高度） -->
     <HeaderBar 
       class="absolute top-0 left-0 right-0 z-50"

@@ -87,7 +87,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
     <div v-if="isWindows" class="flex items-center space-x-1">
       <!-- 关闭（放到最左侧，突出视觉层级） -->
       <button
-        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-red-500/90 hover:text-white focus:outline-none focus:ring-0"
+        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-red-500/90 hover:text-white focus:outline-none focus:ring-0 hover-lift"
         @click="handleClose"
         :data-tauri-drag-region="false"
         :title="$t('window.close') || '关闭'"
@@ -97,7 +97,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       </button>
       <!-- 最小化 -->
       <button
-        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0"
+        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0 hover-lift"
         @click="handleMinimize"
         :data-tauri-drag-region="false"
         :title="$t('window.minimize') || '最小化'"
@@ -107,7 +107,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       </button>
       <!-- 最大化/还原 -->
       <button
-        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0"
+        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0 hover-lift"
         @click="handleMaximize"
         :data-tauri-drag-region="false"
         :title="$t('window.maximize') || '最大化'"
@@ -125,7 +125,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       <!-- 自定义输出文件夹按钮（移动到日志按钮左侧） -->
       <div class="relative">
         <button 
-          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
+          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors hover-lift"
           @click="toggleOutputFolderPopup"
           :title="$t('outputFolder.title') || '输出文件夹'"
         >
@@ -139,6 +139,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
               :show-output-folder="true"
               @update:output-path="handleOutputPathUpdate"
               @close="toggleOutputFolderPopup"
+              class="glass-panel soft-shadow"
             />
           </div>
         </div>
@@ -151,7 +152,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       
       <LanguageSwitcher />
       <button 
-        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
+        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors hover-lift"
         @click="globalSettings.toggleTheme"
         :data-tauri-drag-region="false"
       >

@@ -5,6 +5,10 @@
 /* CSS变量定义 */
 :root {
   --slider-bg-color: #558ee1;
+  /* 主题品牌色（可在组件中通过 var 使用） */
+  --brand-primary: #6366f1; /* indigo-500 */
+  --brand-accent: #a78bfa;  /* violet-400 */
+  --brand-muted: #f1f5f9;   /* slate-100 */
 }
 
 .dark {
@@ -15,10 +19,17 @@
 html, body, #app {
   width: 100%;
   height: 100dvh; /* 使用动态视口高度，避免 Windows 拉伸时出现 1px 缝隙 */
-  background-color: #f5f5f5; /* 与 Header/Footer 一致的浅灰 */
+  /* 轻柔渐变背景，更年轻现代 */
+  background-image: radial-gradient(1200px 600px at 10% 10%, rgba(99,102,241,0.12) 0%, rgba(255,255,255,0) 60%),
+                    radial-gradient(800px 500px at 90% 20%, rgba(167,139,250,0.12) 0%, rgba(255,255,255,0) 55%),
+                    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background-color: #f8fafc;
 }
 .dark html, .dark body, .dark #app {
-  background-color: #1e1e1e; /* 与暗色背景一致 */
+  background-image: radial-gradient(1200px 600px at 12% 8%, rgba(99,102,241,0.18) 0%, rgba(0,0,0,0) 60%),
+                    radial-gradient(900px 520px at 88% 15%, rgba(167,139,250,0.18) 0%, rgba(0,0,0,0) 55%),
+                    linear-gradient(180deg, #0f0f12 0%, #1a1a1d 100%);
+  background-color: #0f0f12; /* 与暗色背景一致 */
 }
 
 body {
@@ -47,7 +58,36 @@ html {
   display: none;
 }
 
+/* 玻璃态通用卡片样式（不改变布局结构） */
+.glass-panel {
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+}
+.dark .glass-panel {
+  background: rgba(16, 16, 20, 0.40);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
 
+/* 柔和投影 */
+.soft-shadow {
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06);
+}
+
+/* 轻微悬浮态（用于可交互元素） */
+.hover-lift { transition: transform 180ms ease, box-shadow 180ms ease; }
+.hover-lift:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(2,6,23,0.08); }
+
+/* 选择高亮 */
+::selection { background: rgba(99,102,241,0.25); color: #0f172a; }
+.dark ::selection { background: rgba(167,139,250,0.25); color: #e5e7eb; }
+
+/* 弹层动画（与 <transition name="fade-up"> 配合） */
+.fade-up-enter-active, .fade-up-leave-active { transition: all 180ms ease; transform-origin: bottom right; }
+.fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(8px) scale(0.98); }
 
 /* Comparison slider styles */
 .comparison-slider {

@@ -136,10 +136,10 @@ const toggleTimeRangePopup = () => {
 </script>
 
 <template>
-  <!-- 底部状态栏 -->
-  <footer class="flex-shrink-0 flex items-center justify-between p-2 border-t border-gray-300 dark:border-dark-border bg-[#f5f5f5] dark:bg-[#2d2d2d]" style="pointer-events: auto;">
+  <!-- 底部状态栏：玻璃态 + 渐变配色，保持布局与交互不变 -->
+  <footer class="flex-shrink-0 flex items-center justify-between p-2 border-t border-gray-300/60 dark:border-dark-border bg-white/60 dark:bg-dark-primary/60 backdrop-blur-lg" style="pointer-events: auto;">
     <div class="flex items-center space-x-4">
-      <div class="text-xs text-gray-500 dark:text-dark-secondary">
+      <div class="text-xs text-gray-600 dark:text-gray-300">
         <span v-if="isProcessing">{{ $t('status.processing') || '处理中' }}...</span>
         <span v-else-if="tasks.length > 0">{{ $t('status.ready') || '就绪' }} - {{ tasks.length }} {{ $t('status.tasks') || '个任务' }}</span>
         <span v-else>{{ $t('status.ready') || '就绪' }}</span>
@@ -147,58 +147,48 @@ const toggleTimeRangePopup = () => {
       <div class="flex items-center space-x-2 relative">
         <div class="relative">
           <button 
-            class="p-1 text-gray-500 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded transition-colors"
+            class="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-dark-border rounded hover-lift transition-colors"
             @click="toggleOutputFolderPopup"
             :title="$t('outputFolder.title') || '输出文件夹'"
           >
             <FolderCog class="w-4 h-4" />
           </button>
-          
-          <!-- 悬浮的输出文件夹设置 -->
+          <!-- 悬浮输出文件夹设置 -->
           <div v-if="showOutputFolderPopup">
-            <!-- 透明遮罩层 -->
-            <div 
-              class="fixed inset-0 z-40" 
-              @click="toggleOutputFolderPopup"
-            ></div>
-            <!-- 弹窗内容 -->
-            <div 
-              class="absolute bottom-full mb-2 left-0 w-80 z-50"
-              @click.stop
-            >
+            <div class="fixed inset-0 z-40" @click="toggleOutputFolderPopup"></div>
+            <div class="absolute bottom-full mb-2 left-0 w-80 z-50" @click.stop>
               <OutputFolder
                 :show-output-folder="true"
                 @update:output-path="handleOutputPathUpdate"
                 @close="toggleOutputFolderPopup"
+                class="glass-panel soft-shadow"
               />
             </div>
           </div>
         </div>
-        
-        <div class="text-xs text-gray-500 dark:text-dark-secondary max-w-xs truncate">
+        <div class="text-xs text-gray-600 dark:text-gray-300 max-w-xs truncate">
           <span v-if="outputPath">{{ outputPath }}</span>
           <span v-else>{{ $t('status.noOutputPath') || '未设置输出路径' }}</span>
         </div>
       </div>
     </div>
+
     <div class="flex items-center space-x-3">
       <!-- 自定义时间段开关（仅视频显示） -->
       <div class="relative" v-if="showTimeRangeUI">
         <button
-          class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-700 dark:text-dark-secondary hover:text-gray-900 dark:hover:text-gray-100"
+          class="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
           :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSettingsLocked }"
           :disabled="isSettingsLocked"
           @click="toggleTimeRangePopup"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="timeRangeSettings.enabled ? 'text-[#518dd6] dark:text-[#518dd6]' : 'text-gray-700 dark:text-dark-secondary'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="timeRangeSettings.enabled ? 'text-brand-500 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
           <span>{{ $t('videoSettings.customTimeRange') || '自定义时间段' }}</span>
         </button>
-        
-        <!-- 时间段设置弹出框 -->
         <transition name="fade-up">
-          <div v-if="showTimeRangePopup" class="absolute bottom-full right-0 mb-2 w-80 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 p-4">
+          <div v-if="showTimeRangePopup" class="absolute bottom-full right-0 mb-2 w-80 glass-panel soft-shadow p-4 z-50">
             <TimeRangeSettings 
               :model-value="timeRangeSettings" 
               @update:model-value="$emit('update:timeRangeSettings', $event)"
@@ -212,9 +202,9 @@ const toggleTimeRangePopup = () => {
       
       <!-- 批量压缩按钮 -->
       <button 
-        class="text-white text-sm font-semibold rounded-md transition-colors px-4 py-1.5 flex items-center space-x-2"
+        class="text-white text-sm font-semibold rounded-md transition-colors px-4 py-1.5 flex items-center space-x-2 hover-lift"
         :class="{ 'bg-gray-400 text-gray-200 cursor-not-allowed hover:bg-gray-400': isBatchButtonDisabled }"
-        :style="pendingTasksCount > 0 ? { backgroundColor: '#578ae6' } : {}"
+        :style="pendingTasksCount > 0 ? { backgroundColor: 'var(--slider-bg-color)' } : {}"
         :disabled="isBatchButtonDisabled"
         @click="handleBatchCompress"
       >
@@ -226,7 +216,7 @@ const toggleTimeRangePopup = () => {
       </button>
       
       <button
-        class="relative overflow-hidden text-white text-sm font-semibold rounded-md transition-all duration-300 px-4 py-1.5 min-w-[100px]"
+        class="relative overflow-hidden text-white text-sm font-semibold rounded-md transition-all duration-300 px-4 py-1.5 min-w-[100px] hover-lift"
         :class="[
           {
             'bg-gray-400 text-gray-200 cursor-not-allowed': isCompressButtonDisabled,
@@ -238,14 +228,10 @@ const toggleTimeRangePopup = () => {
         :disabled="isCompressButtonDisabled"
         @click="handleBottomCompress"
       >
-        <!-- 压缩中状态 -->
         <template v-if="selectedTask?.status === 'processing'">
-          <!-- 半透明蒙版层 -->
           <div class="absolute top-0 left-0 h-full rounded-md bg-white/40 dark:bg-black/25 transition-all duration-500 ease-out progress-mask"></div>
           <span>{{ compressButtonText }}</span>
         </template>
-        
-        <!-- 其他状态 -->
         <template v-else>
           <span>{{ compressButtonText }}</span>
         </template>

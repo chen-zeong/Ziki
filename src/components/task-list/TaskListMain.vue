@@ -88,15 +88,18 @@
  import { useI18n } from 'vue-i18n';
  import { invoke } from '@tauri-apps/api/core';
  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+ import { Window as TauriWindow } from '@tauri-apps/api/window';
  import { useTaskStore } from '../../stores/useTaskStore';
  import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
  import TaskListToolbar from './TaskListToolbar.vue';
  import TaskItem from './TaskItem.vue';
-
+ 
  import type { CompressionTask } from '../../types';
-
+ 
  // 使用任务store
  const taskStore = useTaskStore();
+ // Tauri 窗口实例（仅在 Tauri 环境下使用）
+ let appWindow: TauriWindow | null = null;
 
  interface Props {
    // 保持props接口兼容性，但内部使用store
@@ -354,13 +357,15 @@
 
      console.log('[DD] Registered Tauri drag-drop listeners');
 
-     // 监听窗口焦点变化，失焦时清理拖拽样式
-     appWindow.onFocusChanged(({ payload }: { payload: boolean }) => {
-       console.log('[DD] window focus changed:', payload);
-       if (!payload) {
-         isDragOver.value = false;
-       }
-     });
+     // 监听窗口焦点变化，失焦时清理拖拽样式（若可用）
+    if (appWindow && 'onFocusChanged' in appWindow) {
+      (appWindow as any).onFocusChanged(({ payload }: { payload: boolean }) => {
+        console.log('[DD] window focus changed:', payload);
+        if (!payload) {
+          isDragOver.value = false;
+        }
+      });
+    }
    } catch (error) {
      console.error('Register drag-drop listeners failed:', error);
    }
