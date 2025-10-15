@@ -40,10 +40,7 @@ const emit = defineEmits([
   'time-validation-change',
   'batch-compress',
   'undo-compress',
-  'update:timeRangeSettings',
-  // 新增：任务列表底部按钮事件
-  'start-compress',
-  'start-multi-compress'
+  'update:timeRangeSettings'
 ]);
 
 const mainContentRef = ref<InstanceType<typeof MainContent> | null>(null);
@@ -110,8 +107,6 @@ defineExpose({
       @pause-task="emit('pause-task', $event)"
       @select-task="emit('select-task', $event)"
       @clear-all-tasks="emit('clear-all-tasks')"
-      @start-compress="emit('start-compress')"
-      @start-multi-compress="emit('batch-compress', $event)"
       @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
       @time-validation-change="emit('time-validation-change', $event)"
       @toggle-output-folder-popup="emit('toggle-output-folder-popup')"

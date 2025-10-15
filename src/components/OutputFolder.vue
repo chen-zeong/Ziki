@@ -12,7 +12,7 @@
     >
       <div 
         v-if="showOutputFolder"
-        class="bg-white/80 dark:bg-[#1a1c25]/85 border border-white/70 dark:border-white/10 rounded-2xl shadow-[0_18px_40px_rgba(15,23,42,0.18)] backdrop-blur-md px-5 py-4 mb-4 overflow-hidden transition-all duration-300"
+        class="bg-white dark:bg-[#181b23] border border-slate-200/80 dark:border-white/10 rounded-xl px-5 py-4 mb-4 overflow-hidden transition-all duration-300"
       >
         <div class="space-y-4">
 
@@ -36,7 +36,7 @@
                 />
                 <span
                   class="relative flex items-center h-7 w-12 rounded-full transition-all duration-300"
-                  :class="globalSettings.deleteCompressedFileOnTaskDelete ? 'bg-[var(--brand-primary)] shadow-[0_8px_20px_rgba(81,98,255,0.35)]' : 'bg-slate-200 dark:bg-white/15'"
+                  :class="globalSettings.deleteCompressedFileOnTaskDelete ? 'bg-[var(--brand-primary)]' : 'bg-slate-200 dark:bg-white/15'"
                 >
                   <span
                     class="absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-white dark:bg-[#1f2230] shadow-md transition-all duration-300"
@@ -60,8 +60,8 @@
                 :class="[
                   'flex-1 px-4 py-2 text-xs font-semibold rounded-xl border transition-all duration-250 whitespace-pre-line text-center hover:-translate-y-[1px]',
                   globalSettings.outputFileNameFormat === option.value
-                    ? 'bg-[var(--brand-primary)] text-white border-transparent shadow-[0_12px_24px_rgba(81,98,255,0.28)]'
-                    : 'bg-white/70 dark:bg-white/5 text-slate-600 dark:text-slate-300 border-white/60 dark:border-white/10 hover:bg-white/85 dark:hover:bg-white/10'
+                    ? 'bg-[var(--brand-primary)] text-white border-transparent'
+                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:bg-white/85 dark:hover:bg-white/10'
                 ]"
                 :title="option.description"
               >
@@ -80,10 +80,10 @@
             </label>
             <div class="flex items-center gap-3">
               <div class="flex-1">
-                <div class="px-4 py-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-white/70 dark:border-white/10 text-sm text-slate-600 dark:text-slate-200 flex items-center justify-between hover:bg-white/75 dark:hover:bg-white/8 transition-all duration-200">
+                <div class="px-4 py-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-sm text-slate-600 dark:text-slate-200 flex items-center justify-between hover:bg-white/90 dark:hover:bg-white/10 transition-all duration-200">
                   <span class="truncate">{{ globalSettings.outputPath || ($t('outputFolder.selectFolder') || '选择输出路径...') }}</span>
                   <button 
-                    class="ml-3 h-8 w-8 flex items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-[0_10px_20px_rgba(81,98,255,0.28)] hover:scale-105 transition-all duration-200"
+                    class="ml-3 h-8 w-8 flex items-center justify-center rounded-full bg-[var(--brand-primary)] text-white hover:scale-105 transition-all duration-200"
                     @click="selectOutputFolder"
                     :title="$t('outputFolder.selectFolder') || '选择文件夹'"
                   >

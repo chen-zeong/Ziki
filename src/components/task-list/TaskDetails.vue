@@ -8,7 +8,7 @@
     leave-to-class="max-h-0 opacity-0 transform scale-y-95"
   >
     <div v-if="isExpanded" class="overflow-hidden">
-      <div class="px-3 pb-4 pt-3 border-t border-white/60 dark:border-white/10 bg-white/85 dark:bg-[#1a1c25]/60 backdrop-blur-md rounded-2xl shadow-[0_12px_22px_rgba(15,23,42,0.08)] transition-all duration-300">
+      <div class="px-3 pb-4 pt-3 border-t border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#1a1d26] rounded-xl transition-all duration-300">
         
         <!-- 压缩前后对比 (仅完成的任务) -->
         <TaskComparison 

@@ -211,13 +211,6 @@ input, textarea, select, [contenteditable="true"] {
   background: rgba(148, 163, 184, 0.6);
   box-shadow: none;
 }
-/* 多选动画 */
-@keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(81, 98, 255, 0.25); }
-  70% { box-shadow: 0 0 0 12px rgba(81, 98, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(81, 98, 255, 0); }
-}
-
-.multi-select-active .checkbox-wrapper {
-  animation: pulse-ring 1.4s ease-out infinite;
+.multi-select-active .checkbox-wrapper button {
+  box-shadow: 0 8px 20px rgba(81, 98, 255, 0.16);
 }

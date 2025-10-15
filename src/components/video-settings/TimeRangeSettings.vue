@@ -1,5 +1,5 @@
 <template>
-  <div class="time-range-settings">
+  <div class="time-range-settings p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10">
     <div class="space-y-4">
       <!-- 标题和启用开关 -->
       <div class="flex items-center justify-between mb-3">
@@ -7,7 +7,7 @@
           <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $t('videoSettings.customTimeRange') }}</h3>
           <button
             type="button"
-          class="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-200 bg-white/85 dark:bg-white/10 border border-white/60 dark:border-white/10 rounded-full transition-all duration-200 hover:border-[var(--brand-primary)]/30 hover:text-[var(--brand-primary)]"
+          class="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-200 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/15 rounded-full transition-all duration-200 hover:border-[var(--brand-primary)]/30 hover:text-[var(--brand-primary)]"
             @click="clearTimeRange"
           >
             {{ $t('common.reset') }}
@@ -33,7 +33,9 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-              selectedQuickOption === 'random30s' ? 'bg-[var(--brand-primary)] text-white shadow-[0_8px_18px_rgba(81,98,255,0.24)]' : 'bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-200 hover:bg-white hover:border-[var(--brand-primary)]/30',
+                selectedQuickOption === 'random30s'
+                  ? 'bg-[var(--brand-primary)] text-white'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
                 isRandomButtonDisabled('random30s') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
               @click="selectQuickOption('random30s')"
@@ -45,7 +47,9 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-              selectedQuickOption === 'random1m' ? 'bg-[var(--brand-primary)] text-white shadow-[0_8px_18px_rgba(81,98,255,0.24)]' : 'bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-200 hover:bg-white hover:border-[var(--brand-primary)]/30',
+                selectedQuickOption === 'random1m'
+                  ? 'bg-[var(--brand-primary)] text-white'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
                 isRandomButtonDisabled('random1m') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
               @click="selectQuickOption('random1m')"
@@ -57,7 +61,9 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-              selectedQuickOption === 'random5m' ? 'bg-[var(--brand-primary)] text-white shadow-[0_8px_18px_rgba(81,98,255,0.24)]' : 'bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-200 hover:bg-white hover:border-[var(--brand-primary)]/30',
+                selectedQuickOption === 'random5m'
+                  ? 'bg-[var(--brand-primary)] text-white'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
                 isRandomButtonDisabled('random5m') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
               @click="selectQuickOption('random5m')"
@@ -76,7 +82,7 @@
               type="time"
               step="1"
               placeholder="00:00:00"
-              class="flex-1 px-3 py-2 text-sm border border-white/60 dark:border-white/10 rounded-xl bg-white/90 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]/40"
+              class="flex-1 px-3 py-2 text-sm border border-slate-200/80 dark:border-white/10 rounded-lg bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]/40"
               @input="validateTimeInput('start', $event)"
             />
             <input
@@ -84,7 +90,7 @@
               type="time"
               step="1"
               :placeholder="metadata ? formatDuration(metadata.duration) : $t('videoSettings.endTimePlaceholder')"
-              class="flex-1 px-3 py-2 text-sm border border-white/60 dark:border-white/10 rounded-xl bg-white/90 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]/40"
+              class="flex-1 px-3 py-2 text-sm border border-slate-200/80 dark:border-white/10 rounded-lg bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]/40"
               @input="validateTimeInput('end', $event)"
             />
           </div>

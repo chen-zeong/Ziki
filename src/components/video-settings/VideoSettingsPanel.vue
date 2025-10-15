@@ -1,12 +1,12 @@
 <template>
-  <div class="h-full flex flex-col bg-white/80 dark:bg-[#161821]/70 rounded-2xl border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_18px_40px_rgba(15,23,42,0.12)] p-5 transition-all duration-300">
+  <div class="h-full flex flex-col bg-white dark:bg-[#181b23] rounded-2xl border border-slate-200/70 dark:border-white/10 p-5 transition-all duration-300">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
       <div class="h-full relative">
         <!-- 已完成任务时的交互遮罩 -->
         <div v-if="isSettingsLocked" class="absolute inset-0 z-10 cursor-not-allowed" style="background: transparent;"></div>
         <!-- 基础设置内容 -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-60': isSettingsLocked }">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-50': isSettingsLocked }">
           <div class="space-y-4">
             <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" :hide-quality="true" />
           </div>

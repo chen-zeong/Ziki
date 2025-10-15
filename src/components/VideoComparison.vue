@@ -1,7 +1,7 @@
 <template>
   <!-- 预览窗口 -->
   <div
-    class="h-3/5 rounded-3xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-[#14171f]/70 backdrop-blur-md flex items-center justify-center relative mt-6 shadow-[0_22px_48px_rgba(15,23,42,0.12)] transition-all duration-300"
+    class="h-3/5 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white dark:bg-[#181b23] flex items-center justify-center relative mt-6 transition-all duration-300"
   >
     <VideoPreview
       ref="videoPreviewRef"

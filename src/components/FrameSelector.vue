@@ -1,6 +1,6 @@
 <template>
   <div v-if="props.videoPath" class="frame-selector flex justify-center">
-    <div class="flex items-center gap-2 px-5 py-2 rounded-full bg-white/90 dark:bg-white/10 backdrop-blur-lg border border-white/70 dark:border-white/15 shadow-[0_12px_28px_rgba(15,23,42,0.14)] transition-all duration-300 hover:shadow-[0_18px_38px_rgba(81,98,255,0.24)]">
+  <div class="flex items-center gap-2 px-5 py-2 rounded-full bg-white dark:bg-[#1d202a] border border-slate-200/80 dark:border-white/10 transition-all duration-200">
       <div 
         v-for="index in 10" 
         :key="index"

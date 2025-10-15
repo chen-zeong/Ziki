@@ -1,15 +1,15 @@
 <template>
-  <div class="h-full flex flex-col bg-white/80 dark:bg-[#161821]/70 rounded-2xl border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_18px_40px_rgba(15,23,42,0.12)] p-5 transition-all duration-300">
+  <div class="h-full flex flex-col bg-white dark:bg-[#181b23] rounded-2xl border border-slate-200/70 dark:border-white/10 p-5 transition-all duration-300">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
       <div class="h-full relative">
         <!-- 已完成任务时的交互遮罩 -->
         <div v-if="isSettingsLocked" class="absolute inset-0 z-10 cursor-not-allowed" style="background: transparent;"></div>
         <!-- 基础设置内容 -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-60': isSettingsLocked }">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-50': isSettingsLocked }">
           <!-- 左侧：格式 + 分辨率（单独卡片） -->
           <div class="space-y-4">
-            <div class="p-4 rounded-2xl bg-white/85 dark:bg-[#1e1e1e] border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_12px_26px_rgba(15,23,42,0.08)] overflow-visible max-h-full min-h-[220px] flex flex-col transition-all duration-300">
+            <div class="p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full min-h-[220px] flex flex-col transition-all duration-300">
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.format') }}</label>
@@ -89,7 +89,7 @@
 
           <!-- 右侧：画质（单独卡片） -->
           <div class="space-y-4">
-            <div class="p-4 rounded-2xl bg-white/85 dark:bg-[#1e1e1e] border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_12px_26px_rgba(15,23,42,0.08)] overflow-visible max-h-full quality-slider-container transition-all duration-300">
+            <div class="p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full quality-slider-container transition-all duration-300">
               <div class="space-y-4">
                 <!-- 标题和质量等级 -->
                 <div class="flex justify-between items-center mb-4">
@@ -104,26 +104,26 @@
                   <!-- 滑动条轨道和自定义UI -->
                   <div class="relative h-8 flex items-center">
                     <!-- 轨道背景 -->
-                    <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full shadow-inner z-0"></div>
+                    <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full z-0"></div>
 
                     <!-- 默认值平衡点 -->
                     <div
-                      class="absolute top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-[1px] overflow-hidden bg-white/95 dark:bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.12)] pointer-events-none z-30 before:content-[''] before:absolute before:left-1/2 before:-translate-x-1/2 before:top-0 before:border-l-[1.5px] before:border-r-[1.5px] before:border-b-[4px] before:border-l-transparent before:border-r-transparent before:border-b-white dark:before:border-b-white after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:border-l-[1.5px] after:border-r-[1.5px] after:border-t-[4px] after:border-l-transparent after:border-r-transparent after:border-t-white dark:after:border-t-white"
+                      class="absolute top-1/2 -translate-y-1/2 w-[2px] h-3 rounded bg-slate-300 dark:bg-white/50 pointer-events-none z-30"
                       :style="{ left: `calc(${defaultImageSliderPosition}% - 1.5px)` }"
                       aria-hidden="true"
                     ></div>
 
                     <!-- 已填充的进度条 -->
                     <div
-                      class="absolute h-3 rounded-full shadow-[0_4px_10px_rgba(81,98,255,0.25)] z-10"
-                      :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, rgba(81,98,255,0.9), rgba(79,227,193,0.9))' }"
+                      class="absolute h-3 rounded-full z-10 bg-[var(--brand-primary)]/90"
+                      :style="{ width: qualityValue + '%' }"
                     ></div>
 
                     <!-- 自定义的滑块 -->
                     <div
                       class="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full cursor-pointer transition-transform duration-120 ease-out hover:scale-105 z-30"
                       :class="{ 'scale-105': showTooltip }"
-                      :style="{ left: `calc(${qualityValue}% - 14px)`, background: 'radial-gradient(circle at 30% 30%, #ffffff, rgba(255,255,255,0.65))', boxShadow: '0 10px 24px rgba(81,98,255,0.28)', border: '3px solid rgba(81,98,255,0.5)' }"
+                      :style="{ left: `calc(${qualityValue}% - 14px)` }"
                     >
                       <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
                     </div>

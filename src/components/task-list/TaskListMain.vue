@@ -1,60 +1,51 @@
 <template>
   <div
-    class="h-full flex flex-col rounded-3xl border border-[var(--brand-border)] bg-white/80 dark:bg-[#161821]/80 backdrop-blur-md shadow-[0_18px_40px_rgba(15,23,42,0.08)] transition-all duration-500"
-    :class="isDragOver ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent' : ''"
+    class="h-full flex flex-col rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-[#161920]/80 backdrop-blur-sm transition-colors duration-300"
+    :class="isDragOver ? 'ring-1 ring-offset-2 ring-offset-transparent ring-[var(--brand-primary)]/40' : ''"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
     @drop="handleDrop"
   >
-    <!-- 工具栏 -->
     <TaskListToolbar
       :tasks="tasks"
-      :selected-statuses="selectedStatuses"
       @add-files="$emit('add-files')"
       @files-selected="$emit('files-selected', $event)"
       @clear-all-tasks="handleClearAllTasks"
-      @toggle-status-filter="toggleStatusFilter"
     />
-    
-    <!-- 任务列表 -->
-    <div class="flex-1 overflow-y-auto px-5 pb-6 transition-all duration-300">
-      <div v-if="filteredTasks.length === 0" class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+
+    <div class="flex-1 overflow-y-auto px-5 pb-4 transition-all duration-200">
+      <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
         <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
         </svg>
         <p class="text-lg font-medium mb-2">{{ $t('taskList.noTasks') }}</p>
         <p class="text-sm text-center max-w-md">{{ $t('taskList.noTasksDescription') }}</p>
       </div>
-      
-      <div v-else class="space-y-3.5">
+
+      <div v-else class="space-y-2.5">
         <TaskItem
-          v-for="task in filteredTasks"
+          v-for="task in tasks"
           :key="task.id"
           :task="task"
-          :is-expanded="expandedTasks.has(task.id)"
           :is-selected="selectedTaskId === task.id"
           :is-multi-select="multiSelectMode"
-          :is-checked="selectedTasks.has(task.id)"
+          :is-checked="selectedTaskIds.includes(task.id)"
           @delete="deleteTask"
-          @toggle-expand="toggleTaskExpansion"
           @pause="pauseTask"
           @resume="resumeTask"
           @select="onSelectTask($event)"
           @toggle-check="toggleTaskCheck($event)"
+          @show-details="openDetailPanel($event)"
         />
       </div>
     </div>
-    
-    <!-- 底部操作区：多选与开始压缩 -->
-    <div class="flex items-center justify-between px-5 py-4 border-t border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md">
+
+    <div class="flex items-center justify-between px-5 py-4 border-t border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-white/5">
       <div class="flex items-center gap-3">
         <button
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border border-white/60 dark:border-white/10 bg-white/85 dark:bg-white/5 text-slate-600 dark:text-slate-200 hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)]/30 hover:bg-white"
-          :class="multiSelectMode
-            ? 'bg-[var(--brand-primary)] text-white shadow-[0_12px_22px_rgba(81,98,255,0.2)] border-transparent hover:text-white'
-            : ''
-            "
-          @click="multiSelectMode = !multiSelectMode"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]"
+          :class="multiSelectMode ? 'bg-[var(--brand-primary)] text-white border-transparent hover:text-white' : ''"
+          @click="toggleMultiSelect"
         >
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
             <path d="M9 11l3 3L22 4l2 2-12 12-5-5 2-2z" />
@@ -62,13 +53,13 @@
           <span>{{ t('taskList.multiSelect') || '多选' }}</span>
         </button>
         <span v-if="multiSelectMode" class="text-xs text-slate-500 dark:text-slate-300 tracking-wide">
-          {{ t('taskList.selectedCount') || '已选择' }}: {{ selectedTasks.size }}
+          {{ t('taskList.selectedCount') || '已选择' }}: {{ selectedTaskIds.length }}
         </span>
       </div>
       <div class="flex items-center gap-3">
         <button
-          class="pill-button text-base font-semibold rounded-full px-6 py-2 shadow-lg"
-          :class="{ 'cursor-not-allowed opacity-60': !canStart }"
+          class="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full text-base font-semibold transition-transform duration-150 bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60"
+          :class="{ 'cursor-not-allowed opacity-60 pointer-events-none': !canStart }"
           :disabled="!canStart"
           @click="handleStart"
         >
@@ -76,24 +67,31 @@
         </button>
       </div>
     </div>
-   </div>
- </template>
 
- <script setup lang="ts">
- import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
- import { useI18n } from 'vue-i18n';
+    <TaskDetailsPanel
+      v-if="activeDetailTask"
+      :task="activeDetailTask"
+      @close="closeDetailPanel"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { useI18n } from 'vue-i18n';
  import { invoke } from '@tauri-apps/api/core';
  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
  import { Window as TauriWindow } from '@tauri-apps/api/window';
- import { useTaskStore } from '../../stores/useTaskStore';
- import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
- import TaskListToolbar from './TaskListToolbar.vue';
- import TaskItem from './TaskItem.vue';
+import { useTaskStore } from '../../stores/useTaskStore';
+import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
+import TaskListToolbar from './TaskListToolbar.vue';
+import TaskItem from './TaskItem.vue';
+import TaskDetailsPanel from './TaskDetailsPanel.vue';
  
  import type { CompressionTask } from '../../types';
  
  // 使用任务store
- const taskStore = useTaskStore();
+const taskStore = useTaskStore();
  // Tauri 窗口实例（仅在 Tauri 环境下使用）
  let appWindow: TauriWindow | null = null;
 
@@ -110,13 +108,10 @@
    (e: 'delete-task', taskId: string): void;
    (e: 'resume-compression', taskId: string): void;
    (e: 'pause-task', taskId: string): void;
-   (e: 'select-task', taskId: string): void;
-   (e: 'clear-all-tasks'): void;
-   // 新增：开始压缩事件（单个/多选）
-   (e: 'start-compress'): void;
-   (e: 'start-multi-compress', ids: string[]): void;
-   // 新增：切换输出文件夹弹窗
-   (e: 'toggle-output-folder'): void;
+  (e: 'select-task', taskId: string): void;
+  (e: 'clear-all-tasks'): void;
+  (e: 'start-compress'): void;
+  (e: 'toggle-output-folder'): void;
  }
 
  const props = defineProps<Props>();
@@ -126,39 +121,53 @@
  const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
  const emit = defineEmits<Emits>();
  const { t } = useI18n();
- const globalSettings = useGlobalSettingsStore();
+const globalSettings = useGlobalSettingsStore();
 
  // 状态管理
- const selectedStatuses = ref(new Set<string>());
- const expandedTasks = ref(new Set<string>());
- const selectedTasks = ref(new Set<string>());
- const isDragOver = ref(false);
- const multiSelectMode = ref(false);
+const selectedTaskIds = ref<string[]>([]);
+const isDragOver = ref(false);
+const multiSelectMode = ref(false);
+const detailTaskId = ref<string | null>(null);
 
  // 底部操作区相关：是否可开始、选择与多选切换
- const canStart = computed(() => {
-   return multiSelectMode.value ? selectedTasks.value.size > 0 : !!selectedTaskId.value;
- });
+const canStart = computed(() => {
+  return multiSelectMode.value ? selectedTaskIds.value.length > 0 : !!selectedTaskId.value;
+});
+
+const activeDetailTask = computed(() => {
+  return tasks.value.find(task => task.id === detailTaskId.value) || null;
+});
 
  const onSelectTask = (taskId: string) => {
    emit('select-task', taskId);
  };
 
- const toggleTaskCheck = (taskId: string) => {
-   if (selectedTasks.value.has(taskId)) {
-     selectedTasks.value.delete(taskId);
-   } else {
-     selectedTasks.value.add(taskId);
-   }
- };
+const toggleTaskCheck = (taskId: string) => {
+  if (selectedTaskIds.value.includes(taskId)) {
+    selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
+  } else {
+    selectedTaskIds.value = [...selectedTaskIds.value, taskId];
+  }
+};
 
- const handleStart = () => {
-   if (multiSelectMode.value) {
-     emit('start-multi-compress', Array.from(selectedTasks.value));
-   } else {
-     emit('start-compress');
-   }
- };
+const handleStart = () => {
+  emit('start-compress');
+};
+
+const toggleMultiSelect = () => {
+  multiSelectMode.value = !multiSelectMode.value;
+  if (!multiSelectMode.value) {
+    selectedTaskIds.value = [];
+  }
+};
+
+const openDetailPanel = (taskId: string) => {
+  detailTaskId.value = taskId;
+};
+
+const closeDetailPanel = () => {
+  detailTaskId.value = null;
+};
 
  // Tauri drag-drop listeners
  let unlistenDragDrop: UnlistenFn | null = null;
@@ -168,40 +177,9 @@
  let unlistenFileDrop: UnlistenFn | null = null;
 
  // 计算属性
- const filteredTasks = computed(() => {
-   if (selectedStatuses.value.size === 0) {
-     return tasks.value;
-   }
-   return tasks.value.filter(task => selectedStatuses.value.has(task.status));
- });
-
- // 方法
- const toggleStatusFilter = (status: string) => {
-   if (selectedStatuses.value.has(status)) {
-     // 如果当前状态已选中，移除它
-     selectedStatuses.value.delete(status);
-     // 如果移除后没有选中任何状态，则进入全选状态（清空Set）
-     if (selectedStatuses.value.size === 0) {
-       selectedStatuses.value.clear();
-     }
-   } else {
-     // 如果当前状态未选中，清空其他选择并只选中当前状态
-     selectedStatuses.value.clear();
-     selectedStatuses.value.add(status);
-   }
- };
-
- const toggleTaskExpansion = (taskId: string) => {
-   if (expandedTasks.value.has(taskId)) {
-     expandedTasks.value.delete(taskId);
-   } else {
-     expandedTasks.value.add(taskId);
-   }
- };
-
- const deleteTask = async (taskId: string) => {
-   try {
-     const task = tasks.value.find(t => t.id === taskId);
+const deleteTask = async (taskId: string) => {
+  try {
+    const task = tasks.value.find(t => t.id === taskId);
      if (!task) {
        console.error('Task not found:', taskId);
        return;
@@ -218,12 +196,15 @@
        }
      }
 
-     // 从store中删除任务
-     taskStore.deleteTask(taskId);
-   } catch (error) {
-     console.error('Delete task failed:', error);
-   }
- };
+    taskStore.deleteTask(taskId);
+    if (detailTaskId.value === taskId) {
+      detailTaskId.value = null;
+    }
+    selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
+  } catch (error) {
+    console.error('Delete task failed:', error);
+  }
+};
 
  const pauseTask = async (taskId: string) => {
    try {
@@ -243,13 +224,15 @@
    }
  };
 
- const handleClearAllTasks = () => {
-   try {
-     taskStore.clearAllTasks();
-   } catch (error) {
-     console.error('Clear all tasks failed:', error);
-   }
- };
+const handleClearAllTasks = () => {
+  try {
+    taskStore.clearAllTasks();
+    detailTaskId.value = null;
+    selectedTaskIds.value = [];
+  } catch (error) {
+    console.error('Clear all tasks failed:', error);
+  }
+};
 
  // DOM Drag handlers
  const handleDragOver = (event: DragEvent) => {
@@ -351,9 +334,9 @@
        console.warn('[DD] Failed to register window-level file-drop listener:', werr);
      }
 
-     console.log('[DD] Registered Tauri drag-drop listeners');
+    console.log('[DD] Registered Tauri drag-drop listeners');
 
-     // 监听窗口焦点变化，失焦时清理拖拽样式（若可用）
+    // 监听窗口焦点变化，失焦时清理拖拽样式（若可用）
     if (appWindow && 'onFocusChanged' in appWindow) {
       (appWindow as any).onFocusChanged(({ payload }: { payload: boolean }) => {
         console.log('[DD] window focus changed:', payload);
@@ -362,10 +345,10 @@
         }
       });
     }
-   } catch (error) {
-     console.error('Register drag-drop listeners failed:', error);
-   }
- });
+  } catch (error) {
+    console.error('Register drag-drop listeners failed:', error);
+  }
+});
 
  onUnmounted(async () => {
    try {
@@ -377,5 +360,13 @@
    } catch (error) {
      console.error('Unregister drag-drop listeners failed:', error);
    }
- });
+});
+
+watch(tasks, (newTasks) => {
+  if (!detailTaskId.value) return;
+  const stillExists = newTasks.some(task => task.id === detailTaskId.value);
+  if (!stillExists) {
+    detailTaskId.value = null;
+  }
+});
  </script>

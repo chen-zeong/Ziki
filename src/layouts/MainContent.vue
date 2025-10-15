@@ -3,7 +3,6 @@ import { ref, computed } from 'vue';
 import FileUploader from '../components/FileUploader.vue';
 import VideoComparison from '../components/VideoComparison.vue';
 import TaskList from '../components/TaskList.vue';
-import OutputFolder from '../components/OutputFolder.vue';
 import { useTaskStore } from '../stores/useTaskStore';
 import type { CompressionTask } from '../types';
 
@@ -16,7 +15,6 @@ interface Props {
   isProcessingBatch?: boolean;
   selectedTaskId?: string | null;
   timeRangeSettings: any;
-  outputPath?: string; // 兼容 FooterBar 传入
 }
 
 const props = defineProps<Props>();
@@ -37,36 +35,18 @@ const emit = defineEmits([
   'pause-task',
   'select-task',
   'clear-all-tasks',
-  // 新增事件：来自任务列表底部
-  'start-compress',
-  'start-multi-compress',
   // 新增：时间段设置事件
   'update:timeRangeSettings',
   'time-validation-change',
   // 新增：输出文件夹弹窗转发
-  'toggle-output-folder-popup',
-  // 兼容 FooterBar 的批量压缩事件
-  'batch-compress'
+  'toggle-output-folder-popup'
 ]);
 
 const showOutputFolder = ref(false);
 const videoComparisonRef = ref<InstanceType<typeof VideoComparison> | null>(null);
 
-const beforeImage = computed(() => {
-  return props.currentFile?.originalUrl || '';
-});
-
-const afterImage = computed(() => {
-  const result = props.currentFile?.compressedUrl || '';
-  console.log('[MainContent] afterImage computed:', {
-    currentFileId: props.currentFile?.id,
-    currentFileName: props.currentFile?.name,
-    compressedUrl: props.currentFile?.compressedUrl,
-    compressedPath: props.currentFile?.compressedPath,
-    result: result
-  });
-  return result;
-});
+const beforeImage = computed(() => props.currentFile?.originalUrl || '');
+const afterImage = computed(() => props.currentFile?.compressedUrl || '');
 
 const timeToSeconds = (timeStr: string): number | null => {
   if (!timeStr || timeStr === '00:00:00') return null;
@@ -191,8 +171,6 @@ defineExpose({
           @pause-task="emit('pause-task', $event)"
           @select-task="emit('select-task', $event)"
           @clear-all-tasks="emit('clear-all-tasks')"
-          @start-compress="emit('start-compress')"
-          @start-multi-compress="emit('start-multi-compress', $event)"
           @toggle-output-folder="emit('toggle-output-folder-popup')"
         />
       </div>
@@ -237,15 +215,4 @@ defineExpose({
     </div>
   </main>
 
-  <!-- 底部状态栏（保持原文件，样式在 FooterBar 中处理） -->
-  <FooterBar
-    :selected-task-id="selectedTaskId"
-    :tasks="tasks"
-    :output-path="props.outputPath || ''"
-    :time-range-settings="props.timeRangeSettings"
-    @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
-    @time-validation-change="emit('time-validation-change', $event)"
-    @start-compress="emit('start-compress')"
-    @batch-compress="emit('batch-compress')"
-  />
 </template>

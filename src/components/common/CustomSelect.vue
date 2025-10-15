@@ -3,7 +3,7 @@
     <!-- 触发按钮 -->
     <button
       type="button"
-      class="w-full bg-white/70 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-left shadow-[0_12px_24px_rgba(15,23,42,0.08)] hover:bg-white/90 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] relative pr-10 transition-all duration-200 backdrop-blur-md"
+      class="w-full bg-white dark:bg-[#20242f] border border-slate-200/80 dark:border-white/10 rounded-xl px-4 py-3 text-left hover:bg-white/90 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] relative pr-10 transition-all duration-200"
       @click.stop="toggleDropdown"
     >
       <span :class="['block truncate font-medium', isPlaceholder ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-100']">{{ selectedLabel || placeholderText }}</span>
@@ -19,7 +19,7 @@
         <div
           v-show="isOpen"
           ref="dropdownRef"
-          class="fixed z-[9999] bg-white/90 dark:bg-[#12131a]/95 border border-white/60 dark:border-white/10 rounded-xl shadow-[0_18px_40px_rgba(15,23,42,0.2)] ring-1 ring-white/40 dark:ring-white/10 overflow-auto backdrop-blur-lg"
+          class="fixed z-[9999] bg-white dark:bg-[#161821] border border-slate-200/80 dark:border-white/10 rounded-xl ring-1 ring-white/30 dark:ring-white/10 overflow-auto"
           :style="menuStyle"
         >
           <ul class="py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
@@ -29,8 +29,8 @@
               :class="[
                 'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
                 opt.value === props.modelValue
-                  ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
-                  : 'hover:bg-white/70 dark:hover:bg-white/5'
+                  ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold'
+                  : 'hover:bg-slate-100 dark:hover:bg-white/5'
               ]"
               @click.stop="selectOption(opt.value)"
             >

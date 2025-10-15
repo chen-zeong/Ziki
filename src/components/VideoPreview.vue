@@ -1,9 +1,9 @@
 <template>
   <div class="w-full h-full flex flex-col">
     <!-- 视频预览功能 -->
-    <div 
-      ref="sliderRef"
-      class="comparison-slider w-full h-full bg-transparent relative overflow-hidden rounded-3xl border border-transparent"
+  <div 
+    ref="sliderRef"
+    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-xl border border-slate-200/70 dark:border-white/10"
       :style="{ '--position': `${sliderPosition}%` }"
     >
       <!-- 压缩前（左侧） -->
@@ -71,7 +71,7 @@
           
           <button 
             @click="closeFullscreen" 
-            class="absolute top-2 right-2 z-50 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 dark:bg-white/10 border border-white/70 dark:border-white/20 backdrop-blur-lg transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg-white/80 dark:hover:bg-white/20 shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
+            class="absolute top-2 right-2 z-50 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 dark:bg-white/10 border border-white/70 dark:border-white/20 backdrop-blur-lg transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg-white/80 dark:hover:bg-white/20 shadow"
             title="关闭全屏 (ESC)"
           >
             <svg class="w-4 h-4 text-blue-500 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
