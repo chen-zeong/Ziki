@@ -236,3 +236,4 @@ const computeQualityMetadata = (sliderValue: number) => {
     hint
   };
 };
+</script>
