@@ -35,7 +35,15 @@ const emit = defineEmits([
   'resume-compression',
   'pause-task',
   'select-task',
-  'clear-all-tasks'
+  'clear-all-tasks',
+  // 新增事件：来自任务列表底部
+  'start-compress',
+  'start-multi-compress',
+  // 新增：时间段设置事件
+  'update:timeRangeSettings',
+  'time-validation-change',
+  // 新增：输出文件夹弹窗转发
+  'toggle-output-folder-popup'
 ]);
 
 const showOutputFolder = ref(false);
@@ -57,6 +65,16 @@ const afterImage = computed(() => {
   return result;
 });
 
+const timeToSeconds = (timeStr: string): number | null => {
+  if (!timeStr || timeStr === '00:00:00') return null;
+  const parts = timeStr.split(':');
+  if (parts.length !== 3) return null;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parseInt(parts[2], 10);
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
 const computedTimeRange = computed(() => {
   if (!props.timeRangeSettings.enabled) {
     return undefined;
@@ -72,7 +90,7 @@ const currentTaskStatus = computed(() => {
   return task?.status || 'pending';
 });
 
-// 根据文件名/路径推断任务类型，避免初次渲染时误判为视频
+// 根据文件名/路径推断任务类型
 const inferTaskTypeFromFile = (file: any): 'video' | 'image' | null => {
   if (!file) return null;
   const name: string = file.name || file.path || '';
@@ -91,7 +109,6 @@ const inferTaskTypeFromFile = (file: any): 'video' | 'image' | null => {
 const currentTaskType = computed(() => {
   const task = tasks.value.find(t => t.file.id === props.currentFile?.id);
   if ((task as any)?.type) return (task as any).type as 'video' | 'image';
-  // 当任务尚未建立（例如首次添加文件时），根据当前文件名/路径进行推断，默认回退到 image，避免误触发视频帧提取
   return inferTaskTypeFromFile(props.currentFile) || 'image';
 });
 
@@ -101,23 +118,11 @@ const currentTaskId = computed(() => {
   return task?.id;
 });
 
-// 时间格式转换：HH:MM:SS 转换为秒数
-const timeToSeconds = (timeStr: string): number | null => {
-  if (!timeStr || timeStr === '00:00:00') return null;
-  const parts = timeStr.split(':');
-  if (parts.length !== 3) return null;
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  const seconds = parseInt(parts[2], 10);
-  return hours * 3600 + minutes * 60 + seconds;
-};
-
 const handleOutputFolderClose = () => {
   showOutputFolder.value = false;
 };
 
 const handleOutputPathUpdate = (path: string) => {
-  // 这个功能需要在父组件中处理
   console.log('Output path updated:', path);
 };
 
@@ -155,9 +160,9 @@ defineExpose({
 
 <template>
   <!-- 主内容区域 -->
-  <main class="flex-grow flex pr-3 space-x-3 overflow-hidden bg-white dark:bg-dark-primary" style="pointer-events: auto;">
+  <main class="flex-grow flex pr-3 space-x-3 overflow-hidden bg-white dark:bg-dark-primary pt-3" style="pointer-events: auto;">
     <!-- 左侧面板: 任务队列 -->
-    <div class="w-1/3 flex flex-col">
+    <div class="w-1/3 flex flex-col border-r border-gray-200 dark:border-transparent">
       <div class="flex-grow overflow-hidden">
         <!-- Output Folder Settings (Expandable) -->
         <OutputFolder
@@ -180,6 +185,9 @@ defineExpose({
           @pause-task="emit('pause-task', $event)"
           @select-task="emit('select-task', $event)"
           @clear-all-tasks="emit('clear-all-tasks')"
+          @start-compress="emit('start-compress')"
+          @start-multi-compress="emit('start-multi-compress', $event)"
+          @toggle-output-folder="emit('toggle-output-folder-popup')"
         />
       </div>
     </div>
@@ -187,7 +195,7 @@ defineExpose({
     <!-- 右侧面板: 预览和设置 -->
     <div class="w-2/3 flex flex-col overflow-hidden" :class="isUploaderVisible ? 'space-y-6' : 'space-y-3'">
       <!-- File Upload (Visible by default) -->
-      <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-[#1e1e1e] rounded-md flex items-center justify-center">
+      <div v-if="isUploaderVisible" class="flex-grow bg-white dark:bg-[#1e1e1e] rounded-md flex items-center justify-center mt-3">
         <FileUploader @files-selected="emit('files-selected', $event)" />
       </div>
 
@@ -206,9 +214,12 @@ defineExpose({
         :compressed-video-path="currentTaskType === 'video' ? currentFile?.compressedUrl : undefined"
         :compressed-video-file-path="currentTaskType === 'video' ? currentFile?.compressedPath : undefined"
         :time-range="currentTaskType === 'video' ? computedTimeRange : undefined"
+        :time-range-settings="props.timeRangeSettings"
         @reset="onReset"
         @compress="emit('compress', $event)"
         @update-images="emit('update-images', $event)"
+        @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
+        @time-validation-change="emit('time-validation-change', $event)"
       />
     </div>
   </main>

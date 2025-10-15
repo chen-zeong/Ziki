@@ -191,7 +191,9 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     remaining: '剩余',
     clear: '清空',
     clearAllTasksConfirmActive: '当前有 {count} 个任务正在进行中，确定要清空所有任务吗？这将停止所有进行中的任务，并从队列中删除。',
-    clearAllTasksConfirmSimple: '确定要清空所有任务吗？这将从队列中删除所有任务。'
+    clearAllTasksConfirmSimple: '确定要清空所有任务吗？这将从队列中删除所有任务。',
+    multiSelect: '多选',
+    selectedCount: '已选择'
   },
 
   // 输出文件夹

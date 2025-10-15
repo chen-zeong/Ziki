@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../stores/useTaskStore';
 import HeaderBar from './HeaderBar.vue';
 import MainContent from './MainContent.vue';
-import FooterBar from './FooterBar.vue';
 
 interface Props {
   tasks?: any[];
@@ -17,8 +15,6 @@ interface Props {
   outputPath: string;
   timeRangeSettings: any;
   showOutputFolderPopup: boolean;
-  showTimeRangePopup: boolean;
-
 }
 
 const props = defineProps<Props>();
@@ -40,15 +36,16 @@ const emit = defineEmits([
   'select-task',
   'clear-all-tasks',
   'toggle-output-folder-popup',
-  'toggle-time-range-popup',
   'output-path-update',
   'time-validation-change',
   'batch-compress',
   'undo-compress',
-  'update:timeRangeSettings'
+  'update:timeRangeSettings',
+  // 新增：任务列表底部按钮事件
+  'start-compress',
+  'start-multi-compress'
 ]);
 
-const globalSettings = useGlobalSettingsStore();
 const mainContentRef = ref<InstanceType<typeof MainContent> | null>(null);
 
 // 暴露triggerCompress方法给父组件
@@ -82,10 +79,16 @@ defineExpose({
 <template>
   <!-- 整个应用窗口容器 -->
   <div class="w-full h-[100dvh] min-h-[100dvh] bg-gray-200 dark:bg-[#1e1e1e] flex flex-col overflow-hidden transition-colors duration-300">
-    <!-- 顶部标题栏 -->
-    <HeaderBar />
+    <!-- 顶部标题栏（改为绝对定位覆盖层，透明背景，不占据布局高度） -->
+    <HeaderBar 
+      class="absolute top-0 left-0 right-0 z-50"
+      :output-path="props.outputPath"
+      :show-output-folder-popup="props.showOutputFolderPopup"
+      @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
+      @output-path-update="emit('output-path-update', $event)"
+    />
 
-    <!-- 主内容区域 -->
+    <!-- 主内容区域（顶到页面最上方） -->
     <MainContent
       ref="mainContentRef"
       :tasks="tasks"
@@ -107,27 +110,11 @@ defineExpose({
       @pause-task="emit('pause-task', $event)"
       @select-task="emit('select-task', $event)"
       @clear-all-tasks="emit('clear-all-tasks')"
-    />
-
-    <!-- 底部状态栏 -->
-    <FooterBar
-      :tasks="tasks"
-      :current-file="props.currentFile"
-      :is-processing="props.isProcessing"
-      :is-processing-batch="props.isProcessingBatch"
-      :output-path="props.outputPath"
-      :time-range-settings="props.timeRangeSettings"
-      :show-output-folder-popup="props.showOutputFolderPopup"
-      :show-time-range-popup="props.showTimeRangePopup"
-      @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
-      @toggle-time-range-popup="emit('toggle-time-range-popup')"
-      @output-path-update="emit('output-path-update', $event)"
-      @time-validation-change="emit('time-validation-change', $event)"
-      @batch-compress="emit('batch-compress')"
-      @bottom-compress="triggerCompress"
-      @undo-compress="emit('undo-compress')"
-      @resume-compression="emit('resume-compression', $event)"
+      @start-compress="emit('start-compress')"
+      @start-multi-compress="emit('batch-compress', $event)"
       @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
+      @time-validation-change="emit('time-validation-change', $event)"
+      @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
     />
   </div>
 </template>
@@ -146,42 +133,5 @@ button {
 /* 涟漪按钮效果 */
 .ripple-button {
   position: relative;
-  overflow: hidden;
-}
-
-.ripple-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.ripple-button:active::before {
-  width: 300px;
-  height: 300px;
-}
-
-/* 进度蒙版层动画 */
-.progress-mask {
-  width: 0%;
-  animation: progress-fill 3s ease-in-out infinite;
-}
-
-@keyframes progress-fill {
-  0% {
-    width: 0%;
-  }
-  50% {
-    width: 70%;
-  }
-  100% {
-    width: 0%;
-  }
 }
 </style>

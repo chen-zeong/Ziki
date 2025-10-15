@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-full flex flex-col bg-gray-50 dark:bg-[#2d2d2d]"
+    class="h-full flex flex-col bg-[#f8fafc] dark:bg-[#2d2d2d]"
     :class="isDragOver ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent' : ''"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
@@ -33,377 +33,348 @@
           :task="task"
           :is-expanded="expandedTasks.has(task.id)"
           :is-selected="selectedTaskId === task.id"
+          :is-multi-select="multiSelectMode"
+          :is-checked="selectedTasks.has(task.id)"
           @delete="deleteTask"
           @toggle-expand="toggleTaskExpansion"
           @pause="pauseTask"
           @resume="resumeTask"
-          @select="emit('select-task', $event)"
+          @select="onSelectTask($event)"
+          @toggle-check="toggleTaskCheck($event)"
         />
       </div>
     </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { useTaskStore } from '../../stores/useTaskStore';
-import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
-import TaskListToolbar from './TaskListToolbar.vue';
-import TaskItem from './TaskItem.vue';
-import type { CompressionTask } from '../../types';
-
-// 使用任务store
-const taskStore = useTaskStore();
-
-interface Props {
-  // 保持props接口兼容性，但内部使用store
-  tasks?: CompressionTask[];
-  selectedTaskId?: string | null;
-}
-
-interface Emits {
-  (e: 'add-files'): void;
-  (e: 'files-selected', files: FileList): void;
-  (e: 'update-task', task: CompressionTask): void;
-  (e: 'delete-task', taskId: string): void;
-  (e: 'resume-compression', taskId: string): void;
-  (e: 'pause-task', taskId: string): void;
-  (e: 'select-task', taskId: string): void;
-  (e: 'clear-all-tasks'): void;
-}
-
-const props = defineProps<Props>();
-
-// 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
-const tasks = computed(() => props.tasks || taskStore.tasks);
-const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
-const emit = defineEmits<Emits>();
-const { t } = useI18n();
-
-// 状态管理
-const selectedStatuses = ref(new Set<string>());
-const expandedTasks = ref(new Set<string>());
-const selectedTasks = ref(new Set<string>());
-const isDragOver = ref(false);
-
-// Tauri drag-drop listeners
-let unlistenDragDrop: UnlistenFn | null = null;
-let unlistenDragEnter: UnlistenFn | null = null;
-let unlistenDragLeave: UnlistenFn | null = null;
-let unlistenDragOver: UnlistenFn | null = null;
-let unlistenFileDrop: UnlistenFn | null = null;
-
-// 计算属性
-const filteredTasks = computed(() => {
-  if (selectedStatuses.value.size === 0) {
-    return tasks.value;
-  }
-  return tasks.value.filter(task => selectedStatuses.value.has(task.status));
-});
-
-// 方法
-const toggleStatusFilter = (status: string) => {
-  if (selectedStatuses.value.has(status)) {
-    // 如果当前状态已选中，移除它
-    selectedStatuses.value.delete(status);
-    // 如果移除后没有选中任何状态，则进入全选状态（清空Set）
-    if (selectedStatuses.value.size === 0) {
-      selectedStatuses.value.clear();
-    }
-  } else {
-    // 如果当前状态未选中，清空其他选择并只选中当前状态
-    selectedStatuses.value.clear();
-    selectedStatuses.value.add(status);
-  }
-};
-
-const toggleTaskExpansion = (taskId: string) => {
-  if (expandedTasks.value.has(taskId)) {
-    expandedTasks.value.delete(taskId);
-  } else {
-    expandedTasks.value.add(taskId);
-  }
-};
-
-const deleteTask = async (taskId: string) => {
-  try {
-    const task = tasks.value.find(t => t.id === taskId);
-    if (!task) {
-      console.error('Task not found:', taskId);
-      return;
-    }
-
-    // 如果任务正在压缩或已暂停（FFmpeg已开始），需要先取消系统任务
-    if (task.status === 'processing' || task.status === 'paused') {
-      console.log('Cancelling system task before deletion:', taskId);
-      try {
-        await invoke('pause_task', { taskId });
-        console.log('System task cancelled successfully:', taskId);
-      } catch (pauseError) {
-        const errorMessage = String(pauseError);
-        if (errorMessage.includes('Process was interrupted') || errorMessage.includes('not found')) {
-          console.log('System task already interrupted/not found:', taskId);
-        } else {
-          console.warn('Failed to cancel system task, proceeding with deletion:', pauseError);
-        }
-      }
-    }
-
-    // 调用后端删除任务
-    await invoke('delete_task', { taskId });
     
-    // 如果启用了删除压缩文件选项，在前端删除压缩文件
-    const globalSettings = useGlobalSettingsStore();
-    if (globalSettings.deleteCompressedFileOnTaskDelete) {
-      const task = tasks.value.find(t => t.id === taskId);
-      if (task?.file.compressedPath) {
-        try {
-          await invoke('remove_file', { path: task.file.compressedPath });
-        } catch (error) {
-          console.error('Failed to delete compressed file:', error);
-        }
-      }
-    }
-    
-    // 通知父组件删除任务
-    emit('delete-task', taskId);
-    
-    // 清理本地状态
-    expandedTasks.value.delete(taskId);
-    selectedTasks.value.delete(taskId);
-    
-    console.log('Task deleted successfully:', taskId);
-  } catch (error) {
-    console.error('Failed to delete task:', error);
-  }
-};
+    <!-- 底部操作区：多选与开始压缩 -->
+    <div class="flex items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-3">
+        <button
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all duration-200 border border-gray-300 dark:border-[#3a3a3a] bg-white dark:bg-[#2a2a2a] hover:bg-gray-50 dark:hover:bg-[#303030] shadow-sm"
+          :class="multiSelectMode ? 'ring-2 ring-blue-300 bg-blue-50 dark:bg-[#252525]' : ''"
+          @click="multiSelectMode = !multiSelectMode"
+        >
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M9 11l3 3L22 4l2 2-12 12-5-5 2-2z"/></svg>
+          <span>{{ t('taskList.multiSelect') || '多选' }}</span>
+        </button>
+        <span v-if="multiSelectMode" class="text-xs text-gray-500">{{ t('taskList.selectedCount') || '已选择' }}: {{ selectedTasks.size }}</span>
+        <!-- 输出文件夹按钮：移动到多选按钮右边 -->
+        <button
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all duration-200 border border-gray-300 dark:border-[#3a3a3a] bg-white dark:bg-[#2a2a2a] hover:bg-gray-50 dark:hover:bg-[#303030] shadow-sm"
+          @click="emit('toggle-output-folder')"
+        >
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+          </svg>
+          <span>{{ $t('outputFolder.title') || '输出文件夹' }}</span>
+        </button>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          class="text-white text-base font-semibold rounded-lg transition-colors px-5 py-2 shadow-sm"
+          :style="canStart ? { backgroundColor: '#578ae6' } : {}"
+          :class="{ 'bg-gray-400 text-gray-200 cursor-not-allowed': !canStart }"
+          :disabled="!canStart"
+          @click="handleStart"
+        >
+          {{ t('videoSettings.compress') || '开始压缩' }}
+        </button>
+      </div>
+    </div>
+   </div>
+ </template>
 
-const pauseTask = async (taskId: string) => {
-  try {
-    const task = tasks.value.find(t => t.id === taskId);
-    console.log('Pause task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
-    if (task && task.status === 'processing') {
-      // 上抛给父组件处理暂停（统一由控制器/上层管理）
-      emit('pause-task', taskId);
-    } else {
-      console.log('Task not in processing state or not found:', taskId, task?.status);
-    }
-  } catch (error) {
-    console.error('Failed to pause task:', error);
-  }
-};
+ <script setup lang="ts">
+ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+ import { useI18n } from 'vue-i18n';
+ import { invoke } from '@tauri-apps/api/core';
+ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+ import { useTaskStore } from '../../stores/useTaskStore';
+ import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
+ import TaskListToolbar from './TaskListToolbar.vue';
+ import TaskItem from './TaskItem.vue';
 
-const resumeTask = async (taskId: string) => {
-  try {
-    const task = tasks.value.find(t => t.id === taskId);
-    console.log('Resume task called for:', taskId, 'Task found:', task, 'Task status:', task?.status);
-    if (task && (task.status === 'paused' || task.status === 'queued')) {
-      console.log('Resuming task by restarting compression:', taskId);
-      // 触发重新压缩
-      emit('resume-compression', taskId);
-    } else {
-      console.log('Task not in paused/queued state or not found:', taskId, task?.status);
-    }
-  } catch (error) {
-    console.error('Failed to resume task:', error);
-  }
-};
+ import type { CompressionTask } from '../../types';
 
-const handleClearAllTasks = () => {
-  emit('clear-all-tasks');
-};
+ // 使用任务store
+ const taskStore = useTaskStore();
 
-// DOM drag handlers for visual feedback
-const handleDragOver = (event: DragEvent) => {
-  console.log('[DD] DOM dragover');
-  if (event && event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'copy';
-  }
-  isDragOver.value = true;
-};
- const handleDragLeave = () => {
-   console.log('[DD] DOM dragleave');
-   isDragOver.value = false;
+ interface Props {
+   // 保持props接口兼容性，但内部使用store
+   tasks?: CompressionTask[];
+   selectedTaskId?: string | null;
+ }
+
+ interface Emits {
+   (e: 'add-files'): void;
+   (e: 'files-selected', files: FileList): void;
+   (e: 'update-task', task: CompressionTask): void;
+   (e: 'delete-task', taskId: string): void;
+   (e: 'resume-compression', taskId: string): void;
+   (e: 'pause-task', taskId: string): void;
+   (e: 'select-task', taskId: string): void;
+   (e: 'clear-all-tasks'): void;
+   // 新增：开始压缩事件（单个/多选）
+   (e: 'start-compress'): void;
+   (e: 'start-multi-compress', ids: string[]): void;
+   // 新增：切换输出文件夹弹窗
+   (e: 'toggle-output-folder'): void;
+ }
+
+ const props = defineProps<Props>();
+
+ // 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
+ const tasks = computed(() => props.tasks || taskStore.tasks);
+ const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
+ const emit = defineEmits<Emits>();
+ const { t } = useI18n();
+ const globalSettings = useGlobalSettingsStore();
+
+ // 状态管理
+ const selectedStatuses = ref(new Set<string>());
+ const expandedTasks = ref(new Set<string>());
+ const selectedTasks = ref(new Set<string>());
+ const isDragOver = ref(false);
+ const multiSelectMode = ref(false);
+
+ // 底部操作区相关：是否可开始、选择与多选切换
+ const canStart = computed(() => {
+   return multiSelectMode.value ? selectedTasks.value.size > 0 : !!selectedTaskId.value;
+ });
+
+ const onSelectTask = (taskId: string) => {
+   emit('select-task', taskId);
  };
- const handleDrop = (event: DragEvent) => {
-   console.log('[DD] DOM drop captured');
-   isDragOver.value = false;
-   const dt = event.dataTransfer;
-   if (!dt) {
-     console.log('[DD] DOM drop: no dataTransfer');
-     return;
-   }
-   console.log('[DD] DOM drop: types=', dt.types);
-   if (dt.files && dt.files.length > 0) {
-     const files = Array.from(dt.files);
-     console.log('[DD] DOM drop: files length=', files.length, files.map(f => ({ name: f.name, type: f.type, size: f.size })));
-     // Convert File[] to FileList-like object
-     const indexed = Object.fromEntries(files.map((f, i) => [i, f]));
-     const fileList = {
-       ...indexed,
-       length: files.length,
-       item: (index: number) => files[index] || null,
-       [Symbol.iterator]: function* () {
-         for (let i = 0; i < files.length; i++) {
-           yield files[i];
-         }
-       }
-     } as unknown as FileList;
-     console.log('[DD] DOM drop: emitting files-selected with length:', fileList.length);
-     emit('files-selected', fileList);
+
+ const toggleTaskCheck = (taskId: string) => {
+   if (selectedTasks.value.has(taskId)) {
+     selectedTasks.value.delete(taskId);
    } else {
-     console.log('[DD] DOM drop: no files in dataTransfer');
+     selectedTasks.value.add(taskId);
    }
  };
 
-// Handle Tauri file drop events (global)
-const handleTauriFileDrop = async (filePaths: string[]) => {
-  console.log('[DD] handleTauriFileDrop payload:', filePaths);
-  if (filePaths && Array.isArray(filePaths)) {
-    const files: File[] = [];
-    for (const filePath of filePaths) {
-      const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
-      const extension = fileName.split('.').pop()?.toLowerCase() || '';
-      let mimeType = 'application/octet-stream';
-  
-      // 对齐 FileUploader 的扩展名与 MIME 映射，确保拖拽与点击选择一致
-      const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'];
-      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl'];
-  
-      if (videoExts.includes(extension)) {
-        mimeType = `video/${extension === 'mov' ? 'quicktime' : extension === 'wmv' ? 'x-ms-wmv' : extension === 'avi' ? 'x-msvideo' : extension === '3gp' ? '3gpp' : extension === 'ogv' ? 'ogg' : extension}`;
-      } else if (imageExts.includes(extension)) {
-        mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-      }
-  
-      let fileSize = 0;
-      try {
-        fileSize = await invoke<number>('get_file_size', { filePath });
-      } catch (error) {
-        console.warn('Failed to get file size:', error);
-      }
-      const mockFile = new File([], fileName, { type: mimeType });
-      (mockFile as any).path = filePath;
-      // 注意：不要强行覆盖 File.size（该属性为只读且不可重新定义），否则会在某些 WebView 中抛出错误，
-      // 从而导致整个拖拽回调静默失败。实际的文件大小会在后续 handleFiles 中通过 Tauri 获取。
-      // Object.defineProperty(mockFile, 'size', { value: fileSize, writable: false, enumerable: true });
-      files.push(mockFile);
-    }
-    console.log('[DD] Prepared files for emission:', files.map(f => ({ name: f.name, type: f.type, path: (f as any).path })));
-    // 构造一个 FileList-like 对象，避免与数组的 length 冲突
-    const indexed = Object.fromEntries(files.map((f, i) => [i, f]));
-    const fileList = {
-      ...indexed,
-      length: files.length,
-      item: (index: number) => files[index] || null,
-      [Symbol.iterator]: function* () {
-        for (let i = 0; i < files.length; i++) {
-          yield files[i];
-        }
-      }
-    } as unknown as FileList;
-    console.log('[DD] Emitting files-selected with length:', fileList.length);
-    emit('files-selected', fileList);
-  } else {
-    console.log('[DD] handleTauriFileDrop called with non-array payload');
-  }
-};
+ const handleStart = () => {
+   if (multiSelectMode.value) {
+     emit('start-multi-compress', Array.from(selectedTasks.value));
+   } else {
+     emit('start-compress');
+   }
+ };
 
-// 文档级别后备监听器，避免组件未能捕获到 drop
-let unlistenWindowFileDrop: (() => void) | null = null;
+ // Tauri drag-drop listeners
+ let unlistenDragDrop: UnlistenFn | null = null;
+ let unlistenDragEnter: UnlistenFn | null = null;
+ let unlistenDragLeave: UnlistenFn | null = null;
+ let unlistenDragOver: UnlistenFn | null = null;
+ let unlistenFileDrop: UnlistenFn | null = null;
 
-onMounted(async () => {
-  try {
-    const { getCurrentWindow } = await import('@tauri-apps/api/window');
-    const appWindow = getCurrentWindow();
-    // 注册 Tauri 原生拖拽事件（全局）
-    unlistenDragDrop = await listen('tauri://drag-drop', (event) => {
-      console.log('[DD] tauri://drag-drop event fired with payload:', event?.payload);
-      const payload: any = (event as any)?.payload;
-      const filePaths: string[] = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.paths)
-          ? payload.paths
-          : [];
-      if (filePaths.length) {
-        handleTauriFileDrop(filePaths);
-      } else {
-        console.log('[DD] drag-drop payload does not include paths, skipping');
-      }
-    });
-    // 兼容旧版事件名（某些平台/打包环境可能仍发出 tauri://file-drop）
-    unlistenFileDrop = await listen('tauri://file-drop', (event) => {
-      console.log('[DD] tauri://file-drop event fired with payload:', event?.payload);
-      const payload: any = (event as any)?.payload;
-      const filePaths: string[] = Array.isArray(payload) ? payload : [];
-      if (filePaths.length) {
-        handleTauriFileDrop(filePaths);
-      } else {
-        console.log('[DD] file-drop payload not array, skipping');
-      }
-    });
-    unlistenDragEnter = await listen('tauri://drag-enter', () => {
-      console.log('[DD] tauri://drag-enter');
-      isDragOver.value = true;
-    });
-    unlistenDragLeave = await listen('tauri://drag-leave', () => {
-      console.log('[DD] tauri://drag-leave');
-      isDragOver.value = false;
-    });
-    unlistenDragOver = await listen('tauri://drag-over', () => {
-      console.log('[DD] tauri://drag-over');
-      isDragOver.value = true;
-    });
+ // 计算属性
+ const filteredTasks = computed(() => {
+   if (selectedStatuses.value.size === 0) {
+     return tasks.value;
+   }
+   return tasks.value.filter(task => selectedStatuses.value.has(task.status));
+ });
 
-    // 额外后备：窗口级别文件拖拽事件（如果可用）
-    try {
-      const winAny = appWindow as unknown as { onFileDropEvent?: (cb: (e: any) => void) => Promise<() => void> };
-      if (winAny.onFileDropEvent) {
-        unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
-          console.log('[DD] appWindow.onFileDropEvent:', e);
-          const ty = e?.payload?.type;
-          const paths = e?.payload?.paths || e?.payload || [];
-          if (ty === 'hover') {
-            isDragOver.value = true;
-          } else if (ty === 'cancel') {
-            isDragOver.value = false;
-          } else if (ty === 'drop') {
-            isDragOver.value = false;
-            if (Array.isArray(paths)) handleTauriFileDrop(paths);
-          }
-        });
-        console.log('[DD] Registered window-level file-drop listener');
-      } else {
-        console.log('[DD] appWindow.onFileDropEvent not available in this Tauri version');
-      }
-    } catch (werr) {
-      console.warn('[DD] Failed to register window-level file-drop listener:', werr);
-    }
+ // 方法
+ const toggleStatusFilter = (status: string) => {
+   if (selectedStatuses.value.has(status)) {
+     // 如果当前状态已选中，移除它
+     selectedStatuses.value.delete(status);
+     // 如果移除后没有选中任何状态，则进入全选状态（清空Set）
+     if (selectedStatuses.value.size === 0) {
+       selectedStatuses.value.clear();
+     }
+   } else {
+     // 如果当前状态未选中，清空其他选择并只选中当前状态
+     selectedStatuses.value.clear();
+     selectedStatuses.value.add(status);
+   }
+ };
 
-    console.log('[DD] Registered Tauri drag-drop listeners');
+ const toggleTaskExpansion = (taskId: string) => {
+   if (expandedTasks.value.has(taskId)) {
+     expandedTasks.value.delete(taskId);
+   } else {
+     expandedTasks.value.add(taskId);
+   }
+ };
 
-    // 监听窗口焦点变化，失焦时清理拖拽样式
-    appWindow.onFocusChanged(({ payload }: { payload: boolean }) => {
-      console.log('[DD] window focus changed:', payload);
-      if (!payload) {
-        isDragOver.value = false;
-      }
-    });
-  } catch (error) {
-    console.warn('Failed to register Tauri drag-drop listeners:', error);
-  }
-});
+ const deleteTask = async (taskId: string) => {
+   try {
+     const task = tasks.value.find(t => t.id === taskId);
+     if (!task) {
+       console.error('Task not found:', taskId);
+       return;
+     }
 
-onUnmounted(() => {
-  try { unlistenDragDrop && unlistenDragDrop(); } catch {}
-  try { unlistenDragEnter && unlistenDragEnter(); } catch {}
-  try { unlistenDragLeave && unlistenDragLeave(); } catch {}
-  try { unlistenDragOver && unlistenDragOver(); } catch {}
-  try { unlistenFileDrop && unlistenFileDrop(); } catch {}
-  if (unlistenWindowFileDrop) try { unlistenWindowFileDrop(); } catch {}
-});
+     // 如果任务正在压缩或已暂停（FFmpeg已开始），需要先取消系统任务
+     if (task.status === 'processing' || task.status === 'paused') {
+       console.log('Cancelling system task before deletion:', taskId);
+       try {
+         await invoke('pause_task', { taskId });
+         console.log('System task cancelled successfully:', taskId);
+       } catch (err) {
+         console.warn('Failed to cancel system task:', err);
+       }
+     }
 
-</script>
+     // 从store中删除任务
+     taskStore.deleteTask(taskId);
+   } catch (error) {
+     console.error('Delete task failed:', error);
+   }
+ };
+
+ const pauseTask = async (taskId: string) => {
+   try {
+     await invoke('pause_task', { taskId });
+     taskStore.updateTaskStatus(taskId, 'paused');
+   } catch (error) {
+     console.error('Pause task failed:', error);
+   }
+ };
+
+ const resumeTask = async (taskId: string) => {
+   try {
+     await invoke('resume_task', { taskId });
+     taskStore.updateTaskStatus(taskId, 'processing');
+   } catch (error) {
+     console.error('Resume task failed:', error);
+   }
+ };
+
+ const handleClearAllTasks = () => {
+   try {
+     taskStore.clearAllTasks();
+   } catch (error) {
+     console.error('Clear all tasks failed:', error);
+   }
+ };
+
+ // DOM Drag handlers
+ const handleDragOver = (event: DragEvent) => {
+   event.preventDefault();
+   isDragOver.value = true;
+ };
+
+ const handleDragLeave = (event: DragEvent) => {
+   event.preventDefault();
+   isDragOver.value = false;
+ };
+
+ const handleDrop = (event: DragEvent) => {
+   event.preventDefault();
+   isDragOver.value = false;
+   const files = event.dataTransfer?.files;
+   if (files && files.length > 0) {
+     console.log('[DD] DOM drop: emitting files-selected with length:', files.length);
+     emit('files-selected', files);
+   }
+ };
+
+ // Tauri FileDrop handlers
+ const handleTauriFileDrop = async (paths: string[]) => {
+   try {
+     console.log('[DD] Emitting files-selected with length:', paths.length);
+     // 将路径转换为 FileList（仿造）
+     const fileList = await Promise.all(paths.map(async (filePath) => {
+       const fileName = filePath.split(/\\\\|\//).pop() || 'unknown';
+       const extension = (fileName.split('.').pop() || '').toLowerCase();
+       let mimeType = 'application/octet-stream';
+       const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'];
+       const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl'];
+       if (videoExts.includes(extension)) {
+         mimeType = `video/${extension === 'mov' ? 'quicktime' : extension === 'wmv' ? 'x-ms-wmv' : extension === 'avi' ? 'x-msvideo' : extension === '3gp' ? '3gpp' : extension === 'ogv' ? 'ogg' : extension}`;
+       } else if (imageExts.includes(extension)) {
+         mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+       }
+       const mockFile = new File([], fileName, { type: mimeType });
+       (mockFile as any).path = filePath;
+       return mockFile;
+     }));
+     emit('files-selected', fileList as unknown as FileList);
+   } catch (error) {
+     console.error('[DD] handleTauriFileDrop failed:', error);
+   }
+ };
+
+ // Lifecycle: register/unregister Tauri listeners
+ let unlistenWindowFileDrop: UnlistenFn | null = null;
+ onMounted(async () => {
+   try {
+     const ddEnter = await listen('tauri://file-drop', (event) => {
+       const paths = (event as any).payload as string[];
+       if (Array.isArray(paths)) {
+         isDragOver.value = true;
+       }
+     });
+     const ddLeave = await listen('tauri://file-drop-cancelled', () => {
+       isDragOver.value = false;
+     });
+     const ddOver = await listen('tauri://file-drop-hover', () => {
+       isDragOver.value = true;
+     });
+     const ddDrop = await listen('tauri://file-drop', (event) => {
+       const paths = (event as any).payload as string[];
+       if (Array.isArray(paths) && paths.length > 0) {
+         isDragOver.value = false;
+         handleTauriFileDrop(paths);
+       }
+     });
+     unlistenDragEnter = ddEnter;
+     unlistenDragLeave = ddLeave;
+     unlistenDragOver = ddOver;
+     unlistenFileDrop = ddDrop;
+
+     // 额外后备：窗口级别文件拖拽事件（如果可用）
+     try {
+       const winAny = appWindow as unknown as { onFileDropEvent?: (cb: (e: any) => void) => Promise<() => void> };
+       if (winAny.onFileDropEvent) {
+         unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
+           console.log('[DD] appWindow.onFileDropEvent:', e);
+           const ty = e?.payload?.type;
+           const paths = e?.payload?.paths || e?.payload || [];
+           if (ty === 'hover') {
+             isDragOver.value = true;
+           } else if (ty === 'cancel') {
+             isDragOver.value = false;
+           } else if (ty === 'drop') {
+             isDragOver.value = false;
+             if (Array.isArray(paths)) handleTauriFileDrop(paths);
+           }
+         });
+         console.log('[DD] Registered window-level file-drop listener');
+       } else {
+         console.log('[DD] appWindow.onFileDropEvent not available in this Tauri version');
+       }
+     } catch (werr) {
+       console.warn('[DD] Failed to register window-level file-drop listener:', werr);
+     }
+
+     console.log('[DD] Registered Tauri drag-drop listeners');
+
+     // 监听窗口焦点变化，失焦时清理拖拽样式
+     appWindow.onFocusChanged(({ payload }: { payload: boolean }) => {
+       console.log('[DD] window focus changed:', payload);
+       if (!payload) {
+         isDragOver.value = false;
+       }
+     });
+   } catch (error) {
+     console.error('Register drag-drop listeners failed:', error);
+   }
+ });
+
+ onUnmounted(async () => {
+   try {
+     const funcs = [unlistenDragEnter, unlistenDragLeave, unlistenDragOver, unlistenFileDrop, unlistenWindowFileDrop];
+     for (const fn of funcs) {
+       if (fn) await fn();
+     }
+     console.log('[DD] Unregistered Tauri drag-drop listeners');
+   } catch (error) {
+     console.error('Unregister drag-drop listeners failed:', error);
+   }
+ });
+ </script>

@@ -23,6 +23,16 @@
               v-model="hardwareSettings" 
               :current-video-codec="formatSettings.videoCodec"
             />
+            <!-- 新增：自定义时间段设置（仅视频模式显示） -->
+            <div>
+              <TimeRangeSettings
+                v-if="videoPath"
+                :modelValue="timeRangeSettings"
+                :metadata="currentVideoMetadata"
+                @update:modelValue="(val: any) => emit('update:timeRangeSettings', val)"
+                @validationChange="(isValid: boolean) => emit('time-validation-change', isValid)"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -37,6 +47,7 @@ import { invoke } from '@tauri-apps/api/core';
 import VideoFormatSettings from './VideoFormatSettings.vue';
 import HardwareAccelerationSettings from './HardwareAccelerationSettings.vue';
 import QualitySettings from './QualitySettings.vue';
+import TimeRangeSettings from './TimeRangeSettings.vue'
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskSettingsStore } from '../../stores/useTaskSettingsStore';
 import type { CompressionSettings, VideoFile } from '../../types';
@@ -67,10 +78,15 @@ interface Props {
   videoPath?: string;
   taskStatus?: string;
   isProcessingBatch?: boolean;
+  // 新增：时间段设置
+  timeRangeSettings?: any;
 }
 
 interface Emits {
   compress: [settings: CompressionSettings];
+  // 新增：向父组件透传时间段设置与校验状态
+  'update:timeRangeSettings': [settings: any];
+  'time-validation-change': [isValid: boolean];
 }
 
 const props = withDefaults(defineProps<Props>(), {

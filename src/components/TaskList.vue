@@ -10,6 +10,9 @@
     @pause-task="$emit('pause-task', $event)"
     @select-task="$emit('select-task', $event)"
     @clear-all-tasks="$emit('clear-all-tasks')"
+    @start-compress="$emit('start-compress')"
+    @start-multi-compress="$emit('start-multi-compress', $event)"
+    @toggle-output-folder="$emit('toggle-output-folder')"
   />
 </template>
 
@@ -31,6 +34,10 @@ interface Emits {
   (e: 'pause-task', taskId: string): void;
   (e: 'select-task', taskId: string): void;
   (e: 'clear-all-tasks'): void;
+  (e: 'start-compress'): void;
+  (e: 'start-multi-compress', ids: string[]): void;
+  // 新增：输出文件夹弹窗
+  (e: 'toggle-output-folder'): void;
 }
 
 const props = defineProps<Props>();

@@ -31,7 +31,7 @@
   </div>
   
   <!-- 设置区域 -->
-  <div class="h-2/5 flex flex-col bg-white dark:bg-[#1e1e1e] rounded-md overflow-hidden mb-6" :class="!videoPath ? 'mt-6' : ''">
+  <div class="h-2/5 flex flex-col bg-[#f8fafc] dark:bg-[#1e1e1e] rounded-md overflow-hidden mb-6" :class="!videoPath ? 'mt-6' : ''">
     <template v-if="videoPath">
       <VideoSettingsPanel
         ref="settingsPanelRef"
@@ -39,7 +39,10 @@
         :is-processing="isProcessing"
         :is-processing-batch="isProcessingBatch"
         :task-status="taskStatus"
+        :time-range-settings="timeRangeSettings"
         @compress="handleCompress"
+        @update:timeRangeSettings="$emit('update:timeRangeSettings', $event)"
+        @time-validation-change="$emit('time-validation-change', $event)"
       />
     </template>
     <template v-else>
@@ -71,10 +74,8 @@ interface Props {
   isProcessingBatch?: boolean;
   taskStatus?: string;
   taskId?: string;
-  timeRange?: {
-    start: number;
-    end: number;
-  };
+  timeRange?: { start: number; end: number };
+  timeRangeSettings?: any;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -88,6 +89,8 @@ const emit = defineEmits<{
   reset: [];
   compress: [settings: any];
   updateImages: [{ beforeImage?: string; afterImage?: string }];
+  'update:timeRangeSettings': [settings: any];
+  'time-validation-change': [isValid: boolean];
 }>();
 
 // 组件引用
@@ -101,7 +104,6 @@ const selectedFrame = ref<number | null>(null);
 const handleFrameSelected = (frameIndex: number) => {
   selectedFrame.value = frameIndex;
   if (videoPreviewRef.value && props.videoPath) {
-    // 只在视频模式下处理帧选择，图片模式跳过
     videoPreviewRef.value.clearFrameCache(frameIndex);
     videoPreviewRef.value.selectFrame(frameIndex);
   }
@@ -110,7 +112,6 @@ const handleFrameSelected = (frameIndex: number) => {
 // 当自定义时间段变化时，保持当前选中的帧并刷新
 watch(() => props.timeRange, (newTimeRange) => {
   if (newTimeRange && videoPreviewRef.value && props.videoPath) {
-    // 只在视频模式下处理时间段变化，图片模式跳过
     const index = selectedFrame.value ?? 0;
     videoPreviewRef.value.selectFrame(index);
   }
@@ -136,9 +137,7 @@ const triggerCompress = () => {
 // 新增：强制刷新当前预览帧
 const refreshPreview = () => {
   if (!videoPreviewRef.value || !props.videoPath) return;
-  // 只在视频模式下刷新帧，图片模式跳过
   const index = selectedFrame.value ?? 0;
-  // 尝试清除该帧缓存以确保重新生成
   if (typeof (videoPreviewRef.value as any).clearFrameCache === 'function') {
     (videoPreviewRef.value as any).clearFrameCache(index);
   }

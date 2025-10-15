@@ -191,7 +191,9 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     remaining: 'Left',
     clear: 'Clear',
     clearAllTasksConfirmActive: 'There are {count} active tasks. Clear all? This will stop all in-progress tasks.',
-    clearAllTasksConfirmSimple: 'Clear all tasks? This will remove all tasks from the queue.'
+    clearAllTasksConfirmSimple: 'Clear all tasks? This will remove all tasks from the queue.',
+    multiSelect: 'Multi-select',
+    selectedCount: 'Selected'
   },
 
   // Output Folder
