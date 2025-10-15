@@ -3,11 +3,11 @@
     <!-- 触发按钮 -->
     <button
       type="button"
-      class="w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-md px-3 py-2 text-left shadow-sm hover:bg-gray-50 dark:hover:bg-[#151515] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 relative pr-9"
+      class="w-full bg-white/70 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-left shadow-[0_12px_24px_rgba(15,23,42,0.08)] hover:bg-white/90 dark:hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] relative pr-10 transition-all duration-200 backdrop-blur-md"
       @click.stop="toggleDropdown"
     >
-      <span :class="['block truncate', isPlaceholder ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200']">{{ selectedLabel || placeholderText }}</span>
-      <ChevronDown class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+      <span :class="['block truncate font-medium', isPlaceholder ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-100']">{{ selectedLabel || placeholderText }}</span>
+      <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-300 pointer-events-none transition-transform duration-200" :class="{ 'rotate-180': isOpen }" />
     </button>
 
     <!-- Teleport 到 body，避免被父容器裁剪 -->
@@ -19,35 +19,37 @@
         <div
           v-show="isOpen"
           ref="dropdownRef"
-          class="fixed z-[9999] bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 overflow-auto"
+          class="fixed z-[9999] bg-white/90 dark:bg-[#12131a]/95 border border-white/60 dark:border-white/10 rounded-xl shadow-[0_18px_40px_rgba(15,23,42,0.2)] ring-1 ring-white/40 dark:ring-white/10 overflow-auto backdrop-blur-lg"
           :style="menuStyle"
         >
-          <ul class="py-1 text-xs text-gray-700 dark:text-gray-200 space-y-1">
+          <ul class="py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
             <li
               v-for="opt in visibleOptions"
               :key="opt.value"
               :class="[
-                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-md mx-1',
-                opt.value === props.modelValue ? 'bg-amber-50 dark:bg-[#1a1405] text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-[#1c1c1c]'
+                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
+                opt.value === props.modelValue
+                  ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
+                  : 'hover:bg-white/70 dark:hover:bg-white/5'
               ]"
               @click.stop="selectOption(opt.value)"
             >
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 min-w-0">
-                  <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
+                  <span class="truncate font-medium">{{ opt.label }}</span>
                   <div v-if="opt.tags && opt.tags.length" class="flex flex-wrap gap-1 ml-1.5">
                     <span
                       v-for="(tag, idx) in opt.tags.slice(0, 2)"
                       :key="tag + idx"
-                      class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-gray-300/60 dark:ring-white/15 bg-transparent"
+                      class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-slate-400 dark:text-slate-300 ring-1 ring-inset ring-white/50 dark:ring-white/15 bg-white/40 dark:bg-white/5"
                     >
                       {{ tag }}
                     </span>
-                    <span v-if="opt.tags.length > 2" class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300/50 dark:ring-white/10 bg-transparent">+{{ opt.tags.length - 2 }}</span>
+                    <span v-if="opt.tags.length > 2" class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-slate-400 dark:text-slate-500 ring-1 ring-inset ring-white/40 dark:ring-white/10 bg-white/30 dark:bg-white/5">+{{ opt.tags.length - 2 }}</span>
                   </div>
                 </div>
               </div>
-              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
             </li>
           </ul>
         </div>
@@ -64,32 +66,34 @@
           class="absolute z-50 w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 max-h-60 overflow-auto"
           :class="dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'"
         >
-          <ul class="py-1 text-xs text-gray-700 dark:text-gray-200 space-y-1">
+          <ul class="py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
             <li
               v-for="opt in visibleOptions"
               :key="opt.value"
               :class="[
-                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-md mx-1',
-                opt.value === props.modelValue ? 'bg-amber-50 dark:bg-[#1a1405] text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-[#1c1c1c]'
+                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
+                opt.value === props.modelValue
+                  ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
+                  : 'hover:bg-white/70 dark:hover:bg-white/5'
               ]"
               @click.stop="selectOption(opt.value)"
             >
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 min-w-0">
-                  <span class="truncate font-semibold opacity-80">{{ opt.label }}</span>
+                  <span class="truncate font-medium">{{ opt.label }}</span>
                   <div v-if="opt.tags && opt.tags.length" class="flex flex-wrap gap-1 ml-1.5">
                     <span
                       v-for="(tag, idx) in opt.tags.slice(0, 2)"
                       :key="tag + idx"
-                      class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-500 dark:text-gray-400 ring-1 ring-inset ring-gray-300/60 dark:ring-white/15 bg-transparent"
+                      class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-slate-400 dark:text-slate-300 ring-1 ring-inset ring-white/50 dark:ring-white/15 bg-white/40 dark:bg-white/5"
                     >
                       {{ tag }}
                     </span>
-                    <span v-if="opt.tags.length > 2" class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-gray-400 dark:text-gray-500 ring-1 ring-inset ring-gray-300/50 dark:ring-white/10 bg-transparent">+{{ opt.tags.length - 2 }}</span>
+                    <span v-if="opt.tags.length > 2" class="px-1.5 py-0 rounded-full text-[10px] leading-[16px] font-medium text-slate-400 dark:text-slate-500 ring-1 ring-inset ring-white/40 dark:ring-white/10 bg-white/30 dark:bg-white/5">+{{ opt.tags.length - 2 }}</span>
                   </div>
                 </div>
               </div>
-              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <Check v-if="opt.value === props.modelValue" class="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0 mt-0.5" />
             </li>
           </ul>
         </div>

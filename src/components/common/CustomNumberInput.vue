@@ -10,7 +10,7 @@
       :placeholder="placeholder"
       :disabled="disabled"
       type="number"
-      class="w-full h-10 px-3 pr-8 border rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield] custom-number-input"
+      class="w-full h-11 px-4 pr-10 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield] custom-number-input shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]"
     />
     <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col">
       <button
@@ -103,42 +103,44 @@ const decrement = () => {
 <style scoped>
 /* 自定义数字输入框样式 */
 .custom-number-input {
-  background-color: #f3f4f6;
-  border-color: #dcdcdc;
-  color: #2c3e50;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  color: #1f2937;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .custom-number-input::placeholder {
-  color: #7f8c8d;
+  color: rgba(148, 163, 184, 0.9);
 }
 
 .custom-number-input:hover {
-  border-color: #a0a0a0;
+  border-color: rgba(81, 98, 255, 0.35);
 }
 
 .custom-number-input:focus {
   outline: none;
-  border-color: #a0a0a0 !important;
-  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.3) !important;
+  border-color: rgba(81, 98, 255, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(81, 98, 255, 0.18) !important;
 }
 
 /* 夜间模式样式 */
 .dark .custom-number-input {
-  background-color: #232529;
-  border-color: #383A3F;
-  color: #E1E3E8;
+  background: rgba(20, 21, 29, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
 .dark .custom-number-input::placeholder {
-  color: #969BAD;
+  color: rgba(148, 163, 184, 0.65);
 }
 
 .dark .custom-number-input:hover {
-  border-color: #60687A;
+  border-color: rgba(122, 139, 255, 0.45);
 }
 
 .dark .custom-number-input:focus {
-  border-color: #60687A !important;
-  box-shadow: 0 0 0 3px rgba(120, 130, 150, 0.35) !important;
+  border-color: rgba(122, 139, 255, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(122, 139, 255, 0.24) !important;
 }
 </style>

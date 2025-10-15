@@ -3,7 +3,7 @@
     <!-- 视频预览功能 -->
     <div 
       ref="sliderRef"
-      class="comparison-slider w-full h-full bg-gray-200 dark:bg-[#1e1e1e] relative overflow-hidden rounded-2xl border-4 border-blue-300 dark:border-slate-700 bg-clip-padding backdrop-blur-sm"
+      class="comparison-slider w-full h-full bg-transparent relative overflow-hidden rounded-3xl border border-transparent"
       :style="{ '--position': `${sliderPosition}%` }"
     >
       <!-- 压缩前（左侧） -->
@@ -71,7 +71,7 @@
           
           <button 
             @click="closeFullscreen" 
-            class="absolute top-2 right-2 z-50 w-8 h-8 rounded-full flex items-center justify-center bg-blue-100 dark:bg-gray-900/20 border border-blue-300 dark:border-white/30 backdrop-blur-md transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg-blue-200 dark:hover:bg-white/30"
+            class="absolute top-2 right-2 z-50 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 dark:bg-white/10 border border-white/70 dark:border-white/20 backdrop-blur-lg transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg-white/80 dark:hover:bg-white/20 shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
             title="关闭全屏 (ESC)"
           >
             <svg class="w-4 h-4 text-blue-500 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
@@ -83,7 +83,7 @@
             
             <div 
                ref="fullscreenSliderRef"
-               class="comparison-slider fullscreen-slider w-full h-full bg-gray-200 dark:bg-gray-900 relative rounded-2xl overflow-hidden border-4 border-blue-300 dark:border-slate-700 bg-clip-padding backdrop-blur-sm"
+               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden border border-white/20 dark:border-white/10 backdrop-blur-lg"
                :style="{ '--position': `${sliderPosition}%` }"
                @click.stop
             >
@@ -114,16 +114,13 @@
               
                <div v-if="props.videoPath" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style="pointer-events: auto;">
                  <div class="frame-selector flex justify-center">
-                   <div class="flex items-center gap-2 backdrop-blur-md bg-white/20 px-3 py-2 rounded-full border border-white/30">
+                   <div class="flex items-center gap-2 backdrop-blur-lg bg-white/20 px-4 py-2 rounded-full border border-white/40 shadow-[0_16px_30px_rgba(15,23,42,0.18)]">
                      <div 
                        v-for="index in 10" 
                        :key="index"
-                       class="w-6 h-1.5 rounded-full cursor-pointer transition-all duration-200"
-                       :class="{
-                         'bg-gray-300 hover:bg-gray-200': selectedFrameIndex !== index - 1
-                       }"
+                       class="w-6 h-1.5 rounded-full cursor-pointer transition-all duration-200 bg-white/50"
                        :style="{
-                         backgroundColor: selectedFrameIndex === index - 1 ? '#faa539' : ''
+                         backgroundColor: selectedFrameIndex === index - 1 ? 'var(--brand-accent)' : ''
                        }"
                        @click="selectFrame(index - 1)"
                        :title="`第 ${index} 帧`"

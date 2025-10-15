@@ -1,18 +1,23 @@
 <template>
   <div v-if="props.videoPath" class="frame-selector flex justify-center">
-    <div class="flex items-center gap-2 px-3 py-1">
+    <div class="flex items-center gap-2 px-5 py-2 rounded-full bg-white/90 dark:bg-white/10 backdrop-blur-lg border border-white/70 dark:border-white/15 shadow-[0_12px_28px_rgba(15,23,42,0.14)] transition-all duration-300 hover:shadow-[0_18px_38px_rgba(81,98,255,0.24)]">
       <div 
         v-for="index in 10" 
         :key="index"
-        class="w-8 h-1.5 rounded-full cursor-pointer transition-all duration-200"
-        :class="{
-          'bg-gray-300 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500': selectedFrame !== index - 1
-        }"
+        class="w-7 h-1.5 rounded-full cursor-pointer transition-all duration-250"
         :style="{
-          backgroundColor: selectedFrame === index - 1 ? '#faa539' : ''
+          background: selectedFrame === index - 1
+            ? 'linear-gradient(135deg, rgba(81,98,255,0.95), rgba(79,227,193,0.9))'
+            : 'rgba(148, 163, 184, 0.35)'
         }"
+        @mouseenter="handleHover(index - 1)"
+        @mouseleave="handleHover(null)"
         @click="selectFrame(index - 1)"
         :title="`第 ${index} 帧`"
+        :class="{
+          'opacity-60': selectedFrame !== index - 1 && hoveredIndicator !== index - 1,
+          'opacity-90': selectedFrame === index - 1 || hoveredIndicator === index - 1
+        }"
       >
       </div>
     </div>
@@ -45,6 +50,7 @@ const emit = defineEmits<Emits>();
 
 // 帧选择器状态
 const selectedFrame = ref<number | null>(props.selectedFrame ?? 0);
+const hoveredIndicator = ref<number | null>(null);
 
 // 选择帧
 const selectFrame = (frameIndex: number) => {
@@ -73,6 +79,10 @@ const selectFrame = (frameIndex: number) => {
   console.log('========================');
   
   emit('frameSelected', frameIndex);
+};
+
+const handleHover = (frameIndex: number | null) => {
+  hoveredIndicator.value = frameIndex;
 };
 
 // 监听视频路径变化

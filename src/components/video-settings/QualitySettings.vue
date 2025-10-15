@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full quality-slider-container">
+  <div class="p-4 rounded-2xl bg-white/85 dark:bg-[#161821]/80 border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_16px_32px_rgba(15,23,42,0.1)] overflow-visible max-h-full quality-slider-container transition-all duration-300">
     <div class="space-y-4">
       <!-- 标题和质量等级 -->
       <div class="flex justify-between items-center mb-4">
         <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ t('videoSettings.quality') }}</label>
         <div class="text-right">
-          <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
+          <span class="font-medium text-slate-600 dark:text-slate-200 px-2 py-0.5 rounded-full text-xs bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/15">{{ qualityText }}</span>
         </div>
       </div>
 
@@ -14,12 +14,12 @@
         <!-- 滑动条轨道和自定义UI -->
         <div class="relative h-8 flex items-center">
           <!-- 轨道背景 -->
-          <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner z-0"></div>
+          <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full shadow-inner z-0"></div>
 
           <!-- 已填充的进度条 -->
           <div
-            class="absolute h-3 rounded-full shadow-sm z-10"
-            :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
+            class="absolute h-3 rounded-full shadow-[0_4px_10px_rgba(81,98,255,0.25)] z-10"
+            :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, rgba(81,98,255,0.9), rgba(79,227,193,0.9))' }"
           ></div>
 
           <!-- 默认值平衡点 (在进度条之上) -->
@@ -31,13 +31,10 @@
 
           <!-- 自定义的滑块 -->
           <div
-            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105 z-30"
+            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full cursor-pointer transition-transform duration-120 ease-out hover:scale-105 z-30"
             :class="{ 'scale-105': showTooltip }"
-            :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
-          >
-             <!-- 滑块内部高光效果 -->
-             <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
-           </div>
+            :style="{ left: `calc(${qualityValue}% - 14px)`, background: 'radial-gradient(circle at 30% 30%, #ffffff, rgba(255,255,255,0.65))', boxShadow: '0 10px 24px rgba(81,98,255,0.3)', border: '3px solid rgba(81,98,255,0.5)' }"
+          ></div>
           
           <!-- 气泡提示框 -->
           <div 
@@ -70,11 +67,11 @@
       </div>
       
       <!-- 高bit率选项 -->
-      <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+      <div class="mt-4 pt-3 border-t border-white/60 dark:border-white/10">
         <div class="flex justify-between items-center mb-3">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ t('videoSettings.colorDepth') }}</label>
           <div class="text-right">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ bitDepthText }}</span>
+            <span class="font-medium text-slate-600 dark:text-slate-200 px-2 py-0.5 rounded-full text-xs bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/15">{{ bitDepthText }}</span>
           </div>
         </div>
         
@@ -86,9 +83,9 @@
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 8
                 ? 'text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
+                : 'bg-white/80 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-white/60 dark:border-white/15 hover:bg-white hover:border-[var(--brand-primary)]/30 shadow-sm active:scale-[0.99]'
             ]"
-            :style="selectedBitDepth === 8 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
+            :style="selectedBitDepth === 8 ? { background: 'linear-gradient(135deg, rgba(81,98,255,0.95), rgba(79,227,193,0.9))', borderColor: 'transparent', boxShadow: '0 12px 24px rgba(81,98,255,0.24)' } : {}"
           >
             8bit
           </button>
@@ -102,10 +99,10 @@
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 10
                 ? 'text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
+                : 'bg-white/80 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-white/60 dark:border-white/15 hover:bg-white hover:border-[var(--brand-primary)]/30 shadow-sm active:scale-[0.99]',
               !canUse10bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
             ]"
-            :style="selectedBitDepth === 10 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
+            :style="selectedBitDepth === 10 ? { background: 'linear-gradient(135deg, rgba(81,98,255,0.95), rgba(79,227,193,0.9))', borderColor: 'transparent', boxShadow: '0 12px 24px rgba(81,98,255,0.24)' } : {}"
           >
             10bit
           </button>
@@ -119,10 +116,10 @@
               'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
               selectedBitDepth === 12
                 ? 'text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
+                : 'bg-white/80 dark:bg-white/10 text-slate-600 dark:text-slate-300 border-white/60 dark:border-white/15 hover:bg-white hover:border-[var(--brand-primary)]/30 shadow-sm active:scale-[0.99]',
               !canUse12bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
             ]"
-            :style="selectedBitDepth === 12 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
+            :style="selectedBitDepth === 12 ? { background: 'linear-gradient(135deg, rgba(81,98,255,0.95), rgba(79,227,193,0.9))', borderColor: 'transparent', boxShadow: '0 12px 24px rgba(81,98,255,0.24)' } : {}"
           >
             12bit
           </button>

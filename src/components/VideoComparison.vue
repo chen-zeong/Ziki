@@ -1,6 +1,8 @@
 <template>
   <!-- 预览窗口 -->
-  <div class="h-3/5 rounded-md flex items-center justify-center relative mt-4">
+  <div
+    class="h-3/5 rounded-3xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-[#14171f]/70 backdrop-blur-md flex items-center justify-center relative mt-6 shadow-[0_22px_48px_rgba(15,23,42,0.12)] transition-all duration-300"
+  >
     <VideoPreview
       ref="videoPreviewRef"
       :title="title"
@@ -19,7 +21,7 @@
   </div>
   
   <!-- 帧选择器（仅视频显示） -->
-  <div class="my-2" v-if="videoPath">
+  <div class="my-4" v-if="videoPath">
     <FrameSelector
       :video-path="videoPath"
       :selected-frame="selectedFrame"
@@ -31,7 +33,10 @@
   </div>
   
   <!-- 设置区域 -->
-  <div class="h-2/5 flex flex-col bg-[#f8fafc] dark:bg-[#1e1e1e] rounded-md overflow-hidden mb-6" :class="!videoPath ? 'mt-6' : ''">
+  <div
+    class="h-2/5 flex flex-col gap-4 mb-6 transition-all duration-300"
+    :class="!videoPath ? 'mt-6' : ''"
+  >
     <template v-if="videoPath">
       <VideoSettingsPanel
         ref="settingsPanelRef"

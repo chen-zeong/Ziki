@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-full flex flex-col bg-[#f8fafc] dark:bg-[#2d2d2d]"
+    class="h-full flex flex-col rounded-3xl border border-[var(--brand-border)] bg-white/80 dark:bg-[#161821]/80 backdrop-blur-md shadow-[0_18px_40px_rgba(15,23,42,0.08)] transition-all duration-500"
     :class="isDragOver ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-transparent' : ''"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
@@ -17,7 +17,7 @@
     />
     
     <!-- 任务列表 -->
-    <div class="flex-1 overflow-y-auto p-4">
+    <div class="flex-1 overflow-y-auto px-5 pb-6 transition-all duration-300">
       <div v-if="filteredTasks.length === 0" class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
         <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -26,7 +26,7 @@
         <p class="text-sm text-center max-w-md">{{ $t('taskList.noTasksDescription') }}</p>
       </div>
       
-      <div v-else class="space-y-3">
+      <div v-else class="space-y-3.5">
         <TaskItem
           v-for="task in filteredTasks"
           :key="task.id"
@@ -46,33 +46,29 @@
     </div>
     
     <!-- 底部操作区：多选与开始压缩 -->
-    <div class="flex items-center justify-between px-4 py-3">
+    <div class="flex items-center justify-between px-5 py-4 border-t border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md">
       <div class="flex items-center gap-3">
         <button
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all duration-200 border border-gray-300 dark:border-[#3a3a3a] bg-white dark:bg-[#2a2a2a] hover:bg-gray-50 dark:hover:bg-[#303030] shadow-sm"
-          :class="multiSelectMode ? 'ring-2 ring-blue-300 bg-blue-50 dark:bg-[#252525]' : ''"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border border-white/60 dark:border-white/10 bg-white/85 dark:bg-white/5 text-slate-600 dark:text-slate-200 hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)]/30 hover:bg-white"
+          :class="multiSelectMode
+            ? 'bg-[var(--brand-primary)] text-white shadow-[0_12px_22px_rgba(81,98,255,0.2)] border-transparent hover:text-white'
+            : ''
+            "
           @click="multiSelectMode = !multiSelectMode"
         >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor"><path d="M9 11l3 3L22 4l2 2-12 12-5-5 2-2z"/></svg>
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
+            <path d="M9 11l3 3L22 4l2 2-12 12-5-5 2-2z" />
+          </svg>
           <span>{{ t('taskList.multiSelect') || '多选' }}</span>
         </button>
-        <span v-if="multiSelectMode" class="text-xs text-gray-500">{{ t('taskList.selectedCount') || '已选择' }}: {{ selectedTasks.size }}</span>
-        <!-- 输出文件夹按钮：移动到多选按钮右边 -->
-        <button
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-all duration-200 border border-gray-300 dark:border-[#3a3a3a] bg-white dark:bg-[#2a2a2a] hover:bg-gray-50 dark:hover:bg-[#303030] shadow-sm"
-          @click="emit('toggle-output-folder')"
-        >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 7h5l2 2h11v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
-          </svg>
-          <span>{{ $t('outputFolder.title') || '输出文件夹' }}</span>
-        </button>
+        <span v-if="multiSelectMode" class="text-xs text-slate-500 dark:text-slate-300 tracking-wide">
+          {{ t('taskList.selectedCount') || '已选择' }}: {{ selectedTasks.size }}
+        </span>
       </div>
       <div class="flex items-center gap-3">
         <button
-          class="text-white text-base font-semibold rounded-lg transition-colors px-5 py-2 shadow-sm"
-          :style="canStart ? { backgroundColor: '#578ae6' } : {}"
-          :class="{ 'bg-gray-400 text-gray-200 cursor-not-allowed': !canStart }"
+          class="pill-button text-base font-semibold rounded-full px-6 py-2 shadow-lg"
+          :class="{ 'cursor-not-allowed opacity-60': !canStart }"
           :disabled="!canStart"
           @click="handleStart"
         >

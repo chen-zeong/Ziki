@@ -1,6 +1,6 @@
 <template>
   <div class="hardware-acceleration-settings">
-    <div class="space-y-4 bg-gray-50 dark:bg-[#1e1e1e] p-4 rounded-lg">
+    <div class="space-y-4 bg-white/85 dark:bg-[#161821]/80 border border-white/60 dark:border-white/10 rounded-2xl p-5 backdrop-blur-md shadow-[0_18px_38px_rgba(15,23,42,0.12)] transition-all duration-300">
       
         <!-- 显卡加速开关 -->
          <div class="flex items-center justify-between">
@@ -21,12 +21,9 @@
             <span class="text-xs text-gray-500 dark:text-dark-secondary">{{ hardwareAcceleration.value === 'gpu' ? t('common.enabled') : t('common.disabled') }}</span>
             <button
               type="button"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-gray-200 dark:bg-dark-border'"
-              :style="{
-                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#558ee1' : '',
-                '--tw-ring-color': '#558ee1'
-              }"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]"
+              :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-slate-200/80 dark:bg-dark-border'"
+              :style="hardwareAcceleration.value === 'gpu' ? { backgroundColor: 'var(--brand-primary)' } : {}"
               @click="toggleHardwareAcceleration"
             >
               <span
@@ -41,10 +38,7 @@
             <button
               ref="supportBtnRef"
               @click="toggleSupportedFormats"
-              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-              style="color: #9150e1; background-color: rgba(145, 80, 225, 0.1);"
-              @mouseover="($event.target as HTMLElement).style.color = '#7c3aed'"
-              @mouseleave="($event.target as HTMLElement).style.color = '#9150e1'"
+              class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 border border-white/70 dark:border-white/10 bg-white/90 dark:bg-white/10 text-[var(--brand-primary)] hover:text-[var(--brand-secondary)] hover:border-[var(--brand-primary)]/40 hover:bg-white"
             >
               {{ t('videoSettings.viewSupportedList') }}
             </button>
@@ -55,50 +49,50 @@
                 <div
                   v-if="showSupportedFormats"
                   ref="supportPopupRef"
-                  class="fixed w-96 p-5 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-2xl shadow-lg z-[10000]"
+                  class="fixed w-96 p-5 bg-white/85 dark:bg-[#1a1c25]/90 border border-white/70 dark:border-white/10 rounded-3xl shadow-[0_22px_48px_rgba(15,23,42,0.22)] backdrop-blur-xl z-[10000]"
                   :style="{ top: popupPosition.top + 'px', left: popupPosition.left + 'px' }"
                 >
                   <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
-                      <CheckCircle class="w-4 h-4 text-blue-500" />
+                    <h4 class="text-sm font-semibold text-slate-700 dark:text-white flex items-center space-x-2">
+                      <CheckCircle class="w-4 h-4 text-[var(--brand-primary)]" />
                       <span>{{ t('videoSettings.supportedHardwareEncodersTitle') }}</span>
                     </h4>
-                    <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
+                    <button @click="showSupportedFormats = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                       <X class="w-4 h-4" />
                     </button>
                   </div>
-                  <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
-                    <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                  <div v-if="supportedCodecs.length === 0" class="text-sm text-slate-500 dark:text-slate-300 bg-white/70 dark:bg-white/5 border border-white/60 dark:border-white/10 p-3 rounded-xl text-center">
+                    <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-slate-400 dark:text-slate-200" />
                     {{ t('videoSettings.noHardwareEncoders') }}
                   </div>
                   <div v-else class="space-y-2 max-h-48 overflow-y-auto">
-                     <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
-                       <Check class="w-3 h-3 text-dark-success flex-shrink-0" />
+                     <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-slate-700 dark:text-slate-200 bg-white/65 dark:bg-white/5 border border-white/60 dark:border-white/10 p-2 rounded-lg flex items-center space-x-2">
+                       <Check class="w-3 h-3 text-[var(--brand-primary)] flex-shrink-0" />
                        <span>{{ codec }}</span>
                      </div>
                    </div>
   
                    <!-- 分割线 -->
-                   <div class="border-t border-gray-100 dark:border-dark-border my-4"></div>
+                   <div class="border-t border-white/70 dark:border-white/10 my-4"></div>
   
                    <!-- 仅 Intel Mac 显示的小字说明（英文标点 + 圆角背景 + 暗色适配） -->
                   <div
                     v-if="platform === 'macos' && arch === 'x86_64'"
-                    class="text-[11px] leading-4 text-gray-600 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 border border-gray-200 dark:border-dark-border rounded-md px-3 py-2 mb-4"
+                    class="text-[11px] leading-4 text-slate-500 dark:text-slate-300 bg-white/60 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-md px-3 py-2 mb-4"
                   >
                     {{ t('videoSettings.intelMacNoQvNotice') }}
                   </div>
                    <!-- 检测信息与操作 -->
                    <div class="flex items-center justify-between">
-                     <div class="flex items-center text-xs text-gray-500 dark:text-dark-secondary">
+                     <div class="flex items-center text-xs text-slate-500 dark:text-slate-300">
                        <Clock class="w-3 h-3 mr-1 opacity-70" />
                        <span>{{ t('videoSettings.lastChecked') }}{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
                      </div>
                      <button
-                       class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-all duration-200"
+                       class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full text-white transition-all duration-200 shadow-[0_10px_24px_rgba(81,98,255,0.22)]"
                        :class="{
-                         'bg-[#5492dc] hover:bg-[#4a82c6]': !isDetectingHardwareEncoders,
-                         'bg-[#6ba3e8] cursor-not-allowed': isDetectingHardwareEncoders
+                         'bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)]': !isDetectingHardwareEncoders,
+                         'bg-[var(--brand-secondary)]/70 cursor-not-allowed': isDetectingHardwareEncoders
                        }"
                        @click="refreshHardware"
                        :disabled="isDetectingHardwareEncoders"

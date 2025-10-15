@@ -7,7 +7,7 @@
           <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $t('videoSettings.customTimeRange') }}</h3>
           <button
             type="button"
-            class="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          class="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-200 bg-white/85 dark:bg-white/10 border border-white/60 dark:border-white/10 rounded-full transition-all duration-200 hover:border-[var(--brand-primary)]/30 hover:text-[var(--brand-primary)]"
             @click="clearTimeRange"
           >
             {{ $t('common.reset') }}
@@ -16,7 +16,7 @@
         <button
           type="button"
           class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-          :class="enableTimeRange ? 'bg-[#518dd6] dark:bg-[#518dd6]' : 'bg-gray-200 dark:bg-gray-600'"
+        :class="enableTimeRange ? 'bg-[var(--brand-primary)]' : 'bg-slate-200/80 dark:bg-slate-600'"
           @click="enableTimeRange = !enableTimeRange"
         >
           <span
@@ -33,7 +33,7 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-                selectedQuickOption === 'random30s' ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+              selectedQuickOption === 'random30s' ? 'bg-[var(--brand-primary)] text-white shadow-[0_8px_18px_rgba(81,98,255,0.24)]' : 'bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-200 hover:bg-white hover:border-[var(--brand-primary)]/30',
                 isRandomButtonDisabled('random30s') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
               @click="selectQuickOption('random30s')"
@@ -45,7 +45,7 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-                selectedQuickOption === 'random1m' ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+              selectedQuickOption === 'random1m' ? 'bg-[var(--brand-primary)] text-white shadow-[0_8px_18px_rgba(81,98,255,0.24)]' : 'bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-200 hover:bg-white hover:border-[var(--brand-primary)]/30',
                 isRandomButtonDisabled('random1m') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
               @click="selectQuickOption('random1m')"
@@ -57,7 +57,7 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-                selectedQuickOption === 'random5m' ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
+              selectedQuickOption === 'random5m' ? 'bg-[var(--brand-primary)] text-white shadow-[0_8px_18px_rgba(81,98,255,0.24)]' : 'bg-white/70 dark:bg-white/10 text-slate-600 dark:text-slate-200 hover:bg-white hover:border-[var(--brand-primary)]/30',
                 isRandomButtonDisabled('random5m') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
               @click="selectQuickOption('random5m')"
@@ -76,7 +76,7 @@
               type="time"
               step="1"
               placeholder="00:00:00"
-              class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+              class="flex-1 px-3 py-2 text-sm border border-white/60 dark:border-white/10 rounded-xl bg-white/90 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]/40"
               @input="validateTimeInput('start', $event)"
             />
             <input
@@ -84,7 +84,7 @@
               type="time"
               step="1"
               :placeholder="metadata ? formatDuration(metadata.duration) : $t('videoSettings.endTimePlaceholder')"
-              class="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+              class="flex-1 px-3 py-2 text-sm border border-white/60 dark:border-white/10 rounded-xl bg-white/90 dark:bg-white/5 text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]/40"
               @input="validateTimeInput('end', $event)"
             />
           </div>

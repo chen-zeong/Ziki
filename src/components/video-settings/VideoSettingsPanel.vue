@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col bg-white/80 dark:bg-[#161821]/70 rounded-2xl border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_18px_40px_rgba(15,23,42,0.12)] p-5 transition-all duration-300">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
       <div class="h-full relative">

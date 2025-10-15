@@ -1,54 +1,40 @@
 <template>
-  <div class="mt-4 mb-3 flex items-center justify-between flex-shrink-0">
+  <div class="px-5 pt-5 pb-4 flex items-center justify-between flex-shrink-0">
     <!-- 左侧工具栏按钮 -->
-    <div class="flex items-center space-x-3 pl-4">
+    <div class="flex items-center space-x-2">
       <!-- 添加文件按钮 -->
       <button 
-         class="flex items-center space-x-1 px-3 rounded-md text-white transition-colors"
-         style="background-color: #578ae6; height: 32px;"
+         class="flex items-center gap-2 h-9 px-4 rounded-full text-sm font-medium transition-all duration-200 bg-white/90 dark:bg-white/10 border border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-100 shadow-[0_6px_14px_rgba(15,23,42,0.08)] hover:text-[var(--brand-primary)] hover:border-[var(--brand-primary)]/40"
          @click="handleAddFiles"
          :title="t('toolbar.addFiles')"
        >
         <Plus class="w-4 h-4" />
-        <span class="text-xs">{{ t('toolbar.addFiles') }}</span>
+        <span>{{ t('toolbar.addFiles') }}</span>
       </button>
       
       <!-- 清空任务按钮 -->
       <button 
-        class="flex items-center space-x-1 px-3 rounded-md text-white"
-        style="background-color: #eb534b; height: 32px;"
+        class="flex items-center gap-2 h-9 px-4 rounded-full text-sm font-medium transition-all duration-200 text-red-500 border border-red-200/70 dark:border-red-400/20 bg-white/85 dark:bg-white/5 hover:bg-red-50/90 dark:hover:bg-red-500/10 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
         @click="handleClearAllTasks"
         :disabled="tasks.length === 0"
         :title="t('taskList.clearAllTasks')"
       >
         <BrushCleaning class="w-4 h-4" />
-        <span class="text-xs">{{ t('taskList.clear') }}</span>
+        <span>{{ t('taskList.clear') }}</span>
       </button>
     </div>
     
     <!-- 右侧状态筛选器 -->
-     <div class="flex items-center space-x-2 mr-3">
+     <div class="flex items-center space-x-2">
       <button
         v-for="status in statusFilters"
         :key="status.key"
         @click="toggleStatusFilter(status.key)"
-        class="w-4 h-4 rounded-full transition-all duration-200 relative flex items-center justify-center"
-        :style="{
-          border: '1.5px solid white',
-          boxShadow: selectedStatuses.size === 0 || selectedStatuses.has(status.key) 
-            ? '0 0 0 1.5px #ccc, inset 0 1px 2px rgba(0, 0, 0, 0.2)' 
-            : '0 0 0 0.5px #ccc, inset 0 1px 2px rgba(0, 0, 0, 0.2)',
-          opacity: selectedStatuses.size === 0 || selectedStatuses.has(status.key) ? 1 : 0.3
-        }"
+        class="px-3 h-8 rounded-full transition-all duration-200 flex items-center text-xs font-medium border"
+        :style="getStatusStyle(status.key)"
         :title="status.label"
       >
-        <div 
-          class="w-full h-full rounded-full"
-          :style="{
-            background: status.gradient,
-            boxShadow: `inset 0 0 0 0.5px ${status.innerBorder}`
-          }"
-        ></div>
+        <span>{{ status.label }}</span>
       </button>
     </div>
   </div>
@@ -76,6 +62,7 @@ const props = defineProps<Props>();
 
 // 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
 const tasks = computed(() => props.tasks || taskStore.tasks);
+const selectedStatuses = computed<Set<string>>(() => props.selectedStatuses ?? new Set<string>());
 
 const emit = defineEmits<{
   addFiles: [];
@@ -89,40 +76,43 @@ const statusFilters = computed(() => [
   {
     key: 'pending',
     label: t('taskList.statusPending'),
-    bgColor: '#dbebfd',
-    borderColor: '#dbebfd',
-    textColor: '#1e40af',
-    gradient: 'linear-gradient(to top, #4981f9, #87a9ff)',
-    innerBorder: '#4275d1'
+    fg: 'rgba(59, 130, 246, 0.9)',
+    bg: 'rgba(59, 130, 246, 0.12)',
+    border: 'rgba(59, 130, 246, 0.35)'
   },
   {
     key: 'queued',
     label: t('taskList.statusQueued'),
-    bgColor: '#fff5dc',
-    borderColor: '#fff5dc',
-    textColor: '#d97706',
-    gradient: 'linear-gradient(to top, #ffa500, #ffc96b)',
-    innerBorder: '#d99a26'
+    fg: 'rgba(234, 179, 8, 0.95)',
+    bg: 'rgba(253, 224, 71, 0.15)',
+    border: 'rgba(234, 179, 8, 0.32)'
   },
   {
     key: 'processing',
     label: t('taskList.statusProcessing'),
-    bgColor: '#f3e8ff',
-    borderColor: '#f3e8ff',
-    textColor: '#7c3aed',
-    gradient: 'linear-gradient(to top, #8a2be2, #d6a4ff)',
-    innerBorder: '#813cc9'
+    fg: 'rgba(129, 140, 248, 0.95)',
+    bg: 'rgba(129, 140, 248, 0.18)',
+    border: 'rgba(129, 140, 248, 0.32)'
   },
   {
     key: 'completed',
     label: t('taskList.statusCompleted'),
-    bgColor: '#dcfce7',
-    borderColor: '#dcfce7',
-    textColor: '#16a34a',
-    gradient: 'linear-gradient(to top, #2e8b57, #8fbc8f)',
-    innerBorder: '#388e61'
+    fg: 'rgba(16, 185, 129, 0.95)',
+    bg: 'rgba(16, 185, 129, 0.18)',
+    border: 'rgba(16, 185, 129, 0.28)'
   }
 ]);
+
+const getStatusStyle = (key: string) => {
+  const target = statusFilters.value.find(status => status.key === key);
+  const isActive = selectedStatuses.value.size === 0 || selectedStatuses.value.has(key);
+  return {
+    color: isActive ? target?.fg : 'rgba(99,102,241,0.45)',
+    borderColor: isActive ? target?.border : 'rgba(148,163,184,0.18)',
+    background: isActive ? target?.bg : 'rgba(248,250,252,0.6)',
+    opacity: isActive ? 1 : 0.5
+  };
+};
 
 // 清空所有任务
 const handleClearAllTasks = () => {
@@ -206,17 +196,3 @@ const toggleStatusFilter = (status: string) => {
   emit('toggleStatusFilter', status);
 };
 </script>
-
-<style scoped>
-.status-filter {
-  transition: all 0.2s ease;
-}
-
-.status-filter:hover {
-  transform: translateY(-1px);
-}
-
-.status-filter.active {
-  transform: scale(1.05);
-}
-</style>

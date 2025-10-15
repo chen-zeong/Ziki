@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col bg-white/80 dark:bg-[#161821]/70 rounded-2xl border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_18px_40px_rgba(15,23,42,0.12)] p-5 transition-all duration-300">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
       <div class="h-full relative">
@@ -9,7 +9,7 @@
         <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-60': isSettingsLocked }">
           <!-- 左侧：格式 + 分辨率（单独卡片） -->
           <div class="space-y-4">
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full min-h-[220px] flex flex-col">
+            <div class="p-4 rounded-2xl bg-white/85 dark:bg-[#1e1e1e] border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_12px_26px_rgba(15,23,42,0.08)] overflow-visible max-h-full min-h-[220px] flex flex-col transition-all duration-300">
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.format') }}</label>
@@ -26,12 +26,12 @@
                 <div class="flex items-center justify-between mb-2">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.resolution') }}</label>
                    <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold text-gray-600 dark:text-dark-secondary opacity-80">{{ t('videoSettings.custom') }}</span>
+                    <span class="text-xs font-semibold text-slate-600 dark:text-dark-secondary opacity-80">{{ t('videoSettings.custom') }}</span>
                      <button
                        type="button"
-                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-                       :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
-                       :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
+                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]"
+                       :style="{ backgroundColor: isCustomResolution ? 'var(--brand-primary)' : '' }"
+                       :class="isCustomResolution ? '' : 'bg-slate-200/80 dark:bg-dark-border'"
                        @click="toggleCustomResolution"
                      >
                        <span
@@ -53,9 +53,8 @@
                     />
                     <button
                       type="button"
-                      class="flex-shrink-0 p-2 text-gray-500 hover:text-orange-500 transition-colors duration-200 rounded-md hover:bg-gray-100 dark:hover:bg-dark-border"
-                      :class="{ 'hover:bg-blue-50': isAspectRatioLocked }"
-                      :style="{ color: isAspectRatioLocked ? '#5492dc' : '' }"
+                      class="flex-shrink-0 p-2 rounded-lg transition-all duration-200 text-slate-400 hover:bg-white/80 dark:hover:bg-white/10"
+                      :style="{ color: isAspectRatioLocked ? 'var(--brand-primary)' : '' }"
                       @click="toggleAspectRatioLock"
                       :title="t('videoSettings.lockAspectRatio')"
                     >
@@ -90,13 +89,13 @@
 
           <!-- 右侧：画质（单独卡片） -->
           <div class="space-y-4">
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full quality-slider-container">
+            <div class="p-4 rounded-2xl bg-white/85 dark:bg-[#1e1e1e] border border-white/60 dark:border-white/10 backdrop-blur-md shadow-[0_12px_26px_rgba(15,23,42,0.08)] overflow-visible max-h-full quality-slider-container transition-all duration-300">
               <div class="space-y-4">
                 <!-- 标题和质量等级 -->
                 <div class="flex justify-between items-center mb-4">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.quality') }}</label>
                   <div class="text-right">
-                    <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
+                    <span class="font-medium text-slate-600 dark:text-slate-200 px-2 py-0.5 rounded-full text-xs bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/15">{{ qualityText }}</span>
                   </div>
                 </div>
 
@@ -105,7 +104,7 @@
                   <!-- 滑动条轨道和自定义UI -->
                   <div class="relative h-8 flex items-center">
                     <!-- 轨道背景 -->
-                    <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner z-0"></div>
+                    <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full shadow-inner z-0"></div>
 
                     <!-- 默认值平衡点 -->
                     <div
@@ -116,19 +115,18 @@
 
                     <!-- 已填充的进度条 -->
                     <div
-                      class="absolute h-3 rounded-full shadow-sm z-10"
-                      :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
+                      class="absolute h-3 rounded-full shadow-[0_4px_10px_rgba(81,98,255,0.25)] z-10"
+                      :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, rgba(81,98,255,0.9), rgba(79,227,193,0.9))' }"
                     ></div>
 
                     <!-- 自定义的滑块 -->
                     <div
-                      class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105 z-30"
+                      class="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full cursor-pointer transition-transform duration-120 ease-out hover:scale-105 z-30"
                       :class="{ 'scale-105': showTooltip }"
-                      :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
+                      :style="{ left: `calc(${qualityValue}% - 14px)`, background: 'radial-gradient(circle at 30% 30%, #ffffff, rgba(255,255,255,0.65))', boxShadow: '0 10px 24px rgba(81,98,255,0.28)', border: '3px solid rgba(81,98,255,0.5)' }"
                     >
-                       <!-- 滑块内部高光效果 -->
-                       <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
-                     </div>
+                      <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
+                    </div>
                     
                     <!-- 气泡提示框（显示参数提示，如 -q:v / 色彩位数 / 无损） -->
                     <div 
@@ -163,7 +161,7 @@
                 </div>
                 
                 <!-- 画质提示：只在需要时显示 PNG 色彩缺失的提示 -->
-                <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <div class="text-xs text-slate-500 dark:text-slate-300 space-y-1">
                   <div v-if="qualityHintText.colorWarning" class="flex items-start gap-2 px-3 py-2 rounded-md border shadow-sm bg-gradient-to-r from-amber-50 to-amber-100/60 dark:from-[#34260f] dark:to-[#3b2a12] border-amber-200/80 dark:border-amber-700/60 text-amber-800 dark:text-amber-200">
                     <svg class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-7.5 13A1 1 0 003.62 19h16.76a1 1 0 00.87-1.5l-7.5-13a1 1 0 00-1.76 0z" />

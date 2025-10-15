@@ -163,9 +163,12 @@ defineExpose({
 
 <template>
   <!-- 主内容区域 -->
-  <main class="flex-grow flex pr-3 space-x-3 overflow-hidden bg-transparent dark:bg-transparent pt-4" style="pointer-events: auto;">
+  <main
+    class="flex-grow flex pr-6 pl-4 space-x-4 overflow-hidden bg-transparent dark:bg-transparent pt-9 pb-6 transition-all duration-300"
+    style="pointer-events: auto;"
+  >
     <!-- 左侧面板: 任务队列 -->
-    <div class="w-1/3 flex flex-col border-r border-gray-200/50 dark:border-dark-border/60">
+    <div class="w-1/3 flex flex-col">
       <div class="flex-grow overflow-hidden">
         <!-- Output Folder Settings (Expandable) -->
         <OutputFolder
@@ -196,7 +199,10 @@ defineExpose({
     </div>
 
     <!-- 右侧面板: 预览和设置 -->
-    <div class="w-2/3 flex flex-col overflow-hidden" :class="isUploaderVisible ? 'space-y-6' : 'space-y-3'">
+    <div
+      class="w-2/3 flex flex-col overflow-hidden transition-all duration-300"
+      :class="isUploaderVisible ? 'space-y-8' : 'space-y-5'"
+    >
       <!-- File Upload (Visible by default) -->
       <div v-if="isUploaderVisible" class="flex-grow mt-4">
         <div class="h-full rounded-2xl bg-white/80 dark:bg-dark-primary/80 backdrop-blur-md soft-shadow transition-colors">
