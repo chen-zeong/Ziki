@@ -1,7 +1,7 @@
 <template>
   <!-- 预览窗口 -->
   <div
-    class="relative w-full aspect-[4/3] lg:aspect-[5/4] rounded-2xl bg-white dark:bg-[#181b23] flex items-center justify-center transition-all duration-300 shadow-[0_12px_35px_rgba(15,23,42,0.12)]"
+    class="relative w-full aspect-[5/3] lg:aspect-[25/16] rounded-2xl bg-white dark:bg-[#181b23] flex items-center justify-center transition-all duration-300 shadow-[0_12px_35px_rgba(15,23,42,0.12)]"
   >
     <VideoPreview
       ref="videoPreviewRef"
@@ -44,7 +44,7 @@
     <Transition name="time-range-fade">
       <div
         v-if="showTimeRange"
-        class="absolute left-0 top-full mt-3 z-20 w-[min(22rem,calc(100vw-4rem))] rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#181f2e] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
+        class="absolute left-full top-1/2 -translate-y-[60%] ml-3 z-20 w-[min(22rem,calc(100vw-4rem))] rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#181f2e] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
       >
         <TimeRangeSettings
           :modelValue="timeRangeSettings"
@@ -133,7 +133,7 @@ const { t } = useI18n();
 const showTimeRange = ref(false);
 
 const currentFile = inject<{ value: VideoFile | null }>('currentFile', { value: null });
-const currentVideoMetadata = computed(() => currentFile?.value?.metadata || null);
+const currentVideoMetadata = computed(() => currentFile?.value?.metadata);
 
 // 帧选择器状态
 const selectedFrame = ref<number | null>(null);

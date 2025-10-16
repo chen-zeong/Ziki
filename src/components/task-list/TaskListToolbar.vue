@@ -47,6 +47,7 @@ const emit = defineEmits<{
   addFiles: [];
   filesSelected: [files: FileList];
   'clear-all-tasks': [];
+  toggleStatusFilter: [status: string];
 }>();
 
 // 清空所有任务

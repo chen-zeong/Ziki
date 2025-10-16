@@ -339,17 +339,33 @@ const handleClearAllTasks = () => {
 
  // Lifecycle: register/unregister Tauri listeners
  let unlistenWindowFileDrop: UnlistenFn | null = null;
- onMounted(async () => {
-   if (!isTauri) {
-     // Web 环境不注册 Tauri 事件
-     return;
-   }
-   try {
-     const ddEnter = await listen('tauri://file-drop', (event) => {
-       const paths = (event as any).payload as string[];
-       if (Array.isArray(paths)) {
-         isDragOver.value = true;
-       }
+onMounted(async () => {
+  if (!isTauri) {
+    // Web 环境不注册 Tauri 事件
+    return;
+  }
+  try {
+    try {
+      if (!appWindow && typeof (TauriWindow as any)?.getCurrent === 'function') {
+        appWindow = (TauriWindow as any).getCurrent();
+      }
+      if (
+        !appWindow &&
+        typeof window !== 'undefined' &&
+        (window as any).__TAURI__?.window?.appWindow
+      ) {
+        appWindow = (window as any).__TAURI__.window.appWindow as TauriWindow;
+      }
+    } catch (resolveError) {
+      console.warn('[DD] Failed to resolve appWindow instance:', resolveError);
+      appWindow = null;
+    }
+
+    const ddEnter = await listen('tauri://file-drop', (event) => {
+      const paths = (event as any).payload as string[];
+      if (Array.isArray(paths)) {
+        isDragOver.value = true;
+      }
      });
      const ddLeave = await listen('tauri://file-drop-cancelled', () => {
        isDragOver.value = false;
@@ -369,27 +385,29 @@ const handleClearAllTasks = () => {
      unlistenDragOver = ddOver;
      unlistenFileDrop = ddDrop;
 
-     // 额外后备：窗口级别文件拖拽事件（如果可用）
-     try {
-       const winAny = appWindow as unknown as { onFileDropEvent?: (cb: (e: any) => void) => Promise<() => void> };
-       if (winAny.onFileDropEvent) {
-         unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
-           console.log('[DD] appWindow.onFileDropEvent:', e);
-           const ty = e?.payload?.type;
-           const paths = e?.payload?.paths || e?.payload || [];
-           if (ty === 'hover') {
-             isDragOver.value = true;
-           } else if (ty === 'cancel') {
-             isDragOver.value = false;
-           } else if (ty === 'drop') {
-             isDragOver.value = false;
-             if (Array.isArray(paths)) handleTauriFileDrop(paths);
-           }
-         });
-         console.log('[DD] Registered window-level file-drop listener');
-       } else {
-         console.log('[DD] appWindow.onFileDropEvent not available in this Tauri version');
-       }
+    // 额外后备：窗口级别文件拖拽事件（如果可用）
+    try {
+      const winAny = appWindow
+        ? (appWindow as unknown as { onFileDropEvent?: (cb: (e: any) => void) => Promise<() => void> })
+        : null;
+      if (winAny && typeof winAny.onFileDropEvent === 'function') {
+        unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
+          console.log('[DD] appWindow.onFileDropEvent:', e);
+          const ty = e?.payload?.type;
+          const paths = e?.payload?.paths || e?.payload || [];
+          if (ty === 'hover') {
+            isDragOver.value = true;
+          } else if (ty === 'cancel') {
+            isDragOver.value = false;
+          } else if (ty === 'drop') {
+            isDragOver.value = false;
+            if (Array.isArray(paths)) handleTauriFileDrop(paths);
+          }
+        });
+        console.log('[DD] Registered window-level file-drop listener');
+      } else {
+        console.log('[DD] appWindow.onFileDropEvent not available in this Tauri version');
+      }
      } catch (werr) {
        console.warn('[DD] Failed to register window-level file-drop listener:', werr);
      }

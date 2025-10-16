@@ -18,10 +18,6 @@
               :style="{ left: `calc(${defaultSliderPosition}% - 1px)` }"
             ></div>
             <div
-              class="slider-glow"
-              :style="{ width: qualityValue + '%' }"
-            ></div>
-            <div
               class="slider-fill"
               :style="{ width: qualityValue + '%' }"
             ></div>
@@ -348,13 +344,15 @@ onMounted(async () => {
   width: 100%;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.28), rgba(148, 163, 184, 0.16));
+  background: rgba(148, 163, 184, 0.2);
   overflow: hidden;
-  box-shadow: inset 0 2px 6px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 .dark .slider-track {
-  background: linear-gradient(135deg, rgba(42, 52, 78, 0.75), rgba(32, 39, 59, 0.45));
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 .slider-default-marker {
   position: absolute;
@@ -362,26 +360,20 @@ onMounted(async () => {
   width: 2px;
   height: 100%;
   transform: translateY(-50%);
-  background: linear-gradient(180deg, rgba(226, 232, 240, 0.95), rgba(148, 163, 184, 0.75));
+  background: rgba(226, 232, 240, 0.85);
   pointer-events: none;
   opacity: 0.8;
 }
 .dark .slider-default-marker {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(148, 163, 184, 0.45));
-}
-.slider-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 0% 50%, rgba(81, 98, 255, 0.24), rgba(79, 227, 193, 0));
-  transition: width 0.35s ease;
+  background: rgba(148, 163, 184, 0.6);
 }
 .slider-fill {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(81, 98, 255, 0.95), rgba(79, 227, 193, 0.95));
+  background: rgba(81, 98, 255, 0.85);
   transition: width 0.35s ease;
-  box-shadow: 0 8px 20px rgba(81, 98, 255, 0.25);
+  box-shadow: 0 6px 16px rgba(81, 98, 255, 0.2);
 }
 .slider-thumb {
   position: absolute;
@@ -398,19 +390,25 @@ onMounted(async () => {
   position: absolute;
   inset: 6px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #ffffff, #e2e8f0);
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+  border: 1.5px solid rgba(148, 163, 184, 0.55);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 .dark .thumb-core {
-  background: linear-gradient(135deg, rgba(226, 232, 240, 0.9), rgba(148, 163, 184, 0.6));
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(148, 163, 184, 0.45);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 .thumb-ring {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(129, 140, 248, 0.35), rgba(129, 140, 248, 0));
-  animation: thumbPulse 2.2s ease-in-out infinite;
+  border: 2px solid rgba(81, 98, 255, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.slider-thumb.is-active .thumb-ring {
+  border-color: rgba(81, 98, 255, 0.45);
+  box-shadow: 0 0 0 6px rgba(81, 98, 255, 0.12);
 }
 .slider-tooltip {
   position: absolute;
@@ -433,14 +431,9 @@ onMounted(async () => {
   cursor: pointer;
   z-index: 40;
 }
-@keyframes thumbPulse {
-  0% { transform: scale(0.9); opacity: 0.55; }
-  50% { transform: scale(1.05); opacity: 0.9; }
-  100% { transform: scale(0.9); opacity: 0.55; }
-}
 .tooltip-bubble {
   position: relative;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  background: rgba(15, 23, 42, 0.96);
   color: white;
   font-size: 11px;
   line-height: 1;
@@ -460,10 +453,10 @@ onMounted(async () => {
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid rgba(30, 41, 59, 0.96);
+  border-top: 6px solid rgba(15, 23, 42, 0.96);
 }
 :deep(.dark) .tooltip-bubble {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  background: rgba(2, 6, 23, 0.96);
   border-color: rgba(100, 116, 139, 0.25);
 }
 </style>

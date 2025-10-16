@@ -42,9 +42,12 @@ export interface CompressionTask {
   expectedOutputPath?: string;
   expectedOutputFileName?: string;
   createdAt: Date;
+  updatedAt?: Date;
   startedAt?: Date; // 开始压缩的时间
   completedAt?: Date;
   error?: string;
+  errorMessage?: string;
+  etaText?: string;
 }
 
 export interface CustomResolution {
