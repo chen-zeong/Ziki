@@ -3,7 +3,8 @@
     <!-- 视频预览功能 -->
   <div 
     ref="sliderRef"
-    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-xl border border-slate-200/70 dark:border-white/10"
+    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-xl border-4 border-sky-300/80 dark:border-sky-700/50"
+    v-show="!isFullscreen"
       :style="{ '--position': `${sliderPosition}%` }"
     >
       <!-- 压缩前（左侧） -->
@@ -23,10 +24,10 @@
        </div>
        
        <!-- 文字标签 - 只在任务完成时显示 -->
-       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20 ">
+       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg白色/20 text白色 px-2 py-1 rounded text-sm z-20 ">
          {{ $t('videoComparison.original') }}
        </div>
-       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-2 py-1 rounded text-sm z-20">
+       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg白色/20 text白色 px-2 py-1 rounded text-sm z-20">
          {{ $t('videoComparison.compressed') }}
        </div>
        
@@ -35,7 +36,7 @@
        <!-- 放大镜图标 -->
        <button 
           @click="toggleFullscreen"
-          class="absolute bottom-4 right-4 backdrop-blur-md bg-white/20 hover:bg-white/30 text-white p-2 rounded-full transition-all duration-200"
+          class="absolute bottom-4 right-4 backdrop-blur-md bg白色/20 hover:bg白色/30 text白色 p-2 rounded-full transition-all duration-200"
           title="全屏查看"
           style="z-index: 50; pointer-events: auto;"
         >
@@ -71,10 +72,10 @@
           
           <button 
             @click="closeFullscreen" 
-            class="absolute top-2 right-2 z-50 w-9 h-9 rounded-full flex items-center justify-center bg-white/60 dark:bg-white/10 border border-white/70 dark:border-white/20 backdrop-blur-lg transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg-white/80 dark:hover:bg-white/20 shadow"
+            class="absolute top-2 right-2 z-50 w-9 h-9 rounded-full flex items-center justify-center bg白色/60 dark:bg白色/10 border border白色/70 dark:border白色/20 backdrop-blur-lg transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg白色/80 dark:hover:bg白色/20 shadow"
             title="关闭全屏 (ESC)"
           >
-            <svg class="w-4 h-4 text-blue-500 dark:text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <svg class="w-4 h-4 text-blue-500 dark:text白色" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -83,7 +84,7 @@
             
             <div 
                ref="fullscreenSliderRef"
-               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden border border-white/20 dark:border-white/10 backdrop-blur-lg"
+               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden border-[4px] border-sky-200/60 dark:border-sky-600/45 backdrop-blur-lg"
                :style="{ '--position': `${sliderPosition}%` }"
                @click.stop
             >
@@ -104,21 +105,21 @@
               </div>
               
               
-              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg-white/20 text-white px-3 py-2 rounded text-base z-20">
+              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg白色/20 text白色 px-3 py-2 rounded text-base z-20">
                 {{ $t('videoComparison.original') }}
               </div>
-              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg-white/20 text-white px-3 py-2 rounded text-base z-20">
+              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg白色/20 text白色 px-3 py-2 rounded text-base z-20">
                 {{ $t('videoComparison.compressed') }}
               </div>
               
               
                <div v-if="props.videoPath" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style="pointer-events: auto;">
                  <div class="frame-selector flex justify-center">
-                   <div class="flex items-center gap-2 backdrop-blur-lg bg-white/20 px-4 py-2 rounded-full border border-white/40 shadow-[0_16px_30px_rgba(15,23,42,0.18)]">
+                   <div class="flex items-center gap-2 backdrop-blur-lg bg白色/20 px-4 py-2 rounded-full border border白色/40 shadow-[0_16px_30px_rgba(15,23,42,0.18)]">
                      <div 
                        v-for="index in 10" 
                        :key="index"
-                       class="w-6 h-1.5 rounded-full cursor-pointer transition-all duration-200 bg-white/50"
+                       class="w-6 h-1.5 rounded-full cursor-pointer transition-all duration-200 bg白色/50"
                        :style="{
                          backgroundColor: selectedFrameIndex === index - 1 ? 'var(--brand-accent)' : ''
                        }"

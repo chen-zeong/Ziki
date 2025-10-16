@@ -15,9 +15,9 @@
       {
         "titleBarStyle": "Overlay",
         "title": "",
-        "width": 1147,
+        "width": 1000,
         "height": 852,
-        "minWidth": 1147,
+        "minWidth": 1000,
         "minHeight": 852,
         "dragDropEnabled": true
       }

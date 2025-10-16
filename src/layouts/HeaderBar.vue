@@ -121,11 +121,11 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
     <div class="flex-1" />
 
     <!-- 右侧：输出文件夹、日志、语言、主题切换 -->
-    <div class="flex items-center space-x-2" :data-tauri-drag-region="false">
+    <div class="flex items-center space-x-2 mt-1" :data-tauri-drag-region="false">
       <!-- 自定义输出文件夹按钮（移动到日志按钮左侧） -->
       <div class="relative">
         <button 
-          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors hover-lift"
+          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
           @click="toggleOutputFolderPopup"
           :title="$t('outputFolder.title') || '输出文件夹'"
         >
@@ -139,7 +139,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
               :show-output-folder="true"
               @update:output-path="handleOutputPathUpdate"
               @close="toggleOutputFolderPopup"
-              class="glass-panel soft-shadow"
+              class="soft-shadow"
             />
           </div>
         </div>
@@ -152,12 +152,13 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       
       <LanguageSwitcher />
       <button 
-        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors hover-lift"
+        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary bg-white dark:bg-dark-border border border-slate-200/70 dark:border-white/10 rounded-md transition-colors hover:bg-gray-200 dark:hover:bg-dark-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
         @click="globalSettings.toggleTheme"
+        :aria-pressed="globalSettings.isDarkMode"
         :data-tauri-drag-region="false"
       >
-        <Sun v-if="!globalSettings.isDarkMode" class="w-4 h-4" />
-        <Moon v-else class="w-4 h-4" />
+        <Sun v-if="!globalSettings.isDarkMode" class="w-3.5 h-3.5" />
+        <Moon v-else class="w-3.5 h-3.5" />
       </button>
     </div>
   </div>

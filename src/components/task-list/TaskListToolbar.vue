@@ -1,5 +1,5 @@
 <template>
-  <div class="px-5 pt-4 pb-4 flex items-center justify-between flex-shrink-0 border-b border-slate-200/70 dark:border-white/10">
+  <div class="px-5 pt-4 pb-4 flex items-center justify-between flex-shrink-0">
     <!-- 左侧工具栏按钮 -->
     <div class="flex items-center gap-2">
       <button

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import FileUploader from '../components/FileUploader.vue';
 import VideoComparison from '../components/VideoComparison.vue';
 import TaskList from '../components/TaskList.vue';
+import OutputFolder from '../components/OutputFolder.vue';
 import { useTaskStore } from '../stores/useTaskStore';
 import type { CompressionTask } from '../types';
 

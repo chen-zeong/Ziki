@@ -1,15 +1,34 @@
 <template>
   <div
-    class="task-card group block p-4 rounded-xl border transition-all duration-200 bg-white dark:bg-[#1a1d26] hover:bg-slate-50/70 dark:hover:bg-white/5 cursor-pointer"
+    class="task-card group relative block p-4 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all duration-300 ease-out bg-white dark:bg-[#1a1d26] hover:bg-slate-50/70 dark:hover:bg-white/5 cursor-pointer overflow-visible"
     :class="{
-      'border-[var(--brand-primary)]/60 is-selected': isSelected,
-      'border-slate-200/80 dark:border-white/10': !isSelected,
-      'multi-select-active translate-x-6': isMultiSelect
+      'is-selected shadow-[0_16px_34px_rgba(81,98,255,0.20)] scale-[1.015] bg-sky-50/95 dark:bg-[#1f2c3f] text-slate-900 dark:text-slate-100': isActive
     }"
-    @click="$emit('select', task.id)"
+    @click="handleCardClick"
   >
+    <span
+      v-if="isActive"
+      class="absolute inset-y-3 left-1 w-[3px] rounded-full bg-[var(--brand-primary)]/85 dark:bg-[var(--brand-primary)]/70 pointer-events-none"
+      aria-hidden="true"
+    />
+    <button
+      v-if="isMultiSelect"
+      type="button"
+      class="task-checkbox absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]/60"
+      :class="isChecked
+        ? 'bg-[var(--brand-primary)] text-white border-transparent shadow-[0_8px_18px_rgba(81,98,255,0.32)]'
+        : 'bg-white dark:bg-[#1f2330] border-slate-200/70 dark:border-white/15 text-transparent'"
+      role="checkbox"
+      :aria-checked="isChecked"
+      @click.stop="toggleCheckbox"
+      @keydown.enter.prevent="toggleCheckbox"
+      @keydown.space.prevent="toggleCheckbox"
+    >
+      <Check v-if="isChecked" class="w-3.5 h-3.5" />
+    </button>
+
     <div class="flex items-center gap-3">
-      <!-- 移除内置勾选框，改由父组件外部渲染 -->
+      <!-- 多选时的勾选框已移入卡片内，默认隐藏 -->
 
       <div class="flex items-center gap-3 flex-1 min-w-0">
         <div class="h-10 w-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 grid place-items-center border border-slate-200/70 dark:border-white/10">
@@ -33,12 +52,6 @@
           </p>
         </div>
 
-        <button
-          class="flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full border border-slate-200/70 dark:border-white/15 text-slate-600 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)] transition-colors duration-150"
-          @click.stop="$emit('show-details', task.id)"
-        >
-          {{ $t('taskList.details') }}
-        </button>
       </div>
     </div>
 
@@ -65,6 +78,13 @@
           </div>
         </div>
         <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-300">
+          <button
+            class="action-btn"
+            :title="$t('taskList.details')"
+            @click.stop="$emit('show-details', task.id)"
+          >
+            <Info class="w-4 h-4" />
+          </button>
           <button
             v-if="task.status === 'processing'"
             class="action-btn"
@@ -109,7 +129,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../../stores/useTaskStore';
 import StatusBadge from './StatusBadge.vue';
-import { Video, Pause, Play, Trash, Folder } from 'lucide-vue-next';
+import { Video, Pause, Play, Trash, Folder, Check, Info } from 'lucide-vue-next';
 import type { CompressionTask } from '../../types';
 
 interface Props {
@@ -136,6 +156,20 @@ const globalSettings = useGlobalSettingsStore();
 const taskStore = useTaskStore();
 
 const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+
+const isActive = computed(() => props.isSelected || (props.isMultiSelect && props.isChecked));
+
+const toggleCheckbox = () => {
+  emit('toggle-check', props.task.id);
+};
+
+const handleCardClick = () => {
+  if (props.isMultiSelect) {
+    toggleCheckbox();
+  } else {
+    emit('select', props.task.id);
+  }
+};
 
 const formatFileSize = (bytes: number): string => {
   if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';

@@ -29,7 +29,7 @@
               :class="[
                 'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
                 opt.value === props.modelValue
-                  ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold'
+                  ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
                   : 'hover:bg-slate-100 dark:hover:bg-white/5'
               ]"
               @click.stop="selectOption(opt.value)"
@@ -74,7 +74,7 @@
                 'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
                 opt.value === props.modelValue
                   ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
-                  : 'hover:bg-white/70 dark:hover:bg-white/5'
+                  : 'hover:bg-slate-100 dark:hover:bg-white/5'
               ]"
               @click.stop="selectOption(opt.value)"
             >

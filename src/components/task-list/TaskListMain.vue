@@ -40,11 +40,13 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between px-5 py-4 border-t border-slate-200/80 dark:border-white/10 bg-white/70 dark:bg-white/5">
+    <div class="flex items-center justify-between px-5 py-4 bg-white/70 dark:bg-white/5">
       <div class="flex items-center gap-3">
         <button
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]"
-          :class="multiSelectMode ? 'bg-[var(--brand-primary)] text-white border-transparent hover:text-white' : ''"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5"
+          :class="multiSelectMode
+            ? 'bg-[var(--brand-primary)] text-white/95 hover:bg-[var(--brand-primary)]/90 shadow-[0_10px_30px_rgba(81,98,255,0.25)]'
+            : 'text-slate-700 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]'"
           @click="toggleMultiSelect"
         >
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
@@ -52,18 +54,21 @@
           </svg>
           <span>{{ t('taskList.multiSelect') || '多选' }}</span>
         </button>
-        <span v-if="multiSelectMode" class="text-xs text-slate-500 dark:text-slate-300 tracking-wide">
-          {{ t('taskList.selectedCount') || '已选择' }}: {{ selectedTaskIds.length }}
-        </span>
       </div>
       <div class="flex items-center gap-3">
         <button
-          class="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full text-base font-semibold transition-transform duration-150 bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60"
+          class="relative inline-flex items-center justify-center px-10 py-3 rounded-full text-base font-semibold transition-all duration-200 ease-out bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 w-[230px]"
           :class="{ 'cursor-not-allowed opacity-60 pointer-events-none': !canStart }"
           :disabled="!canStart"
           @click="handleStart"
         >
-          {{ t('videoSettings.compress') || '开始压缩' }}
+          <span>{{ t('videoSettings.compress') || '开始压缩' }}</span>
+          <span
+            v-if="multiSelectMode"
+            class="absolute right-6 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/25 dark:bg-white/10 text-sm font-semibold transition-all duration-200 backdrop-blur-sm"
+          >
+            {{ selectedTaskIds.length }}
+          </span>
         </button>
       </div>
     </div>
@@ -158,7 +163,12 @@ const handleStart = () => {
 
 const toggleMultiSelect = () => {
   multiSelectMode.value = !multiSelectMode.value;
-  if (!multiSelectMode.value) {
+  if (multiSelectMode.value) {
+    const current = selectedTaskId.value;
+    if (current && !selectedTaskIds.value.includes(current)) {
+      selectedTaskIds.value = [current];
+    }
+  } else {
     selectedTaskIds.value = [];
   }
 };

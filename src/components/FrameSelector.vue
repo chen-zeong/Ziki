@@ -1,25 +1,26 @@
 <template>
   <div v-if="props.videoPath" class="frame-selector flex justify-center">
-  <div class="flex items-center gap-2 px-5 py-2 rounded-full bg-white dark:bg-[#1d202a] border border-slate-200/80 dark:border-white/10 transition-all duration-200">
+    <div class="flex items-center gap-2 px-5 py-2 rounded-full bg-white dark:bg-[#1d202a] border border-slate-200/80 dark:border-white/10 shadow-[0_10px_24px_rgba(15,23,42,0.12)] dark:shadow-[0_12px_28px_rgba(3,8,20,0.55)] transition-all duration-200">
       <div 
         v-for="index in 10" 
         :key="index"
-        class="w-7 h-1.5 rounded-full cursor-pointer transition-all duration-250"
+        class="w-8 h-1.5 rounded-full cursor-pointer transition-all duration-200"
         :style="{
-          background: selectedFrame === index - 1
-            ? 'linear-gradient(135deg, rgba(81,98,255,0.95), rgba(79,227,193,0.9))'
-            : 'rgba(148, 163, 184, 0.35)'
+          backgroundColor: selectedFrame === index - 1
+            ? 'rgba(81, 98, 255, 0.9)'
+            : hoveredIndicator === index - 1
+              ? 'rgba(148, 163, 184, 0.8)'
+              : 'rgba(148, 163, 184, 0.35)'
         }"
         @mouseenter="handleHover(index - 1)"
         @mouseleave="handleHover(null)"
         @click="selectFrame(index - 1)"
         :title="`第 ${index} 帧`"
         :class="{
-          'opacity-60': selectedFrame !== index - 1 && hoveredIndicator !== index - 1,
-          'opacity-90': selectedFrame === index - 1 || hoveredIndicator === index - 1
+          'shadow-[0_4px_12px_rgba(81,98,255,0.25)] scale-105': selectedFrame === index - 1,
+          'opacity-75': hoveredIndicator === index - 1 && selectedFrame !== index - 1
         }"
-      >
-      </div>
+      ></div>
     </div>
   </div>
 </template>

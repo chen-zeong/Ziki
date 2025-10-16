@@ -1,15 +1,12 @@
 <template>
   <div class="relative">
     <button 
-      class="h-6 px-2 rounded-md text-xs text-gray-600 dark:text-dark-secondary bg-gray-200 dark:bg-dark-border hover:bg-gray-300 dark:hover:bg-dark-panel focus:outline-none transition-colors flex items-center space-x-1"
+      class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary bg-white dark:bg-dark-border border border-slate-200/70 dark:border-white/10 rounded-md transition-colors hover:bg-gray-200 dark:hover:bg-dark-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
       @click="toggleDropdown"
       :title="$t('language.switch')"
       data-tauri-drag-region="false"
     >
-      <span>{{ currentLanguageName }}</span>
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-      </svg>
+      <Languages class="w-4 h-4" />
     </button>
     
     <!-- 下拉菜单 -->
@@ -23,29 +20,24 @@
     >
       <div 
         v-if="showDropdown" 
-        class="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-dark-panel rounded-lg shadow-lg border border-gray-200 dark:border-dark-border z-50"
+        class="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-[#161b24] rounded-xl shadow-[0_16px_38px_rgba(15,23,42,0.15)] dark:shadow-[0_18px_34px_rgba(5,10,24,0.55)] border border-slate-200/70 dark:border-slate-700/60 z-50"
         @click.stop
       >
-        <div class="py-1">
+        <div class="py-1.5">
           <button
             v-for="lang in languages"
             :key="lang.code"
-            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center justify-between"
-            :class="{
-              'text-amber-600 dark:text-dark-accent bg-amber-50 dark:bg-dark-accent/20': currentLocale === lang.code,
-              'text-gray-700 dark:text-dark-text': currentLocale !== lang.code
-            }"
+            class="w-full px-4 py-2 text-left text-sm transition-all duration-150 flex items-center justify-between"
+            :class="currentLocale === lang.code
+              ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-medium rounded-lg'
+              : 'text-slate-600 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-700/40 rounded-lg'"
             @click="switchLang(lang.code)"
           >
             <span>{{ lang.name }}</span>
-            <svg 
-              v-if="currentLocale === lang.code" 
-              class="w-4 h-4 text-amber-600 dark:text-dark-accent" 
-              fill="currentColor" 
-              viewBox="0 0 20 20"
-            >
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-            </svg>
+            <Check 
+              v-if="currentLocale === lang.code"
+              class="w-4 h-4 text-[var(--brand-primary)]"
+            />
           </button>
         </div>
       </div>
@@ -55,12 +47,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { switchLanguage, getCurrentLocale } from '../i18n';
+import { switchLanguage } from '../i18n';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import type { Language } from '../stores/useGlobalSettingsStore';
+import { Languages, Check } from 'lucide-vue-next';
 
-const { locale } = useI18n();
 const globalSettings = useGlobalSettingsStore();
 
 const showDropdown = ref(false);
@@ -71,11 +62,6 @@ const languages = [
 ];
 
 const currentLocale = computed(() => globalSettings.language);
-
-const currentLanguageName = computed(() => {
-  const lang = languages.find(l => l.code === currentLocale.value);
-  return lang ? lang.name : 'English';
-});
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;

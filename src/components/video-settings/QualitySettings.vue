@@ -10,42 +10,48 @@
         </span>
       </div>
 
-      <div class="relative pt-4 pb-2">
-        <div class="relative h-3 rounded-full bg-slate-200/80 dark:bg-slate-700/70 overflow-hidden">
+      <div class="relative pt-2">
+        <div class="relative h-8 flex items-center">
+          <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full z-0"></div>
+
           <div
-            class="absolute inset-y-0 left-0 bg-[var(--brand-primary)]/90 transition-all duration-150"
+            class="absolute top-1/2 -translate-y-1/2 w-[2px] h-3 rounded bg-slate-300 dark:bg-white/50 pointer-events-none z-30"
+            :style="{ left: `calc(${defaultSliderPosition}% - 1.5px)` }"
+            aria-hidden="true"
+          ></div>
+
+          <div
+            class="absolute h-3 rounded-full z-10 bg-[var(--brand-primary)]/90 transition-[width] duration-150 ease-out"
             :style="{ width: qualityValue + '%' }"
-          />
+          ></div>
+
           <div
-            class="absolute top-1/2 -translate-y-1/2 w-[2px] h-3 rounded bg-slate-300 dark:bg-white/50"
-            :style="{ left: `calc(${defaultSliderPosition}% - 1px)` }"
-          />
-        </div>
+            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full cursor-pointer transition-transform duration-150 ease-out hover:scale-105 z-30"
+            :class="{ 'scale-105': showTooltip }"
+            :style="{ left: `calc(${qualityValue}% - 14px)` }"
+          >
+            <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60 shadow ring-1 ring-white/40 dark:ring-white/10"></div>
+          </div>
 
-        <div
-          class="absolute top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white dark:bg-[#181b23] border border-slate-200/80 dark:border-white/15 shadow-sm transition-transform duration-150 grid place-items-center"
-          :class="{ 'scale-105': showTooltip }"
-          :style="{ left: `calc(${qualityValue}% - 14px)` }"
-        >
-          <div class="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />
-        </div>
-
-        <div
-          class="absolute bottom-full mb-2 pointer-events-none -translate-x-1/2 text-xs px-2 py-1 rounded bg-slate-900 text-white dark:bg-white/90 dark:text-slate-900 transition duration-150"
-          :class="showTooltip ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'"
-          :style="{ left: qualityValue + '%' }"
-        >
-          {{ currentParamDisplay }}
+          <div
+            class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-40 transition duration-150 ease-out"
+            :class="{ 'opacity-100 translate-y-0 scale-100': showTooltip, 'opacity-0 -translate-y-1 scale-95': !showTooltip }"
+            :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
+          >
+            <div class="tooltip-bubble">
+              {{ currentParamDisplay }}
+            </div>
+          </div>
         </div>
 
         <input
           id="quality-slider"
-          v-model="qualityValue"
+          v-model.number="qualityValue"
           type="range"
           min="2"
           max="98"
           step="1"
-          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-50"
           @input="updateQualityState"
           @mouseenter="showTooltip = true"
           @mouseleave="showTooltip = false"
@@ -236,4 +242,124 @@ const computeQualityMetadata = (sliderValue: number) => {
     hint
   };
 };
+
+// ===== 新增：模板所需的计算属性与方法 =====
+const defaultSliderPosition = computed(() => {
+  return getDefaultQualityParam(props.currentVideoCodec || 'h264', props.isHardwareAccelerated || false).sliderValue;
+});
+
+const qualityMeta = computed(() => computeQualityMetadata(qualityValue.value));
+const qualityText = computed(() => t(qualityMeta.value.labelKey));
+
+const currentParamDisplay = computed(() => {
+  const { param } = qualityMeta.value;
+  if (param.paramType === 'crf') return `CRF ${param.value}`;
+  if (param.paramType === 'qv') return `-q:v ${param.value}`;
+  if (param.paramType === 'profile') return `Profile ${String(param.value).toUpperCase()}`;
+  return '';
+});
+
+const bitDepthText = computed(() => `${selectedBitDepth.value}bit`);
+const bitDepthTooltip = (depth: number) => `${depth}bit`;
+
+const canUseDepth = (depth: number) => {
+  // 简化逻辑：默认允许所有位深；如需限制，可根据 codec/hardware 能力判断
+  return [8, 10, 12].includes(depth);
+};
+
+const setBitDepth = (depth: number) => {
+  if (![8, 10, 12].includes(depth)) return;
+  selectedBitDepth.value = depth as 8 | 10 | 12;
+  const updates: Partial<CompressionSettings> = {
+    ...settings.value,
+    bitDepth: selectedBitDepth.value
+  };
+  settings.value = updates;
+  emit('update:modelValue', updates);
+};
+
+const bitDepthButtonClass = (depth: number) => {
+  const isSelected = selectedBitDepth.value === depth;
+  const disabled = !canUseDepth(depth);
+  return [
+    isSelected
+      ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+      : 'border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200',
+    disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10'
+  ].join(' ');
+};
+
+const updateQualityState = () => {
+  const param = getEncoderQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false,
+    qualityValue.value
+  );
+
+  const updates: Partial<CompressionSettings> = {
+    qualityType: param.paramType as 'crf' | 'qv' | 'profile',
+    bitDepth: selectedBitDepth.value
+  };
+
+  if (param.paramType === 'crf') {
+    updates.crfValue = Number(param.value);
+    updates.qvValue = undefined;
+    updates.profileValue = undefined;
+  } else if (param.paramType === 'qv') {
+    updates.qvValue = Number(param.value);
+    updates.crfValue = undefined;
+    updates.profileValue = undefined;
+  } else if (param.paramType === 'profile') {
+    updates.profileValue = String(param.value);
+    updates.crfValue = undefined;
+    updates.qvValue = undefined;
+  }
+
+  settings.value = { ...settings.value, ...updates };
+  emit('update:modelValue', settings.value);
+};
+
+// 同步外部传入的 modelValue 到内部状态
+watch(() => props.modelValue, () => {
+  if (props.modelValue.bitDepth && [8, 10, 12].includes(props.modelValue.bitDepth as number)) {
+    selectedBitDepth.value = props.modelValue.bitDepth as 8 | 10 | 12;
+  }
+  qualityValue.value = deriveSliderFromModel();
+}, { deep: true });
+
+onMounted(async () => {
+  await nextTick();
+  emit('update:modelValue', settings.value);
+});
 </script>
+
+<style scoped>
+.tooltip-bubble {
+  position: relative;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  white-space: nowrap;
+}
+.tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(30, 41, 59, 0.96);
+}
+:deep(.dark) .tooltip-bubble {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  border-color: rgba(100, 116, 139, 0.25);
+}
+</style>
