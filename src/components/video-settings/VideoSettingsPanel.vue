@@ -23,16 +23,6 @@
               v-model="hardwareSettings" 
               :current-video-codec="formatSettings.videoCodec"
             />
-            <!-- 新增：自定义时间段设置（仅视频模式显示） -->
-            <div>
-              <TimeRangeSettings
-                v-if="videoPath"
-                :modelValue="timeRangeSettings"
-                :metadata="currentVideoMetadata"
-                @update:modelValue="(val: any) => emit('update:timeRangeSettings', val)"
-                @validationChange="(isValid: boolean) => emit('time-validation-change', isValid)"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -47,7 +37,6 @@ import { invoke } from '@tauri-apps/api/core';
 import VideoFormatSettings from './VideoFormatSettings.vue';
 import HardwareAccelerationSettings from './HardwareAccelerationSettings.vue';
 import QualitySettings from './QualitySettings.vue';
-import TimeRangeSettings from './TimeRangeSettings.vue'
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskSettingsStore } from '../../stores/useTaskSettingsStore';
 import type { CompressionSettings, VideoFile } from '../../types';
@@ -141,8 +130,6 @@ const detectPlatform = async () => {
     console.error('Failed to detect platform:', error);
   }
 };
-
-const isTimeValid = ref(true);
 
 // 处理画质设置更新，避免循环依赖
 const handleQualitySettingsUpdate = (newQualitySettings: Partial<CompressionSettings>) => {

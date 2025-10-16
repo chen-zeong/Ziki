@@ -24,7 +24,7 @@
         <section class="space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {{ $t('taskList.status') }}
+              {{ $t('taskList.statusLabel') }}
             </span>
             <StatusBadge :status="task.status" />
           </div>

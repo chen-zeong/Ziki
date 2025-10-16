@@ -3,7 +3,7 @@
     <!-- 触发按钮 -->
     <button
       type="button"
-      class="w-full bg-white dark:bg-[#20242f] border border-slate-200/80 dark:border-white/10 rounded-xl px-4 py-3 text-left hover:bg-white/90 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] relative pr-10 transition-all duration-200"
+      class="w-full bg-white dark:bg-[#20242f] border border-slate-200/80 dark:border-white/10 rounded-xl px-4 py-2 text-left hover:bg-white/90 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] relative pr-10 transition-all duration-200"
       @click.stop="toggleDropdown"
     >
       <span :class="['block truncate font-medium', isPlaceholder ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-100']">{{ selectedLabel || placeholderText }}</span>

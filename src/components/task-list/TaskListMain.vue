@@ -14,12 +14,40 @@
     />
 
     <div class="flex-1 overflow-y-auto px-5 pb-4 transition-all duration-200">
-      <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-        <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-        <p class="text-lg font-medium mb-2">{{ $t('taskList.noTasks') }}</p>
-        <p class="text-sm text-center max-w-md">{{ $t('taskList.noTasksDescription') }}</p>
+      <div v-if="tasks.length === 0" class="flex h-full items-center justify-center">
+        <div class="relative w-full max-w-xl overflow-hidden rounded-[28px] border border-dashed border-slate-300/70 dark:border-white/15 bg-white/80 dark:bg-[#141927]/85 shadow-[0_32px_70px_rgba(15,23,42,0.16)] px-12 py-14 text-center">
+          <div class="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
+            <div class="absolute -top-28 right-10 h-48 w-48 rounded-full bg-[var(--brand-primary)]/15 blur-[90px]"></div>
+            <div class="absolute -bottom-32 left-0 h-52 w-52 rounded-full bg-sky-200/25 dark:bg-sky-500/15 blur-[110px]"></div>
+          </div>
+          <div class="relative flex flex-col items-center gap-6 text-slate-600 dark:text-slate-300">
+            <div class="grid place-items-center rounded-2xl bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-[#1c2435] dark:via-[#182031] dark:to-[#111623] border border-white/70 dark:border-white/10 shadow-[0_20px_42px_rgba(15,23,42,0.18)] h-20 w-20">
+              <svg class="w-9 h-9 text-[var(--brand-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <div class="space-y-3 max-w-lg">
+              <h3 class="text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">{{ $t('taskList.noTasks') }}</h3>
+              <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                {{ $t('taskList.noTasksDescription') }}
+              </p>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 text-sm">
+              <button
+                class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[var(--brand-primary)] text-white font-medium shadow-[0_18px_36px_rgba(81,98,255,0.32)] hover:translate-y-[-2px] transition-transform"
+                @click="$emit('add-files')"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+                </svg>
+                {{ $t('toolbar.addFiles') }}
+              </button>
+              <div class="text-xs uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
+                {{ $t('taskList.uploadHint') }}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-else class="space-y-2.5">
@@ -40,25 +68,29 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between px-5 py-4 bg-white/70 dark:bg-white/5">
-      <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 px-5 py-4 bg-white/70 dark:bg-white/5">
+      <div class="flex items-center gap-3 flex-[1] min-w-0">
         <button
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5"
+          class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 gap-0"
           :class="multiSelectMode
             ? 'bg-[var(--brand-primary)] text-white/95 hover:bg-[var(--brand-primary)]/90 shadow-[0_10px_30px_rgba(81,98,255,0.25)]'
             : 'text-slate-700 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]'"
           @click="toggleMultiSelect"
+          :aria-pressed="multiSelectMode"
+          :aria-label="t('taskList.multiSelect') || 'Multi-select'"
         >
           <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
             <path d="M9 11l3 3L22 4l2 2-12 12-5-5 2-2z" />
           </svg>
-          <span>{{ t('taskList.multiSelect') || '多选' }}</span>
         </button>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-[3] min-w-0 justify-end">
         <button
-          class="relative inline-flex items-center justify-center px-10 py-3 rounded-full text-base font-semibold transition-all duration-200 ease-out bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 w-[230px]"
-          :class="{ 'cursor-not-allowed opacity-60 pointer-events-none': !canStart }"
+          class="relative inline-flex w-full max-w-md items-center justify-center px-10 py-3 rounded-full text-base font-semibold transition-all duration-200 ease-out bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 overflow-hidden"
+          :class="{
+            'cursor-not-allowed opacity-60 pointer-events-none': !canStart,
+            'start-button--processing': !multiSelectMode && selectedTaskStatus === 'processing'
+          }"
           :disabled="!canStart"
           @click="handleStart"
         >
@@ -73,9 +105,9 @@
       </div>
     </div>
 
-    <TaskDetailsPanel
-      v-if="activeDetailTask"
+    <TaskDetails
       :task="activeDetailTask"
+      :open="!!activeDetailTask"
       @close="closeDetailPanel"
     />
   </div>
@@ -91,7 +123,7 @@ import { useTaskStore } from '../../stores/useTaskStore';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
-import TaskDetailsPanel from './TaskDetailsPanel.vue';
+import TaskDetails from './TaskDetails.vue';
  
  import type { CompressionTask } from '../../types';
  
@@ -139,6 +171,12 @@ const detailTaskId = ref<string | null>(null);
  // 底部操作区相关：是否可开始、选择与多选切换
 const canStart = computed(() => {
   return multiSelectMode.value ? selectedTaskIds.value.length > 0 : !!selectedTaskId.value;
+});
+
+const selectedTaskStatus = computed(() => {
+  const current = selectedTaskId.value;
+  if (!current) return null;
+  return tasks.value.find(task => task.id === current)?.status || null;
 });
 
 const activeDetailTask = computed(() => {
@@ -392,4 +430,54 @@ watch(tasks, (newTasks) => {
     detailTaskId.value = null;
   }
 });
- </script>
+</script>
+
+<style scoped>
+.start-button--processing::before,
+.start-button--processing::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+}
+.start-button--processing::before {
+  width: 112%;
+  height: 112%;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: transparent;
+  border-left-color: transparent;
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: start-orbit 1.4s linear infinite;
+}
+.start-button--processing::after {
+  width: 138%;
+  height: 138%;
+  border-radius: 999px;
+  transform: translate(-50%, -50%) scale(0.7);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 65%);
+  opacity: 0.75;
+  animation: start-pulse 2.6s ease-out infinite;
+}
+
+@keyframes start-orbit {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes start-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.65);
+    opacity: 0.7;
+  }
+  55% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.65);
+    opacity: 0;
+  }
+}
+</style>

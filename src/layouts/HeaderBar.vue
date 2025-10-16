@@ -152,7 +152,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       
       <LanguageSwitcher />
       <button 
-        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary bg-white dark:bg-dark-border border border-slate-200/70 dark:border-white/10 rounded-md transition-colors hover:bg-gray-200 dark:hover:bg-dark-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
+        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary rounded-md transition-colors hover:bg-gray-200/80 dark:hover:bg-dark-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
         @click="globalSettings.toggleTheme"
         :aria-pressed="globalSettings.isDarkMode"
         :data-tauri-drag-region="false"

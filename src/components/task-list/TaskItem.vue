@@ -11,21 +11,14 @@
       class="absolute inset-y-3 left-1 w-[3px] rounded-full bg-[var(--brand-primary)]/85 dark:bg-[var(--brand-primary)]/70 pointer-events-none"
       aria-hidden="true"
     />
-    <button
+    <span
       v-if="isMultiSelect"
-      type="button"
-      class="task-checkbox absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]/60"
+      class="absolute top-2 right-3 w-3 h-3 rounded-full pointer-events-none transition-all duration-200 border"
       :class="isChecked
-        ? 'bg-[var(--brand-primary)] text-white border-transparent shadow-[0_8px_18px_rgba(81,98,255,0.32)]'
-        : 'bg-white dark:bg-[#1f2330] border-slate-200/70 dark:border-white/15 text-transparent'"
-      role="checkbox"
-      :aria-checked="isChecked"
-      @click.stop="toggleCheckbox"
-      @keydown.enter.prevent="toggleCheckbox"
-      @keydown.space.prevent="toggleCheckbox"
-    >
-      <Check v-if="isChecked" class="w-3.5 h-3.5" />
-    </button>
+        ? 'bg-[var(--brand-primary)] border-transparent shadow-[0_0_6px_rgba(81,98,255,0.35)]'
+        : 'bg-white dark:bg-[#1c2334] border-slate-300/70 dark:border-slate-700/70 shadow-[inset_0_0_2px_rgba(15,23,42,0.18)]'"
+      :aria-hidden="true"
+    />
 
     <div class="flex items-center gap-3">
       <!-- 多选时的勾选框已移入卡片内，默认隐藏 -->
@@ -59,19 +52,24 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <StatusBadge :status="task.status" />
-          <div v-if="task.status === 'processing'" class="w-32">
-            <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+          <div v-if="task.status === 'processing'" class="w-44">
+            <div class="progress-track">
               <div
-                class="h-full rounded-full bg-[var(--brand-primary)] transition-all duration-200 ease-linear"
-                :style="{ width: `${Math.max(task.progress || 0, 3)}%` }"
-              ></div>
+                class="progress-fill"
+                :style="{ width: normalizedProgress + '%' }"
+              >
+                <span class="progress-sheen"></span>
+              </div>
             </div>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-              {{ (task.progress || 0).toFixed(1) }}% · {{ estimatedRemaining }}
-            </p>
           </div>
-          <div v-else-if="task.status === 'completed' && task.compressedSize" class="text-[11px] text-emerald-600 dark:text-emerald-300 font-medium">
-            {{ compressionSummary }}
+          <div v-else-if="task.status === 'completed'" class="relative">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/80 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-200 text-xs font-semibold shadow-[0_6px_16px_rgba(16,185,129,0.18)]">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{{ t('taskList.completed') || '完成' }}</span>
+              <span class="text-[11px] font-semibold">{{ completionProgress }}</span>
+            </span>
           </div>
           <div v-else-if="task.status === 'failed'" class="text-[11px] text-rose-500 dark:text-rose-300">
             {{ failureHint }}
@@ -129,7 +127,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../../stores/useTaskStore';
 import StatusBadge from './StatusBadge.vue';
-import { Video, Pause, Play, Trash, Folder, Check, Info } from 'lucide-vue-next';
+import { Video, Pause, Play, Trash, Folder, Info } from 'lucide-vue-next';
 import type { CompressionTask } from '../../types';
 
 interface Props {
@@ -156,6 +154,13 @@ const globalSettings = useGlobalSettingsStore();
 const taskStore = useTaskStore();
 
 const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+
+const progressValue = computed(() => Number(props.task.progress ?? 0));
+const normalizedProgress = computed(() => {
+  const value = progressValue.value;
+  if (value === 0) return 2;
+  return Math.min(100, Math.max(value, 2));
+});
 
 const isActive = computed(() => props.isSelected || (props.isMultiSelect && props.isChecked));
 
@@ -212,46 +217,11 @@ const handleThumbnailError = (event: Event) => {
   img.style.display = 'none';
 };
 
-const estimatedRemaining = computed(() => {
-  const { progress, startedAt, status } = props.task;
-  // 仅在 processing 且有有效进度时尝试计算剩余时间
-  if (status !== 'processing' || progress == null || progress <= 0 || progress >= 100) {
-    return t('taskList.statusProcessing');
+const completionProgress = computed(() => {
+  if (progressValue.value && progressValue.value > 0) {
+    return `${Math.round(progressValue.value)}%`;
   }
-
-  // 根据 startedAt 估算处理速度（百分比/秒）
-  let elapsedSec: number | null = null;
-  if (startedAt) {
-    try {
-      const startMs = typeof startedAt === 'string' ? Date.parse(startedAt) : new Date(startedAt as unknown as Date).getTime();
-      if (!Number.isNaN(startMs)) {
-        elapsedSec = Math.max(1, Math.floor((Date.now() - startMs) / 1000));
-      }
-    } catch (_) {
-      // 解析失败则回退到显示“处理中”
-      elapsedSec = null;
-    }
-  }
-
-  if (!elapsedSec) {
-    return t('taskList.statusProcessing');
-  }
-
-  const speed = progress / elapsedSec; // 百分比/秒
-  if (!speed || speed <= 0) {
-    return t('taskList.statusProcessing');
-  }
-
-  const remaining = (100 - progress) / speed; // 剩余秒数
-  const minutes = Math.floor(remaining / 60);
-  const seconds = Math.floor(remaining % 60);
-  return `${minutes}:${seconds.toString().padStart(2, '0')} ${t('taskList.remainingShort') || ''}`;
-});
-
-const compressionSummary = computed(() => {
-  if (!props.task.compressedSize || !props.task.originalSize) return t('taskList.statusCompleted');
-  const change = ((props.task.originalSize - props.task.compressedSize) / props.task.originalSize) * 100;
-  return `${t('taskList.compressedBy') || '减少'} ${Math.abs(change).toFixed(1)}%`;
+  return '100%';
 });
 
 const failureHint = computed(() => {
@@ -262,6 +232,49 @@ const failureHint = computed(() => {
 
 <style scoped>
 .task-card-grid { display: grid; grid-template-columns: 0fr auto; transition: grid-template-columns 0.3s ease-in-out; }
+.progress-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.22);
+  box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+.dark .progress-track {
+  background: rgba(39, 48, 70, 0.55);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.progress-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(81, 98, 255, 0.92);
+  transition: width 0.35s ease;
+  box-shadow: 0 6px 16px rgba(81, 98, 255, 0.28);
+  overflow: hidden;
+}
+.progress-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  opacity: 0.6;
+}
+.progress-sheen {
+  position: absolute;
+  top: -40%;
+  left: -30%;
+  width: 45%;
+  height: 180%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%);
+  transform: rotate(18deg);
+  animation: progress-sheen-move 2.8s ease-in-out infinite;
+}
+@keyframes progress-sheen-move {
+  0% { transform: translateX(-30%) rotate(18deg); opacity: 0.45; }
+  50% { transform: translateX(160%) rotate(18deg); opacity: 0.9; }
+  100% { transform: translateX(260%) rotate(18deg); opacity: 0; }
+}
 .action-btn {
   display: grid;
   place-items: center;

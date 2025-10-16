@@ -10,33 +10,34 @@
         </span>
       </div>
 
-      <div class="relative pt-2">
-        <div class="relative h-8 flex items-center">
-          <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full z-0"></div>
-
-          <div
-            class="absolute top-1/2 -translate-y-1/2 w-[2px] h-3 rounded bg-slate-300 dark:bg-white/50 pointer-events-none z-30"
-            :style="{ left: `calc(${defaultSliderPosition}% - 1.5px)` }"
-            aria-hidden="true"
-          ></div>
-
-          <div
-            class="absolute h-3 rounded-full z-10 bg-[var(--brand-primary)]/90 transition-[width] duration-150 ease-out"
-            :style="{ width: qualityValue + '%' }"
-          ></div>
-
-          <div
-            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full cursor-pointer transition-transform duration-150 ease-out hover:scale-105 z-30"
-            :class="{ 'scale-105': showTooltip }"
-            :style="{ left: `calc(${qualityValue}% - 14px)` }"
-          >
-            <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60 shadow ring-1 ring-white/40 dark:ring-white/10"></div>
+      <div class="relative pt-3 pb-2">
+        <div class="slider-shell">
+          <div class="slider-track">
+            <div
+              class="slider-default-marker"
+              :style="{ left: `calc(${defaultSliderPosition}% - 1px)` }"
+            ></div>
+            <div
+              class="slider-glow"
+              :style="{ width: qualityValue + '%' }"
+            ></div>
+            <div
+              class="slider-fill"
+              :style="{ width: qualityValue + '%' }"
+            ></div>
           </div>
-
           <div
-            class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-40 transition duration-150 ease-out"
-            :class="{ 'opacity-100 translate-y-0 scale-100': showTooltip, 'opacity-0 -translate-y-1 scale-95': !showTooltip }"
-            :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
+            class="slider-thumb"
+            :class="{ 'is-active': showTooltip }"
+            :style="{ left: `calc(${qualityValue}% - 18px)` }"
+          >
+            <span class="thumb-core"></span>
+            <span class="thumb-ring"></span>
+          </div>
+          <div
+            class="slider-tooltip"
+            :class="{ 'slider-tooltip--visible': showTooltip }"
+            :style="{ left: qualityValue + '%' }"
           >
             <div class="tooltip-bubble">
               {{ currentParamDisplay }}
@@ -51,7 +52,7 @@
           min="2"
           max="98"
           step="1"
-          class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-50"
+          class="slider-input"
           @input="updateQualityState"
           @mouseenter="showTooltip = true"
           @mouseleave="showTooltip = false"
@@ -334,6 +335,109 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.slider-shell {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.28), rgba(148, 163, 184, 0.16));
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+.dark .slider-track {
+  background: linear-gradient(135deg, rgba(42, 52, 78, 0.75), rgba(32, 39, 59, 0.45));
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.slider-default-marker {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 100%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.95), rgba(148, 163, 184, 0.75));
+  pointer-events: none;
+  opacity: 0.8;
+}
+.dark .slider-default-marker {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(148, 163, 184, 0.45));
+}
+.slider-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 0% 50%, rgba(81, 98, 255, 0.24), rgba(79, 227, 193, 0));
+  transition: width 0.35s ease;
+}
+.slider-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(81, 98, 255, 0.95), rgba(79, 227, 193, 0.95));
+  transition: width 0.35s ease;
+  box-shadow: 0 8px 20px rgba(81, 98, 255, 0.25);
+}
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.slider-thumb.is-active {
+  transform: translateY(-50%) scale(1.05);
+}
+.thumb-core {
+  position: absolute;
+  inset: 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffffff, #e2e8f0);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
+}
+.dark .thumb-core {
+  background: linear-gradient(135deg, rgba(226, 232, 240, 0.9), rgba(148, 163, 184, 0.6));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.thumb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(129, 140, 248, 0.35), rgba(129, 140, 248, 0));
+  animation: thumbPulse 2.2s ease-in-out infinite;
+}
+.slider-tooltip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%) translateY(6px) scale(0.96);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.slider-tooltip--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+.slider-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 40;
+}
+@keyframes thumbPulse {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(0.9); opacity: 0.55; }
+}
 .tooltip-bubble {
   position: relative;
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));

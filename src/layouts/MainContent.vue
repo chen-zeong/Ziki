@@ -145,7 +145,7 @@ defineExpose({
 <template>
   <!-- 主内容区域 -->
   <main
-    class="flex-grow flex pr-6 pl-4 space-x-4 overflow-hidden bg-transparent dark:bg-transparent pt-9 pb-6 transition-all duration-300"
+    class="flex-grow flex pr-6 pl-4 space-x-4 overflow-hidden bg-transparent dark:bg-transparent pt-9 transition-all duration-300"
     style="pointer-events: auto;"
   >
     <!-- 左侧面板: 任务队列 -->
@@ -172,6 +172,7 @@ defineExpose({
           @pause-task="emit('pause-task', $event)"
           @select-task="emit('select-task', $event)"
           @clear-all-tasks="emit('clear-all-tasks')"
+          @start-compress="triggerCompress"
           @toggle-output-folder="emit('toggle-output-folder-popup')"
         />
       </div>
