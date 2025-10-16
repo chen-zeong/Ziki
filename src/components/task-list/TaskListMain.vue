@@ -94,6 +94,8 @@ import TaskDetailsPanel from './TaskDetailsPanel.vue';
 const taskStore = useTaskStore();
  // Tauri 窗口实例（仅在 Tauri 环境下使用）
  let appWindow: TauriWindow | null = null;
+// 新增：环境检测，避免在 Web 端注册 Tauri 事件
+const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
 
  interface Props {
    // 保持props接口兼容性，但内部使用store
@@ -189,7 +191,9 @@ const deleteTask = async (taskId: string) => {
      if (task.status === 'processing' || task.status === 'paused') {
        console.log('Cancelling system task before deletion:', taskId);
        try {
-         await invoke('pause_task', { taskId });
+         if (isTauri) {
+           await invoke('pause_task', { taskId });
+         }
          console.log('System task cancelled successfully:', taskId);
        } catch (err) {
          console.warn('Failed to cancel system task:', err);
@@ -208,7 +212,9 @@ const deleteTask = async (taskId: string) => {
 
  const pauseTask = async (taskId: string) => {
    try {
-     await invoke('pause_task', { taskId });
+     if (isTauri) {
+       await invoke('pause_task', { taskId });
+     }
      taskStore.updateTaskStatus(taskId, 'paused');
    } catch (error) {
      console.error('Pause task failed:', error);
@@ -217,7 +223,9 @@ const deleteTask = async (taskId: string) => {
 
  const resumeTask = async (taskId: string) => {
    try {
-     await invoke('resume_task', { taskId });
+     if (isTauri) {
+       await invoke('resume_task', { taskId });
+     }
      taskStore.updateTaskStatus(taskId, 'processing');
    } catch (error) {
      console.error('Resume task failed:', error);
@@ -284,6 +292,10 @@ const handleClearAllTasks = () => {
  // Lifecycle: register/unregister Tauri listeners
  let unlistenWindowFileDrop: UnlistenFn | null = null;
  onMounted(async () => {
+   if (!isTauri) {
+     // Web 环境不注册 Tauri 事件
+     return;
+   }
    try {
      const ddEnter = await listen('tauri://file-drop', (event) => {
        const paths = (event as any).payload as string[];
@@ -351,6 +363,7 @@ const handleClearAllTasks = () => {
 });
 
  onUnmounted(async () => {
+   if (!isTauri) return;
    try {
      const funcs = [unlistenDragEnter, unlistenDragLeave, unlistenDragOver, unlistenFileDrop, unlistenWindowFileDrop];
      for (const fn of funcs) {

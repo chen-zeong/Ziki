@@ -4,43 +4,14 @@
     :class="{
       'border-[var(--brand-primary)]/60 is-selected': isSelected,
       'border-slate-200/80 dark:border-white/10': !isSelected,
-      'multi-select-active': isMultiSelect
+      'multi-select-active translate-x-6': isMultiSelect
     }"
     @click="$emit('select', task.id)"
   >
     <div class="flex items-center gap-3">
-      <div
-        class="checkbox-wrapper flex items-center justify-center transition-all duration-300"
-        :class="[
-          isMultiSelect ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-4 pointer-events-none',
-          isMultiSelect ? 'delay-75' : ''
-        ]"
-      >
-        <button
-          class="h-6 w-6 grid place-content-center rounded-full border border-slate-300/80 dark:border-white/15 transition-all duration-150 bg-white dark:bg-transparent"
-          :class="isChecked ? 'bg-[var(--brand-primary)] border-transparent text-white shadow-sm' : 'text-transparent'"
-          @click.stop="$emit('toggle-check', task.id)"
-        >
-          <svg
-            class="h-3.5 w-3.5 text-current transition-transform duration-150"
-            :class="isChecked ? 'scale-100 opacity-100' : 'scale-75 opacity-0'"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </button>
-      </div>
+      <!-- 移除内置勾选框，改由父组件外部渲染 -->
 
-      <div
-        class="flex items-center gap-3 flex-1 min-w-0 transition-transform duration-200"
-        :class="isMultiSelect ? 'translate-x-3' : 'translate-x-0'"
-      >
+      <div class="flex items-center gap-3 flex-1 min-w-0">
         <div class="h-10 w-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 grid place-items-center border border-slate-200/70 dark:border-white/10">
           <img
             v-if="task.file.thumbnailUrl || task.type === 'image'"
@@ -164,6 +135,8 @@ const { t } = useI18n();
 const globalSettings = useGlobalSettingsStore();
 const taskStore = useTaskStore();
 
+const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+
 const formatFileSize = (bytes: number): string => {
   if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';
   const k = 1024;
@@ -183,9 +156,18 @@ const openOutputFolder = async (task: CompressionTask) => {
       }
     }
     if (!folderPath) {
-      folderPath = await invoke<string>('get_desktop_path');
+      if (isTauri) {
+        folderPath = await invoke<string>('get_desktop_path');
+      } else {
+        console.warn('非 Tauri 环境，无法获取桌面路径');
+        return;
+      }
     }
-    await invoke('open_output_folder', { folderPath });
+    if (isTauri) {
+      await invoke('open_output_folder', { folderPath });
+    } else {
+      console.warn('非 Tauri 环境，无法打开本地文件夹');
+    }
   } catch (error) {
     console.error('Failed to open output folder:', error);
   }
@@ -197,8 +179,36 @@ const handleThumbnailError = (event: Event) => {
 };
 
 const estimatedRemaining = computed(() => {
-  if (!props.task.speed || !props.task.progress) return t('taskList.statusProcessing');
-  const remaining = (100 - props.task.progress) / (props.task.speed || 1);
+  const { progress, startedAt, status } = props.task;
+  // 仅在 processing 且有有效进度时尝试计算剩余时间
+  if (status !== 'processing' || progress == null || progress <= 0 || progress >= 100) {
+    return t('taskList.statusProcessing');
+  }
+
+  // 根据 startedAt 估算处理速度（百分比/秒）
+  let elapsedSec: number | null = null;
+  if (startedAt) {
+    try {
+      const startMs = typeof startedAt === 'string' ? Date.parse(startedAt) : new Date(startedAt as unknown as Date).getTime();
+      if (!Number.isNaN(startMs)) {
+        elapsedSec = Math.max(1, Math.floor((Date.now() - startMs) / 1000));
+      }
+    } catch (_) {
+      // 解析失败则回退到显示“处理中”
+      elapsedSec = null;
+    }
+  }
+
+  if (!elapsedSec) {
+    return t('taskList.statusProcessing');
+  }
+
+  const speed = progress / elapsedSec; // 百分比/秒
+  if (!speed || speed <= 0) {
+    return t('taskList.statusProcessing');
+  }
+
+  const remaining = (100 - progress) / speed; // 剩余秒数
   const minutes = Math.floor(remaining / 60);
   const seconds = Math.floor(remaining % 60);
   return `${minutes}:${seconds.toString().padStart(2, '0')} ${t('taskList.remainingShort') || ''}`;
