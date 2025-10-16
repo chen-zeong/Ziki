@@ -1,7 +1,7 @@
 <template>
   <div
-    class="h-full flex flex-col rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-[#161920]/80 backdrop-blur-sm transition-colors duration-300"
-    :class="isDragOver ? 'ring-1 ring-offset-2 ring-offset-transparent ring-[var(--brand-primary)]/40' : ''"
+    class="h-full flex flex-col transition-colors duration-300"
+    :class="isDragOver ? 'ring-1 ring-inset ring-[var(--brand-primary)]/40' : ''"
     @dragover.prevent="handleDragOver"
     @dragleave.prevent="handleDragLeave"
     @drop="handleDrop"
@@ -13,7 +13,7 @@
       @clear-all-tasks="handleClearAllTasks"
     />
 
-    <div class="flex-1 overflow-y-auto px-5 pb-4 transition-all duration-200">
+    <div class="flex-1 overflow-y-auto px-4 pb-1 transition-all duration-200">
       <div v-if="tasks.length === 0" class="flex h-full items-center justify-center">
         <div class="relative w-full max-w-xl overflow-hidden rounded-[28px] border border-dashed border-slate-300/70 dark:border-white/15 bg-white/80 dark:bg-[#141927]/85 shadow-[0_32px_70px_rgba(15,23,42,0.16)] px-12 py-14 text-center">
           <div class="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
@@ -68,7 +68,7 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-3 px-5 py-4 bg-white/70 dark:bg-white/5">
+    <div class="flex items-center gap-3 px-4 py-2 bg-transparent">
       <div class="flex items-center gap-3 flex-[1] min-w-0">
         <button
           class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 gap-0"

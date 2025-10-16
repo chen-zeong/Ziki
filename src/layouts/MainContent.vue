@@ -144,37 +144,40 @@ defineExpose({
 
 <template>
   <!-- 主内容区域 -->
-  <main
-    class="flex-grow flex pr-6 pl-4 space-x-4 overflow-hidden bg-transparent dark:bg-transparent pt-9 transition-all duration-300"
-    style="pointer-events: auto;"
-  >
+  <main class="flex-grow flex overflow-hidden pr-6 pt-9 gap-6 bg-transparent dark:bg-transparent transition-all duration-300" style="pointer-events: auto;">
     <!-- 左侧面板: 任务队列 -->
-    <div class="w-1/3 flex flex-col">
-      <div class="flex-grow overflow-hidden">
-        <!-- Output Folder Settings (Expandable) -->
-        <OutputFolder
-          v-if="showOutputFolder"
-          :show-output-folder="showOutputFolder"
-          @update:output-path="handleOutputPathUpdate"
-          @close="handleOutputFolderClose"
-        />
-        
-        <!-- Task List -->
-        <TaskList 
-          :tasks="tasks" 
-          :selected-task-id="selectedTaskId"
-          :show-theme-toggle="false" 
-          @add-files="() => { if (!isUploaderVisible) onReset(); }"
-          @files-selected="emit('files-selected', $event)"
-          @update-task="emit('update-task', $event)"
-          @delete-task="emit('delete-task', $event)"
-          @resume-compression="emit('resume-compression', $event)"
-          @pause-task="emit('pause-task', $event)"
-          @select-task="emit('select-task', $event)"
-          @clear-all-tasks="emit('clear-all-tasks')"
-          @start-compress="triggerCompress"
-          @toggle-output-folder="emit('toggle-output-folder-popup')"
-        />
+    <div class="flex h-full w-1/3 max-w-[420px] -mt-9">
+      <div class="flex-1 flex flex-col overflow-hidden bg-white/95 dark:bg-[#101621]/95 border-r border-slate-200/60 dark:border-white/10 backdrop-blur-sm">
+        <div class="flex-1 flex flex-col overflow-hidden">
+          <div
+            v-if="showOutputFolder"
+            class="flex-shrink-0 px-4 pt-6 pb-4 border-b border-slate-200/60 dark:border-white/10"
+          >
+            <OutputFolder
+              :show-output-folder="showOutputFolder"
+              @update:output-path="handleOutputPathUpdate"
+              @close="handleOutputFolderClose"
+            />
+          </div>
+
+          <div class="flex-1 overflow-hidden">
+            <TaskList 
+              :tasks="tasks" 
+              :selected-task-id="selectedTaskId"
+              :show-theme-toggle="false" 
+              @add-files="() => { if (!isUploaderVisible) onReset(); }"
+              @files-selected="emit('files-selected', $event)"
+              @update-task="emit('update-task', $event)"
+              @delete-task="emit('delete-task', $event)"
+              @resume-compression="emit('resume-compression', $event)"
+              @pause-task="emit('pause-task', $event)"
+              @select-task="emit('select-task', $event)"
+              @clear-all-tasks="emit('clear-all-tasks')"
+              @start-compress="triggerCompress"
+              @toggle-output-folder="emit('toggle-output-folder-popup')"
+            />
+          </div>
+        </div>
       </div>
     </div>
 
