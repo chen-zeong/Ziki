@@ -132,9 +132,13 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
           <FolderCog class="w-4 h-4" />
         </button>
         <!-- 悬浮输出文件夹设置 -->
-        <div v-if="props.showOutputFolderPopup">
-          <div class="fixed inset-0 z-40" @click="toggleOutputFolderPopup"></div>
-          <div class="absolute top-full mt-2 right-0 w-80 z-50" @click.stop>
+        <div v-if="props.showOutputFolderPopup" class="fixed inset-0 z-40" @click="toggleOutputFolderPopup"></div>
+        <Transition name="header-pop">
+          <div
+            v-if="props.showOutputFolderPopup"
+            class="absolute top-full mt-2 right-0 w-80 z-50 header-popover"
+            @click.stop
+          >
             <OutputFolder
               :show-output-folder="true"
               @update:output-path="handleOutputPathUpdate"
@@ -142,7 +146,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
               class="soft-shadow"
             />
           </div>
-        </div>
+        </Transition>
       </div>
 
       <!-- 日志按钮 -->
@@ -157,9 +161,43 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
         :aria-pressed="globalSettings.isDarkMode"
         :data-tauri-drag-region="false"
       >
-        <Sun v-if="!globalSettings.isDarkMode" class="w-3.5 h-3.5" />
-        <Moon v-else class="w-3.5 h-3.5" />
+        <Transition name="theme-icon" mode="out-in">
+          <Sun v-if="!globalSettings.isDarkMode" key="sun" class="theme-icon" />
+          <Moon v-else key="moon" class="theme-icon" />
+        </Transition>
       </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.header-pop-enter-active,
+.header-pop-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.header-pop-enter-from,
+.header-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+}
+.header-popover {
+  transform-origin: top right;
+}
+.theme-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+}
+.theme-icon-enter-active,
+.theme-icon-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.theme-icon-enter-from {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+.theme-icon-leave-to {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+</style>

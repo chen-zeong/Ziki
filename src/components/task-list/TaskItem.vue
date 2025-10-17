@@ -1,32 +1,22 @@
 <template>
-  <div
-    class="task-card group relative block p-4 rounded-xl border border-slate-200/80 dark:border-white/10 transition-all duration-300 ease-out bg-white dark:bg-[#1a1d26] hover:bg-slate-50/70 dark:hover:bg-white/5 cursor-pointer overflow-visible"
-    :class="{
-      'is-selected shadow-[0_16px_34px_rgba(81,98,255,0.20)] scale-[1.015] bg-sky-50/95 dark:bg-[#1f2c3f] text-slate-900 dark:text-slate-100': isActive
-    }"
+  <MotionCard
+    class="task-card group relative block rounded-2xl border px-4 py-3 transition-colors duration-300 ease-out cursor-pointer overflow-visible backdrop-blur"
+    :class="[
+      cardToneClass,
+      {
+        'is-selected ring-1 ring-[var(--brand-primary)]/20 text-slate-900/95 dark:text-slate-100': isActive
+      }
+    ]"
+    :variants="cardVariants"
+    :animate="cardState"
+    :initial="false"
+    :transition="cardTransition"
     @click="handleCardClick"
+    @mouseenter="handleHover(true)"
+    @mouseleave="handleHover(false)"
   >
-    <span
-      v-if="isActive"
-      class="absolute inset-y-3 left-1 w-[3px] rounded-full bg-[var(--brand-primary)]/85 dark:bg-[var(--brand-primary)]/70 pointer-events-none"
-      aria-hidden="true"
-    />
-
     <div class="flex items-center gap-3">
-      <!-- 多选时的勾选框已移入卡片内，默认隐藏 -->
-
       <div class="flex items-center gap-3 flex-1 min-w-0">
-        <button
-          v-if="isMultiSelect"
-          type="button"
-          class="multi-select-toggle"
-          :class="{ 'is-checked': isChecked }"
-          :aria-pressed="isChecked"
-          @click.stop="toggleCheckbox"
-        >
-          <Check v-if="isChecked" class="w-3.5 h-3.5" />
-        </button>
-
         <div class="h-10 w-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 grid place-items-center border border-slate-200/70 dark:border-white/10">
           <img
             v-if="task.file.thumbnailUrl || task.type === 'image'"
@@ -61,7 +51,7 @@
           />
           <div
             v-if="task.status === 'processing'"
-            class="progress-wrapper flex-1 min-w-[220px] max-w-[420px]"
+            class="progress-wrapper flex-none w-full max-w-[260px]"
           >
             <div class="progress-track">
               <div
@@ -81,9 +71,10 @@
         </div>
         <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-300">
           <button
+            v-if="task.status !== 'processing'"
             class="action-btn"
             :title="$t('taskList.details')"
-            @click.stop="$emit('show-details', task.id)"
+            @click.stop="handleDetailClick"
           >
             <Info class="w-4 h-4" />
           </button>
@@ -116,22 +107,23 @@
             :title="$t('taskList.delete')"
             @click.stop="$emit('delete', task.id)"
           >
-            <Trash class="w-4 h-4" />
+            <X class="w-4 h-4" />
           </button>
         </div>
       </div>
     </div>
-  </div>
+  </MotionCard>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../../stores/useTaskStore';
 import StatusBadge from './StatusBadge.vue';
-import { Video, Pause, Play, Trash, Folder, Info, Check } from 'lucide-vue-next';
+import { Video, Pause, Play, Folder, Info, X } from 'lucide-vue-next';
+import { motion } from 'motion-v';
 import type { CompressionTask } from '../../types';
 
 interface Props {
@@ -148,7 +140,7 @@ interface Emits {
   (e: 'resume', taskId: string): void;
   (e: 'select', taskId: string): void;
   (e: 'toggle-check', taskId: string): void;
-  (e: 'show-details', taskId: string): void;
+  (e: 'show-details', payload: { taskId: string; trigger: HTMLElement | null }): void;
 }
 
 const props = defineProps<Props>();
@@ -167,6 +159,37 @@ const normalizedProgress = computed(() => {
 });
 
 const isActive = computed(() => props.isSelected || (props.isMultiSelect && props.isChecked));
+const isHovering = ref(false);
+const MotionCard = motion.div;
+
+const cardVariants = {
+  rest: { y: 0, scale: 1, opacity: 1 },
+  hover: { y: -4, scale: 1.01, opacity: 1 },
+  active: { y: -6, scale: 1.015, opacity: 1 }
+} as const;
+
+const cardTransition = {
+  type: 'spring',
+  stiffness: 340,
+  damping: 28,
+  mass: 0.65
+};
+
+const cardToneClass = computed(() => {
+  if (isActive.value) return 'task-card--active';
+  if (isHovering.value) return 'task-card--hover';
+  return 'task-card--rest';
+});
+
+const cardState = computed(() => {
+  if (isActive.value) return 'active';
+  if (isHovering.value) return 'hover';
+  return 'rest';
+});
+
+const handleHover = (isEntering: boolean) => {
+  isHovering.value = isEntering;
+};
 
 const toggleCheckbox = () => {
   emit('toggle-check', props.task.id);
@@ -178,6 +201,11 @@ const handleCardClick = () => {
   } else {
     emit('select', props.task.id);
   }
+};
+
+const handleDetailClick = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement | null;
+  emit('show-details', { taskId: props.task.id, trigger: target });
 };
 
 const formatFileSize = (bytes: number): string => {
@@ -244,34 +272,106 @@ const failureHint = computed(() => {
 </script>
 
 <style scoped>
-.task-card-grid { display: grid; grid-template-columns: 0fr auto; transition: grid-template-columns 0.3s ease-in-out; }
-.progress-track {
+.task-card {
   position: relative;
-  height: 28px;
-  border-radius: 999px;
-  overflow: hidden;
-  padding: 2px;
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.24), rgba(148, 163, 184, 0.08));
-  box-shadow: inset 0 1px 5px rgba(15, 23, 42, 0.12);
+  isolation: isolate;
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--task-card-border);
+  background: var(--task-card-bg);
+  box-shadow: var(--task-card-shadow);
+  backdrop-filter: blur(14px);
+  transition: background 0.32s ease, border-color 0.32s ease, box-shadow 0.38s ease;
 }
-.dark .progress-track {
-  background: linear-gradient(135deg, rgba(39, 48, 70, 0.65), rgba(27, 35, 54, 0.4));
-  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.45);
-}
-.progress-fill {
+.task-card::before {
+  content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(81, 98, 255, 0.95), rgba(37, 211, 178, 0.92));
-  transition: width 0.35s ease;
-  box-shadow: 0 6px 16px rgba(81, 98, 255, 0.28);
+  background: var(--task-card-overlay);
+  opacity: var(--task-card-overlay-opacity);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+.task-card--rest {
+  --task-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 250, 255, 0.88) 100%);
+  --task-card-border: rgba(148, 163, 184, 0.35);
+  --task-card-shadow: 0 12px 26px -18px rgba(15, 23, 42, 0.42);
+  --task-card-overlay: radial-gradient(120% 120% at 12% -18%, rgba(99, 102, 241, 0.22) 0%, transparent 68%);
+  --task-card-overlay-opacity: 0.25;
+}
+.task-card--hover {
+  --task-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 255, 0.94) 100%);
+  --task-card-border: rgba(99, 102, 241, 0.4);
+  --task-card-shadow: 0 18px 34px -16px rgba(79, 70, 229, 0.28);
+  --task-card-overlay: radial-gradient(140% 140% at 16% -22%, rgba(96, 165, 250, 0.32) 0%, transparent 70%);
+  --task-card-overlay-opacity: 0.6;
+}
+.task-card--active {
+  --task-card-bg: linear-gradient(180deg, rgba(244, 248, 255, 0.95) 0%, rgba(232, 240, 255, 0.9) 100%);
+  --task-card-border: rgba(79, 70, 229, 0.28);
+  --task-card-shadow: 0 18px 36px -18px rgba(79, 70, 229, 0.28);
+  --task-card-overlay: radial-gradient(160% 160% at 18% -24%, rgba(129, 140, 248, 0.28) 0%, transparent 72%);
+  --task-card-overlay-opacity: 0.55;
+}
+.dark .task-card {
+  --task-card-bg: linear-gradient(180deg, rgba(20, 24, 33, 0.92) 0%, rgba(17, 21, 29, 0.86) 100%);
+  --task-card-border: rgba(71, 85, 105, 0.45);
+  --task-card-shadow: 0 14px 32px -18px rgba(2, 6, 23, 0.6);
+  --task-card-overlay: radial-gradient(140% 140% at 18% -32%, rgba(129, 140, 248, 0.32) 0%, transparent 75%);
+  --task-card-overlay-opacity: 0.35;
+}
+.dark .task-card--hover {
+  --task-card-bg: linear-gradient(180deg, rgba(27, 32, 43, 0.9) 0%, rgba(21, 26, 37, 0.86) 100%);
+  --task-card-border: rgba(129, 140, 248, 0.45);
+  --task-card-shadow: 0 18px 38px -16px rgba(15, 23, 42, 0.68);
+  --task-card-overlay: radial-gradient(150% 150% at 20% -30%, rgba(96, 165, 250, 0.42) 0%, transparent 76%);
+  --task-card-overlay-opacity: 0.65;
+}
+.dark .task-card--active {
+  --task-card-bg: linear-gradient(180deg, rgba(31, 41, 55, 0.9) 0%, rgba(24, 32, 46, 0.86) 100%);
+  --task-card-border: rgba(129, 140, 248, 0.38);
+  --task-card-shadow: 0 20px 40px -18px rgba(37, 99, 235, 0.4);
+  --task-card-overlay: radial-gradient(160% 160% at 18% -24%, rgba(129, 140, 248, 0.38) 0%, transparent 78%);
+  --task-card-overlay-opacity: 0.5;
+}
+.task-card-grid {
+  display: grid;
+  grid-template-columns: 0fr auto;
+  transition: grid-template-columns 0.3s ease-in-out;
+}
+.progress-track {
+  position: relative;
+  height: 26px;
+  border-radius: 999px;
+  overflow: hidden;
+  padding: 2px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.dark .progress-track {
+  background: rgba(30, 58, 138, 0.35);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.progress-fill {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(79, 70, 229, 0.95), rgba(37, 211, 178, 0.9));
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.28);
   overflow: hidden;
 }
 .progress-fill::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
   opacity: 0.6;
 }
 .progress-sheen {
@@ -280,9 +380,9 @@ const failureHint = computed(() => {
   left: -30%;
   width: 45%;
   height: 180%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 70%);
   transform: rotate(18deg);
-  animation: progress-sheen-move 2.8s ease-in-out infinite;
+  animation: progress-sheen-move 3.2s ease-in-out infinite;
 }
 .progress-content {
   position: absolute;
@@ -294,80 +394,44 @@ const failureHint = computed(() => {
 }
 .progress-label {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.015em;
+  letter-spacing: 0.01em;
   color: #0f172a;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(6px);
 }
 .dark .progress-label {
   color: #e2e8f0;
-  text-shadow: none;
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(15, 23, 42, 0.7);
 }
 @keyframes progress-sheen-move {
   0% { transform: translateX(-30%) rotate(18deg); opacity: 0.45; }
-  50% { transform: translateX(160%) rotate(18deg); opacity: 0.9; }
+  50% { transform: translateX(160%) rotate(18deg); opacity: 0.85; }
   100% { transform: translateX(260%) rotate(18deg); opacity: 0; }
 }
 .action-btn {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease;
 }
 .action-btn:hover {
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(99, 102, 241, 0.15);
+  color: rgba(15, 23, 42, 0.85);
+  transform: translateY(-1px);
 }
 .dark .action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(129, 140, 248, 0.18);
+  color: #e2e8f0;
 }
-.multi-select-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  border: 1.5px solid rgba(148, 163, 184, 0.55);
-  background: rgba(255, 255, 255, 0.85);
-  color: rgba(15, 23, 42, 0.8);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 3px rgba(15, 23, 42, 0.12);
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-.multi-select-toggle:hover {
-  border-color: rgba(81, 98, 255, 0.8);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 14px rgba(81, 98, 255, 0.18);
-}
-.multi-select-toggle.is-checked {
-  background: rgba(81, 98, 255, 0.95);
-  border-color: rgba(81, 98, 255, 1);
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(81, 98, 255, 0.28);
-}
-.dark .multi-select-toggle {
-  background: rgba(15, 23, 42, 0.75);
-  color: rgba(226, 232, 240, 0.85);
-  border-color: rgba(148, 163, 184, 0.4);
-  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.2), 0 1px 4px rgba(2, 6, 23, 0.5);
-}
-.dark .multi-select-toggle:hover {
-  border-color: rgba(129, 140, 248, 0.8);
-  box-shadow: inset 0 1px 0 rgba(226, 232, 240, 0.12), 0 8px 18px rgba(79, 70, 229, 0.32);
-}
-.dark .multi-select-toggle.is-checked {
-  background: rgba(99, 102, 241, 0.95);
-  border-color: rgba(129, 140, 248, 1);
-  color: #f8fafc;
-  box-shadow: 0 10px 22px rgba(79, 70, 229, 0.35);
+.action-btn:active {
+  transform: translateY(0);
 }
 </style>

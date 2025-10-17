@@ -12,12 +12,10 @@
 
     <!-- Teleport 到 body，避免被父容器裁剪 -->
     <teleport v-if="teleportToBody" to="body">
-      <!-- 点击遮罩 -->
-      <div v-show="isOpen" class="fixed inset-0 z-[9998]" @click="closeDropdown"></div>
-      <!-- 下拉容器（fixed + 计算定位） -->
+      <div v-if="isOpen" class="fixed inset-0 z-[9998]" @click="closeDropdown"></div>
       <transition name="fade-scale">
         <div
-          v-show="isOpen"
+          v-if="isOpen"
           ref="dropdownRef"
           class="fixed z-[9999] bg-white dark:bg-[#161821] border border-slate-200/80 dark:border-white/10 rounded-xl ring-1 ring-white/30 dark:ring-white/10 overflow-auto"
           :style="menuStyle"
@@ -58,10 +56,10 @@
 
     <!-- 非 Teleport 模式（相对定位） -->
     <div v-else>
-      <div v-show="isOpen" class="fixed inset-0 z-40" @click="closeDropdown"></div>
+      <div v-if="isOpen" class="fixed inset-0 z-40" @click="closeDropdown"></div>
       <transition name="fade-scale">
         <div
-          v-show="isOpen"
+          v-if="isOpen"
           ref="dropdownRef"
           class="absolute z-50 w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 max-h-60 overflow-auto"
           :class="dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'"
@@ -103,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount, type CSSProperties } from 'vue';
+import { ref, computed, nextTick, onBeforeUnmount, type CSSProperties } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ChevronDown, Check } from 'lucide-vue-next';
 
@@ -207,38 +205,35 @@ function computePosition() {
   });
 }
 
-function toggleDropdown() {
-  isOpen.value = !isOpen.value;
-  if (isOpen.value) {
-    nextTick(() => {
-      computePosition();
-      window.addEventListener('scroll', computePosition, true);
-      window.addEventListener('resize', computePosition);
+const openDropdown = () => {
+  if (isOpen.value) return;
+  isOpen.value = true;
+  nextTick(() => {
+    computePosition();
+    window.addEventListener('scroll', computePosition, true);
+    window.addEventListener('resize', computePosition);
 
-      // 仅在打开时观察下拉内容尺寸变化
-      if (!resizeObserver && 'ResizeObserver' in window) {
-        resizeObserver = new ResizeObserver(() => computePosition());
-      }
-      if (resizeObserver && dropdownRef.value) {
-        resizeObserver.observe(dropdownRef.value);
-      }
-    });
-  } else {
-    window.removeEventListener('scroll', computePosition, true);
-    window.removeEventListener('resize', computePosition);
-    if (resizeObserver && dropdownRef.value) {
-      resizeObserver.unobserve(dropdownRef.value);
+    if (!resizeObserver && 'ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver(() => computePosition());
     }
-  }
-}
+    if (resizeObserver && dropdownRef.value) {
+      resizeObserver.observe(dropdownRef.value);
+    }
+  });
+};
 
-function closeDropdown() {
+const closeDropdown = () => {
+  if (!isOpen.value) return;
   isOpen.value = false;
   window.removeEventListener('scroll', computePosition, true);
   window.removeEventListener('resize', computePosition);
   if (resizeObserver && dropdownRef.value) {
     resizeObserver.unobserve(dropdownRef.value);
   }
+};
+
+function toggleDropdown() {
+  isOpen.value ? closeDropdown() : openDropdown();
 }
 
 function selectOption(val: string) {
@@ -259,11 +254,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .fade-scale-enter-active,
 .fade-scale-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform-origin: top;
 }
 .fade-scale-enter-from,
 .fade-scale-leave-to {
   opacity: 0;
-  transform: scale(0.98);
+  transform: translateY(-6px) scale(0.96);
 }
 </style>

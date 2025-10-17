@@ -1,7 +1,8 @@
 <template>
-  <div class="relative">
+  <div class="relative" ref="rootRef">
     <button 
-      class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary rounded-md transition-colors hover:bg-gray-200/80 dark:hover:bg-dark-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
+      class="language-trigger"
+      :class="{ 'is-active': showDropdown }"
       @click="toggleDropdown"
       :title="$t('language.switch')"
       data-tauri-drag-region="false"
@@ -9,35 +10,37 @@
       <Languages class="w-4 h-4" />
     </button>
     
-    <!-- 下拉菜单 -->
-    <Transition
-      enter-active-class="transition ease-out duration-200"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-150"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
+    <Transition name="lang-pop">
       <div 
         v-if="showDropdown" 
-        class="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-[#161b24] rounded-xl shadow-[0_16px_38px_rgba(15,23,42,0.15)] dark:shadow-[0_18px_34px_rgba(5,10,24,0.55)] border border-slate-200/70 dark:border-slate-700/60 z-50"
+        class="language-dropdown"
         @click.stop
       >
-        <div class="py-1.5">
+        <div class="language-dropdown__header">
+          <span>{{ $t('language.title') || 'Language' }}</span>
+          <span class="language-dropdown__hint">{{ $t('language.switchHint') || 'Switch interface language' }}</span>
+        </div>
+        <div class="language-dropdown__list">
           <button
             v-for="lang in languages"
             :key="lang.code"
-            class="w-full px-4 py-2 text-left text-sm transition-all duration-150 flex items-center justify-between"
-            :class="currentLocale === lang.code
-              ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-medium rounded-lg'
-              : 'text-slate-600 dark:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-700/40 rounded-lg'"
+            class="language-item"
+            :class="currentLocale === lang.code ? 'language-item--active' : ''"
             @click="switchLang(lang.code)"
           >
-            <span>{{ lang.name }}</span>
-            <Check 
+            <div class="language-item__label">
+              <span class="language-item__name">{{ lang.name }}</span>
+              <span class="language-item__code">{{ lang.code.toUpperCase() }}</span>
+            </div>
+            <MotionCheck
               v-if="currentLocale === lang.code"
-              class="w-4 h-4 text-[var(--brand-primary)]"
-            />
+              class="language-item__check"
+              :initial="{ opacity: 0, scale: 0.7 }"
+              :animate="{ opacity: 1, scale: 1 }"
+              :transition="{ duration: 0.18, easing: 'ease-out' }"
+            >
+              <Check class="w-4 h-4" />
+            </MotionCheck>
           </button>
         </div>
       </div>
@@ -51,10 +54,13 @@ import { switchLanguage } from '../i18n';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import type { Language } from '../stores/useGlobalSettingsStore';
 import { Languages, Check } from 'lucide-vue-next';
+import { motion } from 'motion-v';
 
 const globalSettings = useGlobalSettingsStore();
 
 const showDropdown = ref(false);
+const rootRef = ref<HTMLElement | null>(null);
+const MotionCheck = motion.div;
 
 const languages = [
   { code: 'zh' as Language, name: '简体中文' },
@@ -83,8 +89,8 @@ watch(
 
 // 点击外部关闭下拉菜单
 const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (!target.closest('.relative')) {
+  const target = event.target as Node;
+  if (rootRef.value && !rootRef.value.contains(target)) {
     showDropdown.value = false;
   }
 };
@@ -98,3 +104,151 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
+
+<style scoped>
+.language-trigger {
+  height: 24px;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #475569;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.25s ease;
+}
+.language-trigger:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: #1e293b;
+}
+.language-trigger.is-active {
+  transform: scale(1.06);
+}
+.dark .language-trigger {
+  color: #cbd5f5;
+}
+.dark .language-trigger:hover {
+  background: rgba(100, 116, 139, 0.18);
+  color: #f8fafc;
+}
+.language-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 220px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 24px 48px -18px rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  z-index: 1200;
+}
+.dark .language-dropdown {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(22, 27, 39, 0.95);
+  box-shadow: 0 24px 52px -18px rgba(0, 0, 0, 0.55);
+}
+.language-dropdown__header {
+  padding: 14px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.language-dropdown__header span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.language-dropdown__hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.dark .language-dropdown__header span:first-child {
+  color: #e2e8f0;
+}
+.dark .language-dropdown__hint {
+  color: rgba(148, 163, 184, 0.75);
+}
+.language-dropdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 10px 12px;
+}
+.language-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px 10px 12px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1e293b;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.language-item:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.08);
+}
+.language-item--active {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+.dark .language-item {
+  color: #e2e8f0;
+}
+.dark .language-item:hover {
+  border-color: rgba(129, 140, 248, 0.32);
+  background: rgba(129, 140, 248, 0.12);
+}
+.dark .language-item--active {
+  border-color: rgba(129, 140, 248, 0.45);
+  background: rgba(129, 140, 248, 0.18);
+  color: #cbd5f5;
+}
+.language-item__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.language-item__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.language-item__code {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.dark .language-item__code {
+  color: rgba(148, 163, 184, 0.7);
+}
+.language-item__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.16);
+  color: rgba(79, 70, 229, 0.95);
+}
+.dark .language-item__check {
+  background: rgba(129, 140, 248, 0.16);
+  color: rgba(129, 140, 248, 0.9);
+}
+.lang-pop-enter-active,
+.lang-pop-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  transform-origin: top right;
+}
+.lang-pop-enter-from,
+.lang-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+}
+</style>

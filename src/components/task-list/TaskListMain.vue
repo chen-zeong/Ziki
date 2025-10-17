@@ -13,7 +13,7 @@
       @clear-all-tasks="handleClearAllTasks"
     />
 
-    <div class="flex-1 overflow-y-auto px-4 pb-1 transition-all duration-200">
+    <div class="flex-1 overflow-y-auto px-4 py-4 transition-all duration-200">
       <div v-if="tasks.length === 0" class="flex h-full items-center justify-center">
         <div class="relative w-full max-w-xl overflow-hidden rounded-[28px] border border-dashed border-slate-300/70 dark:border-white/15 bg-white/80 dark:bg-[#141927]/85 shadow-[0_32px_70px_rgba(15,23,42,0.16)] px-12 py-14 text-center">
           <div class="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
@@ -50,39 +50,64 @@
         </div>
       </div>
 
-      <div v-else class="space-y-2.5">
-        <TaskItem
-          v-for="task in tasks"
-          :key="task.id"
-          :task="task"
-          :is-selected="selectedTaskId === task.id"
-          :is-multi-select="multiSelectMode"
-          :is-checked="selectedTaskIds.includes(task.id)"
-          @delete="deleteTask"
-          @pause="pauseTask"
-          @resume="resumeTask"
-          @select="onSelectTask($event)"
-          @toggle-check="toggleTaskCheck($event)"
-          @show-details="openDetailPanel($event)"
-        />
-      </div>
+      <template v-else>
+        <div class="task-stack relative" :class="{ 'task-stack--multi': multiSelectMode }">
+          <MotionGlow
+            class="task-stack__glow"
+            aria-hidden="true"
+            :initial="false"
+            :animate="multiSelectMode ? { opacity: 0.32, scale: 1.02 } : { opacity: 0.12, scale: 1 }"
+            :transition="{ duration: 0.32, easing: 'ease-out' }"
+          />
+          <TransitionGroup
+            name="task-stagger"
+            tag="div"
+            class="relative z-10 space-y-3 py-3"
+          >
+            <TaskItem
+              v-for="task in tasks"
+              :key="task.id"
+              :task="task"
+              :is-selected="selectedTaskId === task.id"
+              :is-multi-select="multiSelectMode"
+              :is-checked="selectedTaskIds.includes(task.id)"
+              @delete="deleteTask"
+              @pause="pauseTask"
+              @resume="resumeTask"
+              @select="onSelectTask($event)"
+              @toggle-check="toggleTaskCheck($event)"
+              @show-details="openDetailPanel($event)"
+            />
+          </TransitionGroup>
+        </div>
+      </template>
     </div>
 
     <div class="flex items-center gap-3 px-4 py-2 bg-transparent">
       <div class="flex items-center gap-3 flex-[1] min-w-0">
-        <button
-          class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 gap-0"
+        <MotionButton
+          class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 gap-0"
           :class="multiSelectMode
-            ? 'bg-[var(--brand-primary)] text-white/95 hover:bg-[var(--brand-primary)]/90 shadow-[0_10px_30px_rgba(81,98,255,0.25)]'
+            ? 'bg-[var(--brand-primary)] text-white/95 hover:bg-[var(--brand-primary)]/92'
             : 'text-slate-700 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]'"
+          :animate="multiSelectMode ? multiSelectActiveMotion : multiSelectInactiveMotion"
+          :initial="false"
+          :transition="multiSelectTransition"
           @click="toggleMultiSelect"
           :aria-pressed="multiSelectMode"
           :aria-label="t('taskList.multiSelect') || 'Multi-select'"
         >
-          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="currentColor">
-            <path d="M9 11l3 3L22 4l2 2-12 12-5-5 2-2z" />
-          </svg>
-        </button>
+          <ListPlus class="w-4 h-4" />
+        </MotionButton>
+        <MotionIndicator
+          v-if="multiSelectMode"
+          class="multi-select-pill"
+          :initial="{ opacity: 0, y: 6 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :transition="{ duration: 0.25, easing: 'ease-out' }"
+        >
+          {{ t('taskList.multiSelectActive') || '多选模式' }}
+        </MotionIndicator>
       </div>
       <div class="flex items-center gap-3 flex-[3] min-w-0 justify-end">
         <button
@@ -108,13 +133,14 @@
     <TaskDetails
       :task="activeDetailTask"
       :open="!!activeDetailTask"
+      :anchor-rect="detailAnchorRect"
       @close="closeDetailPanel"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
  import { invoke } from '@tauri-apps/api/core';
  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -124,6 +150,8 @@ import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
 import TaskDetails from './TaskDetails.vue';
+import { ListPlus } from 'lucide-vue-next';
+import { motion } from 'motion-v';
  
  import type { CompressionTask } from '../../types';
  
@@ -167,6 +195,14 @@ const selectedTaskIds = ref<string[]>([]);
 const isDragOver = ref(false);
 const multiSelectMode = ref(false);
 const detailTaskId = ref<string | null>(null);
+const detailAnchorElement = ref<HTMLElement | null>(null);
+const detailAnchorRect = ref<DOMRect | null>(null);
+const MotionGlow = motion.div;
+const MotionButton = motion.button;
+const MotionIndicator = motion.div;
+const multiSelectActiveMotion = { scale: 1.08, y: -2, boxShadow: '0 16px 36px rgba(81, 98, 255, 0.28)' } as const;
+const multiSelectInactiveMotion = { scale: 1, y: 0, boxShadow: '0 0 0 rgba(0, 0, 0, 0)' } as const;
+const multiSelectTransition = { type: 'spring', stiffness: 340, damping: 24, mass: 0.6 } as const;
 
  // 底部操作区相关：是否可开始、选择与多选切换
 const canStart = computed(() => {
@@ -211,13 +247,41 @@ const toggleMultiSelect = () => {
   }
 };
 
-const openDetailPanel = (taskId: string) => {
+const updateDetailAnchorRect = () => {
+  if (detailAnchorElement.value) {
+    detailAnchorRect.value = detailAnchorElement.value.getBoundingClientRect();
+  } else {
+    detailAnchorRect.value = null;
+  }
+};
+
+const openDetailPanel = (payload: string | { taskId: string; trigger: HTMLElement | null }) => {
+  const taskId = typeof payload === 'string' ? payload : payload.taskId;
   detailTaskId.value = taskId;
+  detailAnchorElement.value = typeof payload === 'string' ? null : payload.trigger;
+  nextTick(updateDetailAnchorRect);
 };
 
 const closeDetailPanel = () => {
   detailTaskId.value = null;
+  detailAnchorElement.value = null;
+  detailAnchorRect.value = null;
 };
+
+const handleDetailViewportChange = () => {
+  if (!detailTaskId.value) return;
+  updateDetailAnchorRect();
+};
+
+onMounted(() => {
+  window.addEventListener('resize', handleDetailViewportChange);
+  window.addEventListener('scroll', handleDetailViewportChange, true);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleDetailViewportChange);
+  window.removeEventListener('scroll', handleDetailViewportChange, true);
+});
 
  // Tauri drag-drop listeners
  let unlistenDragDrop: UnlistenFn | null = null;
@@ -251,6 +315,8 @@ const deleteTask = async (taskId: string) => {
     taskStore.deleteTask(taskId);
     if (detailTaskId.value === taskId) {
       detailTaskId.value = null;
+      detailAnchorElement.value = null;
+      detailAnchorRect.value = null;
     }
     selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
   } catch (error) {
@@ -284,6 +350,8 @@ const handleClearAllTasks = () => {
   try {
     taskStore.clearAllTasks();
     detailTaskId.value = null;
+    detailAnchorElement.value = null;
+    detailAnchorRect.value = null;
     selectedTaskIds.value = [];
   } catch (error) {
     console.error('Clear all tasks failed:', error);
@@ -451,6 +519,52 @@ watch(tasks, (newTasks) => {
 </script>
 
 <style scoped>
+.task-stagger-enter-from,
+.task-stagger-leave-to {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.task-stagger-enter-active,
+.task-stagger-leave-active {
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.task-stagger-leave-active {
+  position: absolute;
+}
+.task-stagger-move {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.task-stack__glow {
+  position: absolute;
+  inset: -18px -8px;
+  border-radius: 36px;
+  background: radial-gradient(120% 120% at 40% -10%, rgba(99, 102, 241, 0.22), transparent 70%);
+  pointer-events: none;
+  opacity: 0.12;
+  transform-origin: center;
+  filter: saturate(1);
+}
+.task-stack--multi .task-stack__glow {
+  filter: saturate(1.3);
+}
+.multi-select-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4338ca;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 10px 24px -18px rgba(81, 98, 255, 0.4);
+}
+.dark .multi-select-pill {
+  color: #e0e7ff;
+  background: rgba(129, 140, 248, 0.16);
+  border-color: rgba(129, 140, 248, 0.32);
+  box-shadow: 0 12px 26px -18px rgba(129, 140, 248, 0.45);
+}
 .start-button--processing::before,
 .start-button--processing::after {
   content: '';

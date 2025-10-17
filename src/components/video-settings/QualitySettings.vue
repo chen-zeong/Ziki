@@ -10,22 +10,30 @@
         </span>
       </div>
 
-      <div class="relative pt-3 pb-2">
-        <div class="slider-shell">
+      <div class="relative pt-2 pb-1">
+        <div
+          class="slider-shell"
+          @pointerenter="handleSliderPointerEnter"
+          @pointerleave="handleSliderPointerLeave"
+          @pointerdown="handleSliderPointerDown"
+          @pointerup="handleSliderPointerUp"
+        >
           <div class="slider-track">
             <div
               class="slider-default-marker"
               :style="{ left: `calc(${defaultSliderPosition}% - 1px)` }"
             ></div>
-            <div
+            <MotionFill
               class="slider-fill"
-              :style="{ width: qualityValue + '%' }"
-            ></div>
+              :animate="{ width: qualityValue + '%' }"
+              :initial="false"
+              :transition="{ duration: 0.16, easing: 'linear' }"
+            />
           </div>
           <div
             class="slider-thumb"
             :class="{ 'is-active': showTooltip }"
-            :style="{ left: `calc(${qualityValue}% - 18px)` }"
+            :style="{ left: `calc(${qualityValue}% - 14px)` }"
           >
             <span class="thumb-core"></span>
             <span class="thumb-ring"></span>
@@ -35,9 +43,15 @@
             :class="{ 'slider-tooltip--visible': showTooltip }"
             :style="{ left: qualityValue + '%' }"
           >
-            <div class="tooltip-bubble">
+            <MotionTooltip
+              class="tooltip-bubble"
+              :key="currentParamDisplay"
+              :initial="{ y: 8, opacity: 0 }"
+              :animate="{ y: 0, opacity: 1 }"
+              :transition="{ type: 'spring', stiffness: 320, damping: 20, mass: 0.6 }"
+            >
               {{ currentParamDisplay }}
-            </div>
+            </MotionTooltip>
           </div>
         </div>
 
@@ -50,10 +64,8 @@
           step="1"
           class="slider-input"
           @input="updateQualityState"
-          @mouseenter="showTooltip = true"
-          @mouseleave="showTooltip = false"
-          @mousedown="showTooltip = true"
-          @mouseup="showTooltip = false"
+          @focus="showTooltip = true"
+          @blur="showTooltip = false"
         />
       </div>
 
@@ -84,15 +96,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, inject, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, inject, nextTick } from 'vue';
 import type { CompressionSettings } from '../../types';
 import {
-  getQualityLevelIndex,
   getEncoderQualityParam,
   getDefaultQualityParam,
   QUALITY_LEVELS
 } from '../../config/qualityMappings';
 import { useI18n } from 'vue-i18n';
+import { motion } from 'motion-v';
 
 const currentFile = inject<{ value: any }>('currentFile');
 const { t } = useI18n();
@@ -116,6 +128,10 @@ const emit = defineEmits<{
 const qualityValue = ref(80);
 const showTooltip = ref(false);
 const selectedBitDepth = ref<8 | 10 | 12>(8);
+const isInternalModelUpdate = ref(false);
+const isSliderPointerDown = ref(false);
+const MotionFill = motion.div;
+const MotionTooltip = motion.div;
 
 const getOriginalBitDepth = (): number => {
   const val = currentFile?.value?.metadata?.colorDepth as unknown;
@@ -132,6 +148,22 @@ const getOriginalBitDepth = (): number => {
     if (!Number.isNaN(n)) return n;
   }
   return 8;
+};
+
+const originalBitDepth = computed(() => getOriginalBitDepth());
+const maxSupportedBitDepth = computed<8 | 10 | 12>(() => {
+  const value = originalBitDepth.value;
+  if (value >= 12) return 12;
+  if (value >= 10) return 10;
+  return 8;
+});
+const resolveBitDepth = (depth?: number | null): 8 | 10 | 12 => {
+  const candidates: Array<8 | 10 | 12> = [8, 10, 12];
+  if (depth && candidates.includes(depth as 8 | 10 | 12) && depth <= maxSupportedBitDepth.value) {
+    return depth as 8 | 10 | 12;
+  }
+  const lowerCandidates = candidates.filter(d => d <= maxSupportedBitDepth.value);
+  return (lowerCandidates[lowerCandidates.length - 1] ?? 8) as 8 | 10 | 12;
 };
 
 const deriveSliderFromModel = (): number => {
@@ -179,9 +211,8 @@ const deriveSliderFromModel = (): number => {
 
 const initializeSettings = () => {
   const defaults = getDefaultQualityParam(props.currentVideoCodec || 'h264', props.isHardwareAccelerated || false);
-  const originalDepth = getOriginalBitDepth();
-  const fallbackDepth = originalDepth >= 12 ? 12 : originalDepth >= 10 ? 10 : 8;
-  selectedBitDepth.value = (props.modelValue.bitDepth as 8 | 10 | 12) ?? fallbackDepth;
+  const incomingDepth = props.modelValue.bitDepth as number | undefined;
+  selectedBitDepth.value = resolveBitDepth(incomingDepth);
 
   qualityValue.value = deriveSliderFromModel();
 
@@ -260,18 +291,18 @@ const bitDepthText = computed(() => `${selectedBitDepth.value}bit`);
 const bitDepthTooltip = (depth: number) => `${depth}bit`;
 
 const canUseDepth = (depth: number) => {
-  // 简化逻辑：默认允许所有位深；如需限制，可根据 codec/hardware 能力判断
-  return [8, 10, 12].includes(depth);
+  return [8, 10, 12].includes(depth) && depth <= maxSupportedBitDepth.value;
 };
 
 const setBitDepth = (depth: number) => {
-  if (![8, 10, 12].includes(depth)) return;
+  if (![8, 10, 12].includes(depth) || !canUseDepth(depth)) return;
   selectedBitDepth.value = depth as 8 | 10 | 12;
   const updates: Partial<CompressionSettings> = {
     ...settings.value,
     bitDepth: selectedBitDepth.value
   };
   settings.value = updates;
+  isInternalModelUpdate.value = true;
   emit('update:modelValue', updates);
 };
 
@@ -280,9 +311,11 @@ const bitDepthButtonClass = (depth: number) => {
   const disabled = !canUseDepth(depth);
   return [
     isSelected
-      ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
-      : 'border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200',
-    disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10'
+      ? 'border-[var(--brand-primary)]/45 text-[var(--brand-primary)] bg-[var(--brand-primary)]/12 shadow-[0_10px_22px_-16px_rgba(99,102,241,0.8)]'
+      : 'border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 bg-white dark:bg-white/5',
+    disabled
+      ? 'opacity-45 cursor-not-allowed'
+      : 'hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10'
   ].join(' ');
 };
 
@@ -313,20 +346,60 @@ const updateQualityState = () => {
   }
 
   settings.value = { ...settings.value, ...updates };
+  isInternalModelUpdate.value = true;
   emit('update:modelValue', settings.value);
+};
+
+const handleSliderPointerEnter = () => {
+  showTooltip.value = true;
+};
+
+const handleSliderPointerLeave = () => {
+  if (!isSliderPointerDown.value) {
+    showTooltip.value = false;
+  }
+};
+
+const handleSliderPointerDown = () => {
+  isSliderPointerDown.value = true;
+  showTooltip.value = true;
+};
+
+const handleGlobalPointerUp = () => {
+  if (!isSliderPointerDown.value) return;
+  isSliderPointerDown.value = false;
+  showTooltip.value = false;
+};
+
+const handleSliderPointerUp = () => {
+  handleGlobalPointerUp();
 };
 
 // 同步外部传入的 modelValue 到内部状态
 watch(() => props.modelValue, () => {
-  if (props.modelValue.bitDepth && [8, 10, 12].includes(props.modelValue.bitDepth as number)) {
-    selectedBitDepth.value = props.modelValue.bitDepth as 8 | 10 | 12;
+  if (isInternalModelUpdate.value) {
+    isInternalModelUpdate.value = false;
+    return;
   }
+  selectedBitDepth.value = resolveBitDepth(props.modelValue.bitDepth as number | undefined);
   qualityValue.value = deriveSliderFromModel();
 }, { deep: true });
 
+watch(maxSupportedBitDepth, (maxDepth) => {
+  if (selectedBitDepth.value > maxDepth) {
+    setBitDepth(maxDepth);
+  }
+});
+
 onMounted(async () => {
+  window.addEventListener('pointerup', handleGlobalPointerUp, { passive: true });
   await nextTick();
+  isInternalModelUpdate.value = true;
   emit('update:modelValue', settings.value);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('pointerup', handleGlobalPointerUp);
 });
 </script>
 
@@ -334,85 +407,89 @@ onMounted(async () => {
 .slider-shell {
   position: relative;
   width: 100%;
-  height: 48px;
+  height: 40px;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 .slider-track {
   position: relative;
   width: 100%;
-  height: 12px;
+  height: 10px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.22);
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+.slider-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.25), transparent 65%);
+  pointer-events: none;
 }
 .dark .slider-track {
-  background: rgba(30, 41, 59, 0.55);
-  border-color: rgba(148, 163, 184, 0.3);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  background: rgba(71, 85, 105, 0.45);
+  box-shadow: inset 0 1px 1px rgba(2, 6, 23, 0.55);
 }
 .slider-default-marker {
   position: absolute;
   top: 50%;
   width: 2px;
-  height: 100%;
+  height: 70%;
   transform: translateY(-50%);
-  background: rgba(226, 232, 240, 0.85);
+  background: rgba(226, 232, 240, 0.75);
   pointer-events: none;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 .dark .slider-default-marker {
-  background: rgba(148, 163, 184, 0.6);
+  background: rgba(148, 163, 184, 0.5);
 }
 .slider-fill {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(81, 98, 255, 0.85);
-  transition: width 0.35s ease;
-  box-shadow: 0 6px 16px rgba(81, 98, 255, 0.2);
+  background: rgba(99, 102, 241, 0.92);
+  box-shadow: 0 10px 22px -16px rgba(99, 102, 241, 0.45);
 }
 .slider-thumb {
   position: absolute;
   top: 50%;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   transform: translateY(-50%);
   pointer-events: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
 }
 .slider-thumb.is-active {
-  transform: translateY(-50%) scale(1.05);
+  transform: translateY(-50%) scale(1.08);
+  filter: brightness(1.05);
 }
 .thumb-core {
   position: absolute;
-  inset: 6px;
+  inset: 3px;
   border-radius: 999px;
-  background: #f8fafc;
-  border: 1.5px solid rgba(148, 163, 184, 0.55);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  background: #6366f1;
+  border: none;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
 }
 .dark .thumb-core {
-  background: rgba(15, 23, 42, 0.92);
-  border-color: rgba(148, 163, 184, 0.45);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  background: rgba(99, 102, 241, 0.92);
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.7);
 }
 .thumb-ring {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  border: 2px solid rgba(81, 98, 255, 0.2);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid rgba(99, 102, 241, 0.32);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .slider-thumb.is-active .thumb-ring {
-  border-color: rgba(81, 98, 255, 0.45);
-  box-shadow: 0 0 0 6px rgba(81, 98, 255, 0.12);
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: none;
 }
 .slider-tooltip {
   position: absolute;
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 10px);
   transform: translateX(-50%) translateY(6px) scale(0.96);
   pointer-events: none;
   opacity: 0;
@@ -424,12 +501,15 @@ onMounted(async () => {
 }
 .slider-input {
   position: absolute;
-  inset: 0;
+  top: -12px;
+  bottom: -12px;
+  left: 0;
+  right: 0;
   width: 100%;
-  height: 100%;
   opacity: 0;
   cursor: pointer;
   z-index: 40;
+  touch-action: none;
 }
 .tooltip-bubble {
   position: relative;

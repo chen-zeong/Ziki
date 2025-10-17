@@ -21,8 +21,35 @@
   </div>
   
   <!-- 帧选择器（仅视频显示） -->
-  <div v-if="videoPath" class="relative my-3 flex justify-center">
-    <div class="px-12">
+  <div v-if="videoPath" class="my-3 flex items-center justify-center gap-6">
+    <div class="relative">
+      <button
+        type="button"
+        class="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/15 bg-white dark:bg-[#1b2130] text-slate-600 dark:text-slate-200 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-[#222a3b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
+        :aria-pressed="showTimeRange"
+        :aria-label="t('videoComparison.timeRange') || 'Time range'"
+        @click.stop="toggleTimeRange"
+        ref="timeRangeButtonRef"
+      >
+        <Scissors class="w-4 h-4" />
+      </button>
+      <Transition name="time-range-pop">
+        <div
+          v-if="showTimeRange"
+          class="time-range-dropdown absolute left-full top-0 ml-3 z-30 w-[min(22rem,calc(100vw-4rem))] origin-left rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#181f2e] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
+          @click.stop
+          ref="timeRangeDropdownRef"
+        >
+          <TimeRangeSettings
+            :modelValue="timeRangeSettings"
+            :metadata="currentVideoMetadata"
+            @update:modelValue="handleTimeRangeUpdate"
+            @validationChange="handleTimeValidation"
+          />
+        </div>
+      </Transition>
+    </div>
+    <div class="px-10">
       <FrameSelector
         :video-path="videoPath"
         :selected-frame="selectedFrame"
@@ -32,28 +59,6 @@
         @frame-selected="handleFrameSelected"
       />
     </div>
-    <button
-      type="button"
-      class="absolute left-0 top-1/2 -translate-y-1/2 h-9 w-9 flex items-center justify-center rounded-full border border-slate-200/80 dark:border-white/15 bg-white dark:bg-[#1b2130] text-slate-600 dark:text-slate-200 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-[#222a3b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
-      :aria-pressed="showTimeRange"
-      :aria-label="t('videoComparison.timeRange') || 'Time range'"
-      @click="toggleTimeRange"
-    >
-      <Scissors class="w-4 h-4" />
-    </button>
-    <Transition name="time-range-fade">
-      <div
-        v-if="showTimeRange"
-        class="absolute left-full top-1/2 -translate-y-[60%] ml-3 z-20 w-[min(22rem,calc(100vw-4rem))] rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#181f2e] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
-      >
-        <TimeRangeSettings
-          :modelValue="timeRangeSettings"
-          :metadata="currentVideoMetadata"
-          @update:modelValue="handleTimeRangeUpdate"
-          @validationChange="handleTimeValidation"
-        />
-      </div>
-    </Transition>
   </div>
   
   <!-- 设置区域 -->
@@ -86,7 +91,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch, computed, inject } from 'vue';
+import { ref, watch, computed, inject, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Scissors } from 'lucide-vue-next';
 import VideoPreview from './VideoPreview.vue';
@@ -131,6 +136,8 @@ const videoPreviewRef = ref<InstanceType<typeof VideoPreview> | null>(null);
 const settingsPanelRef = ref<any | null>(null);
 const { t } = useI18n();
 const showTimeRange = ref(false);
+const timeRangeButtonRef = ref<HTMLButtonElement | null>(null);
+const timeRangeDropdownRef = ref<HTMLElement | null>(null);
 
 const currentFile = inject<{ value: VideoFile | null }>('currentFile', { value: null });
 const currentVideoMetadata = computed(() => currentFile?.value?.metadata);
@@ -150,6 +157,22 @@ const handleFrameSelected = (frameIndex: number) => {
 const toggleTimeRange = () => {
   showTimeRange.value = !showTimeRange.value;
 };
+
+const handleDocumentClick = (event: MouseEvent) => {
+  if (!showTimeRange.value) return;
+  const target = event.target as Node | null;
+  if (timeRangeButtonRef.value && timeRangeButtonRef.value.contains(target)) return;
+  if (timeRangeDropdownRef.value && timeRangeDropdownRef.value.contains(target)) return;
+  showTimeRange.value = false;
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick);
+});
 
 const handleTimeRangeUpdate = (val: any) => {
   emit('update:timeRangeSettings', val);
@@ -224,13 +247,34 @@ defineExpose({
 </script>
 
 <style scoped>
-.time-range-fade-enter-active,
-.time-range-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+.time-range-dropdown {
+  transform-origin: 0% 12px;
 }
-.time-range-fade-enter-from,
-.time-range-fade-leave-to {
+.time-range-dropdown::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-left: inherit;
+  border-top: inherit;
+  transform: rotate(45deg);
+  border-bottom: none;
+  border-right: none;
+  box-shadow: -6px 6px 12px rgba(15, 23, 42, 0.08);
+}
+.dark .time-range-dropdown::before {
+  box-shadow: -6px 6px 12px rgba(0, 0, 0, 0.45);
+}
+.time-range-pop-enter-active,
+.time-range-pop-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.time-range-pop-enter-from,
+.time-range-pop-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateX(-12px) scale(0.94);
 }
 </style>

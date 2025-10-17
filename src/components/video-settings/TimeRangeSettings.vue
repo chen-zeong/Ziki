@@ -1,5 +1,5 @@
 <template>
-  <div class="time-range-settings p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10">
+  <div class="time-range-settings">
     <div class="space-y-4">
       <!-- 标题和启用开关 -->
       <div class="flex items-center justify-between mb-3">

@@ -1,139 +1,142 @@
 <template>
   <Teleport to="body">
-    <Transition name="task-detail-pop">
-      <div v-if="isVisible" class="fixed inset-0 z-[1100]">
-        <div class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" @click="$emit('close')" />
-        <div class="absolute inset-0 flex items-start justify-center pt-24 px-4">
-          <div
-            class="w-full max-w-lg rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white dark:bg-[#121726] shadow-[0_24px_60px_rgba(15,23,42,0.28)] dark:shadow-[0_30px_70px_rgba(0,0,0,0.65)] overflow-hidden"
-            @click.stop
-          >
-            <header class="flex items-center justify-between px-6 py-4 border-b border-slate-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-sm">
-              <div class="min-w-0">
-                <p class="text-base font-semibold text-slate-900 dark:text-slate-50 truncate">
-                  {{ task?.file.name }}
+    <div v-if="isVisible" class="task-detail-layer">
+      <div class="task-detail-backdrop" @click="$emit('close')" />
+      <MotionPopover
+        class="task-detail-popover"
+        :class="popoverClass"
+        :style="popoverStyle"
+        :initial="popoverMotion.initial"
+        :animate="popoverMotion.animate"
+        :exit="popoverMotion.exit"
+        :transition="popoverMotion.transition"
+        @click.stop
+      >
+          <header class="task-detail-header">
+            <div class="min-w-0">
+              <p class="task-detail-title">
+                {{ task?.file.name }}
+              </p>
+              <p class="task-detail-subtitle">
+                {{ formatFileSize(task?.file.size || task?.originalSize) }}
+              </p>
+            </div>
+            <button
+              class="task-detail-close"
+              @click="$emit('close')"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </header>
+
+          <div class="task-detail-body">
+            <section class="task-detail-status">
+              <div>
+                <p class="detail-label">
+                {{ $t('taskList.statusLabel') }}
                 </p>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {{ formatFileSize(task?.file.size || task?.originalSize) }}
+                <p class="detail-value">
+                  {{ statusLabel }}
                 </p>
               </div>
-              <button
-                class="h-8 w-8 grid place-items-center rounded-full text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
-                @click="$emit('close')"
-              >
-                <X class="w-4 h-4" />
-              </button>
-            </header>
+              <StatusBadge v-if="task" :status="task.status" :progress="completionPercent" />
+            </section>
 
-            <div class="px-6 py-5 space-y-6 max-h-[60vh] overflow-y-auto">
-              <section class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  {{ $t('taskList.statusLabel') }}
-                  </p>
-                  <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                    {{ statusLabel }}
-                  </p>
-                </div>
-                <StatusBadge v-if="task" :status="task.status" :progress="completionPercent" />
-              </section>
+            <section class="detail-grid">
+              <div>
+                <p class="detail-label">
+                  {{ $t('taskList.createdAt') }}
+                </p>
+                <p class="detail-value">{{ formatDate(task?.createdAt) }}</p>
+              </div>
+              <div>
+                <p class="detail-label">
+                  {{ $t('taskList.updatedAt') }}
+                </p>
+                <p class="detail-value">{{ formatDate(task?.updatedAt) }}</p>
+              </div>
+              <div>
+                <p class="detail-label">
+                  {{ $t('taskList.progress') }}
+                </p>
+                <p class="detail-value">{{ ((task?.progress ?? 0) as number).toFixed(1) }}%</p>
+              </div>
+              <div>
+                <p class="detail-label">
+                  {{ $t('taskList.remaining') }}
+                </p>
+                <p class="detail-value">{{ task?.etaText || '--' }}</p>
+              </div>
+            </section>
 
-              <section class="grid grid-cols-2 gap-4 text-sm text-slate-700 dark:text-slate-200">
-                <div>
-                  <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {{ $t('taskList.createdAt') }}
-                  </p>
-                  <p class="mt-1">{{ formatDate(task?.createdAt) }}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {{ $t('taskList.updatedAt') }}
-                  </p>
-                  <p class="mt-1">{{ formatDate(task?.updatedAt) }}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {{ $t('taskList.progress') }}
-                  </p>
-                  <p class="mt-1">{{ ((task?.progress ?? 0) as number).toFixed(1) }}%</p>
-                </div>
-                <div>
-                  <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {{ $t('taskList.remaining') }}
-                  </p>
-                  <p class="mt-1">{{ task?.etaText || '--' }}</p>
-                </div>
-              </section>
-
-              <section v-if="metadataRows.length" class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-                    {{ $t('taskList.fileInfo') }}
-                  </h3>
-                  <span
-                    v-if="hasAfterData"
-                    class="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-500 dark:text-sky-300"
-                  >
-                    {{ $t('taskList.compressionComparison') }}
-                  </span>
-                </div>
-                <div class="overflow-hidden rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5">
-                  <table class="w-full text-xs">
-                    <thead class="bg-slate-50/90 dark:bg-white/5 text-slate-500 dark:text-slate-400">
-                      <tr>
-                        <th class="py-2 pl-4 text-left font-medium">{{ $t('taskList.metric') }}</th>
-                        <th class="py-2 text-right font-medium">{{ $t('taskList.before') }}</th>
-                        <th
-                          v-if="hasAfterData"
-                          class="py-2 pr-4 text-right font-medium"
-                        >
-                          {{ $t('taskList.after') }}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody class="text-slate-700 dark:text-slate-200">
-                      <tr
-                        v-for="row in metadataRows"
-                        :key="row.key"
-                        class="border-t border-slate-100/70 dark:border-white/5"
+            <section v-if="metadataRows.length" class="detail-table">
+              <div class="detail-table-header">
+                <h3 class="detail-table-title">
+                  {{ $t('taskList.fileInfo') }}
+                </h3>
+                <span
+                  v-if="hasAfterData"
+                  class="detail-table-hint"
+                >
+                  {{ $t('taskList.compressionComparison') }}
+                </span>
+              </div>
+              <div class="detail-table-wrapper">
+                <table class="w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th class="py-2 pl-4 text-left font-medium">{{ $t('taskList.metric') }}</th>
+                      <th class="py-2 text-right font-medium">{{ $t('taskList.before') }}</th>
+                      <th
+                        v-if="hasAfterData"
+                        class="py-2 pr-4 text-right font-medium"
                       >
-                        <td class="py-2 pl-4 font-medium text-slate-500 dark:text-slate-400">
-                          {{ row.label }}
-                        </td>
-                        <td class="py-2 text-right pr-4">
-                          {{ row.before }}
-                        </td>
-                        <td
-                          v-if="hasAfterData"
-                          class="py-2 pr-4 text-right"
-                          :class="row.toneClass"
-                        >
-                          {{ row.after }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                        {{ $t('taskList.after') }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in metadataRows"
+                      :key="row.key"
+                    >
+                      <td class="py-2 pl-4 font-medium text-slate-500 dark:text-slate-400">
+                        {{ row.label }}
+                      </td>
+                      <td class="py-2 text-right pr-4">
+                        {{ row.before }}
+                      </td>
+                      <td
+                        v-if="hasAfterData"
+                        class="py-2 pr-4 text-right"
+                        :class="row.toneClass"
+                      >
+                        {{ row.after }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-              <section v-if="task?.errorMessage" class="rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200/70 dark:border-rose-500/40 px-4 py-3 text-sm text-rose-600 dark:text-rose-200">
-                <p class="font-semibold text-xs uppercase tracking-widest">{{ $t('taskList.statusFailed') }}</p>
-                <p class="mt-1 leading-relaxed">{{ task.errorMessage }}</p>
-              </section>
-            </div>
+            <section v-if="task?.errorMessage" class="detail-error">
+              <p class="detail-error-title">{{ $t('taskList.statusFailed') }}</p>
+              <p class="detail-error-text">{{ task.errorMessage }}</p>
+            </section>
           </div>
-        </div>
-      </div>
-    </Transition>
+      </MotionPopover>
+    </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { CSSProperties } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import type { CompressionTask, VideoMetadata } from '../../types';
 import StatusBadge from './StatusBadge.vue';
+import { motion } from 'motion-v';
 
 type InfoRow = {
   key: string;
@@ -146,14 +149,45 @@ type InfoRow = {
 const props = defineProps<{
   open: boolean;
   task: CompressionTask | null;
+  anchorRect?: DOMRect | null;
 }>();
 
 defineEmits<{ close: [] }>();
 
 const { t } = useI18n();
+const MotionPopover = motion.div;
+const popoverMotion = {
+  initial: { opacity: 0, y: 16, scale: 0.96 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 12, scale: 0.96 },
+  transition: { type: 'spring', stiffness: 340, damping: 26, mass: 0.65 }
+} as const;
 
 const task = computed(() => props.task);
 const isVisible = computed(() => props.open && !!task.value);
+const popoverStyle = computed<CSSProperties>(() => {
+  if (!isVisible.value) return {};
+  if (props.anchorRect && typeof window !== 'undefined') {
+    const rect = props.anchorRect;
+    const viewportWidth = window.innerWidth + window.scrollX;
+    const desiredLeft = rect.right + 16 + window.scrollX;
+    const maxLeft = viewportWidth - 420;
+    return {
+      top: `${rect.top + window.scrollY}px`,
+      left: `${Math.min(desiredLeft, maxLeft)}px`
+    };
+  }
+  return {
+    top: `${window.scrollY + window.innerHeight / 2}px`,
+    left: `${window.scrollX + window.innerWidth / 2}px`,
+    transform: 'translate(-50%, -50%)'
+  };
+});
+
+const popoverClass = computed(() => ({
+  'task-detail-popover--anchored': !!props.anchorRect,
+  'task-detail-popover--centered': !props.anchorRect
+}));
 
 const statusLabel = computed(() => {
   if (!task.value) return '--';
@@ -334,13 +368,205 @@ const completionPercent = computed(() => {
 </script>
 
 <style scoped>
-.task-detail-pop-enter-active,
-.task-detail-pop-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+.task-detail-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
 }
-.task-detail-pop-enter-from,
-.task-detail-pop-leave-to {
-  opacity: 0;
-  transform: scale(0.96);
+.task-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  background: transparent;
+}
+.task-detail-popover {
+  position: absolute;
+  pointer-events: auto;
+  min-width: 340px;
+  max-width: 420px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 48px -20px rgba(15, 23, 42, 0.3);
+  padding: 18px 0 0;
+  backdrop-filter: blur(12px);
+  transform-origin: top left;
+}
+.dark .task-detail-popover {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(23, 28, 40, 0.96);
+  box-shadow: 0 28px 54px -18px rgba(0, 0, 0, 0.6);
+}
+.task-detail-popover--anchored {
+  transform: translateY(0);
+}
+.task-detail-popover--centered {
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+.task-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+.dark .task-detail-header {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+.task-detail-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+.dark .task-detail-title {
+  color: #e2e8f0;
+}
+.task-detail-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+.dark .task-detail-subtitle {
+  color: #94a3b8;
+}
+.task-detail-close {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #475569;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.task-detail-close:hover {
+  background: rgba(148, 163, 184, 0.18);
+  color: #1e293b;
+}
+.dark .task-detail-close {
+  color: #cbd5f5;
+}
+.dark .task-detail-close:hover {
+  background: rgba(100, 116, 139, 0.16);
+  color: #e2e8f0;
+}
+.task-detail-body {
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.task-detail-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.dark .detail-label {
+  color: rgba(148, 163, 184, 0.7);
+}
+.detail-value {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #1e293b;
+}
+.dark .detail-value {
+  color: #cbd5f5;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  font-size: 13px;
+}
+.detail-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.detail-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-table-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.detail-table-hint {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #0ea5e9;
+}
+.dark .detail-table-hint {
+  color: #38bdf8;
+}
+.detail-table-wrapper {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(241, 245, 255, 0.56);
+  overflow: hidden;
+}
+.detail-table-wrapper table thead {
+  background: rgba(226, 232, 240, 0.6);
+  color: #475569;
+}
+.detail-table-wrapper table tbody tr + tr {
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+.dark .detail-table-wrapper {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.7);
+}
+.dark .detail-table-wrapper table thead {
+  background: rgba(51, 65, 85, 0.4);
+  color: #cbd5f5;
+}
+.dark .detail-table-wrapper table tbody tr + tr {
+  border-color: rgba(148, 163, 184, 0.12);
+}
+.detail-error {
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(254, 226, 226, 0.7);
+  padding: 12px 14px;
+}
+.detail-error-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #b91c1c;
+}
+.detail-error-text {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #7f1d1d;
+}
+.dark .detail-error {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(76, 5, 25, 0.6);
+}
+.dark .detail-error-title {
+  color: rgba(248, 180, 180, 0.9);
+}
+.dark .detail-error-text {
+  color: rgba(252, 231, 243, 0.85);
 }
 </style>
