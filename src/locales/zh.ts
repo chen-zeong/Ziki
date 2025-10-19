@@ -40,14 +40,17 @@ export default {
 
   // 文件上传
   fileUpload: {
-    title: '拖拽视频文件到此处',
+    title: '拖放视频或图片即可开始',
     subtitle: '或点击选择文件',
-    supportedFormats: `
-MP4, AVI, MOV, MKV, WMV, FLV, WEBM
-M4V, M4S, MPG, MTS, 3GP, ASF, VOB, OGV, RM, F4V,
-JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
+    description: '支持批量导入，自动识别视频与图片格式，快速建立压缩任务。',
+    supportedFormats: `视频：MP4 / MOV / MKV / AVI / WEBM
+图片：JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     selectFiles: '选择文件',
-    dragHere: '拖拽文件到此处'
+    dragHere: '拖拽即可开始',
+    videoLabel: '视频文件',
+    videoHint: '支持 MP4、MOV、MKV、AVI、WEBM 等主流格式',
+    imageLabel: '图片资源',
+    imageHint: '支持 JPG、PNG、WEBP、TIFF、SVG、HEIC、AVIF 等'
   },
 
   // 视频设置
@@ -74,7 +77,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     timeRangeHint: '提示：结束时间设为 00:00:00 或留空表示处理到视频末尾',
     hardwareAcceleration: '硬件加速',
     cpuEncoding: 'CPU编码',
-    gpuAcceleration: '显卡加速',
+    gpuAcceleration: '显卡',
     recommendedFormats: '推荐格式',
     otherFormats: '其他格式',
     incompatibleCodecs: '编码组合不兼容',
@@ -104,7 +107,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     qvHint: '编码参数 -q:v {value}',
     bitDepth10Unavailable: '源视频位深不足，无法升到10bit（仅支持向下转换）',
     bitDepth12Unavailable: '源视频位深不足，无法升到12bit（仅支持向下转换）',
-    viewSupportedList: '查看支持列表',
+    viewSupportedList: '支持列表',
     supportedHardwareEncodersTitle: '支持的硬件编码格式',
     noHardwareEncoders: '当前系统不支持任何硬件编码格式',
     intelMacNoQvNotice: '注意: 根据系统限制, Intel 版本的 macOS 暂不支持使用 VideoToolbox 的质量模式 (-q:v), 本应用已禁用硬件加速.',
@@ -198,6 +201,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG 等`,
     statusCompleted: '压缩完成',
     statusFailed: '压缩失败',
     statusCancelled: '已取消',
+    compressing: '压缩中',
     noFilteredTasks: '没有符合筛选条件的任务',
     uploadHint: '上传文件开始压缩',
     fileInfo: '文件信息',

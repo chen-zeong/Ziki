@@ -110,6 +110,8 @@ defineExpose({
       @update:timeRangeSettings="emit('update:timeRangeSettings', $event)"
       @time-validation-change="emit('time-validation-change', $event)"
       @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
+      @batch-compress="emit('batch-compress', $event)"
+      @undo-compress="emit('undo-compress')"
     />
   </div>
 </template>

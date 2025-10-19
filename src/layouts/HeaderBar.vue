@@ -125,7 +125,7 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
       <!-- 自定义输出文件夹按钮（移动到日志按钮左侧） -->
       <div class="relative">
         <button 
-          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
+          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200/80 dark:hover:bg-dark-border rounded-md transition-colors"
           @click="toggleOutputFolderPopup"
           :title="$t('outputFolder.title') || '输出文件夹'"
         >

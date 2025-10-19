@@ -40,13 +40,17 @@ export default {
 
   // File Upload
   fileUpload: {
-    title: 'Drag video files here',
+    title: 'Drop videos or images to start',
     subtitle: 'or click to select files',
-    supportedFormats: `MP4, AVI, MOV, MKV, WMV, FLV, WEBM
-M4V, M4S, MPG, 3GP, ASF, VOB, OGV, RM, F4V,
-JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
-    selectFiles: 'Select Files',
-    dragHere: 'Drag files here'
+    description: 'Batch import media and let Ziki detect video or image formats automatically.',
+    supportedFormats: `Video: MP4 / MOV / MKV / AVI / WEBM
+Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
+    selectFiles: 'Choose Files',
+    dragHere: 'Drag & drop ready',
+    videoLabel: 'Video files',
+    videoHint: 'Supports MP4, MOV, MKV, AVI, WEBM and other popular codecs',
+    imageLabel: 'Image assets',
+    imageHint: 'Supports JPG, PNG, WEBP, TIFF, SVG, HEIC, AVIF and more'
   },
 
   // Video Settings
@@ -197,6 +201,7 @@ JPG, PNG, BMP, TIFF, WEBP, SVG etc.`,
     statusCompleted: 'Completed',
     statusFailed: 'Failed',
     statusCancelled: 'Cancelled',
+    compressing: 'Compressing',
     noFilteredTasks: 'No tasks match filter',
     uploadHint: 'Upload files to start compression',
     fileInfo: 'File Info',

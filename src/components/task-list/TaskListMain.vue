@@ -13,38 +13,36 @@
       @clear-all-tasks="handleClearAllTasks"
     />
 
-    <div class="flex-1 overflow-y-auto px-4 py-4 transition-all duration-200">
-      <div v-if="tasks.length === 0" class="flex h-full items-center justify-center">
-        <div class="relative w-full max-w-xl overflow-hidden rounded-[28px] border border-dashed border-slate-300/70 dark:border-white/15 bg-white/80 dark:bg-[#141927]/85 shadow-[0_32px_70px_rgba(15,23,42,0.16)] px-12 py-14 text-center">
-          <div class="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
-            <div class="absolute -top-28 right-10 h-48 w-48 rounded-full bg-[var(--brand-primary)]/15 blur-[90px]"></div>
-            <div class="absolute -bottom-32 left-0 h-52 w-52 rounded-full bg-sky-200/25 dark:bg-sky-500/15 blur-[110px]"></div>
-          </div>
-          <div class="relative flex flex-col items-center gap-6 text-slate-600 dark:text-slate-300">
-            <div class="grid place-items-center rounded-2xl bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-[#1c2435] dark:via-[#182031] dark:to-[#111623] border border-white/70 dark:border-white/10 shadow-[0_20px_42px_rgba(15,23,42,0.18)] h-20 w-20">
-              <svg class="w-9 h-9 text-[var(--brand-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+    <div class="flex-1 overflow-y-auto px-4 pb-4 transition-all duration-200">
+      <div v-if="tasks.length === 0" class="flex h-full items-center justify-center px-4">
+        <div class="w-full max-w-lg rounded-2xl border border-dashed border-slate-300/70 bg-white/90 px-10 py-12 text-center shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-white/12 dark:bg-white/[0.04] dark:shadow-[0_24px_55px_rgba(4,9,20,0.55)]">
+          <div class="flex flex-col items-center gap-6 text-slate-600 dark:text-slate-300">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full border border-slate-200/80 bg-white text-[var(--brand-primary)] shadow-sm dark:border-white/15 dark:bg-white/[0.03]">
+              <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <div class="space-y-3 max-w-lg">
-              <h3 class="text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">{{ $t('taskList.noTasks') }}</h3>
+            <div class="space-y-2">
+              <h3 class="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">
+                {{ $t('taskList.noTasks') }}
+              </h3>
               <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                 {{ $t('taskList.noTasksDescription') }}
               </p>
             </div>
-            <div class="flex flex-col sm:flex-row items-center gap-3 text-sm">
+            <div class="flex flex-col items-center gap-3">
               <button
-                class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[var(--brand-primary)] text-white font-medium shadow-[0_18px_36px_rgba(81,98,255,0.32)] hover:translate-y-[-2px] transition-transform"
+                class="inline-flex items-center gap-2 rounded-full border border-slate-200/70 px-5 py-2.5 text-sm font-medium text-slate-600 transition-colors duration-200 hover:border-[var(--brand-primary)]/50 hover:text-[var(--brand-primary)] dark:border-white/12 dark:text-slate-300 dark:hover:border-[var(--brand-primary)]/40"
                 @click="$emit('add-files')"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
                 </svg>
                 {{ $t('toolbar.addFiles') }}
               </button>
-              <div class="text-xs uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
+              <span class="text-xs font-medium uppercase tracking-[0.32em] text-slate-400 dark:text-slate-500">
                 {{ $t('taskList.uploadHint') }}
-              </div>
+              </span>
             </div>
           </div>
         </div>
@@ -62,7 +60,8 @@
           <TransitionGroup
             name="task-stagger"
             tag="div"
-            class="relative z-10 space-y-3 py-3"
+            move-class="task-stagger-no-move"
+            class="relative z-10 space-y-3 py-2"
           >
             <TaskItem
               v-for="task in tasks"
@@ -85,44 +84,70 @@
 
     <div class="flex items-center gap-3 px-4 py-2 bg-transparent">
       <div class="flex items-center gap-3 flex-[1] min-w-0">
-        <MotionButton
-          class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 gap-0"
-          :class="multiSelectMode
-            ? 'bg-[var(--brand-primary)] text-white/95 hover:bg-[var(--brand-primary)]/92'
-            : 'text-slate-700 dark:text-slate-200 hover:border-[var(--brand-primary)]/40 hover:text-[var(--brand-primary)]'"
-          :animate="multiSelectMode ? multiSelectActiveMotion : multiSelectInactiveMotion"
-          :initial="false"
-          :transition="multiSelectTransition"
+        <button
+          type="button"
+          class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full transition-colors duration-200"
+          :class="multiSelectMode ? multiSelectActiveClasses : multiSelectInactiveClasses"
           @click="toggleMultiSelect"
           :aria-pressed="multiSelectMode"
           :aria-label="t('taskList.multiSelect') || 'Multi-select'"
         >
-          <ListPlus class="w-4 h-4" />
-        </MotionButton>
+          <div class="flex h-4 items-center justify-center gap-1.5">
+            <template v-if="showMultiSelectDots">
+              <span
+                v-for="index in 3"
+                :key="index"
+                :class="['multi-select-dot', multiSelectMode && !isDarkMode ? 'multi-select-dot--light' : '']"
+                :style="{ animationDelay: ((index - 1) * 0.22) + 's' }"
+                aria-hidden="true"
+              ></span>
+            </template>
+            <ListPlus v-else class="w-4 h-4" aria-hidden="true" />
+          </div>
+          <span class="sr-only">{{ t('taskList.multiSelect') }}</span>
+        </button>
         <MotionIndicator
           v-if="multiSelectMode"
-          class="multi-select-pill"
-          :initial="{ opacity: 0, y: 6 }"
-          :animate="{ opacity: 1, y: 0 }"
-          :transition="{ duration: 0.25, easing: 'ease-out' }"
-        >
-          {{ t('taskList.multiSelectActive') || '多选模式' }}
-        </MotionIndicator>
+          class="multi-select-flare"
+          :initial="{ opacity: 0, scale: 0.9 }"
+          :animate="{ opacity: 1, scale: 1 }"
+          :transition="{ duration: 0.28, easing: 'ease-out' }"
+        />
       </div>
       <div class="flex items-center gap-3 flex-[3] min-w-0 justify-end">
         <button
-          class="relative inline-flex w-full max-w-md items-center justify-center px-10 py-3 rounded-full text-base font-semibold transition-all duration-200 ease-out bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 overflow-hidden"
+          class="start-button relative inline-flex w-full max-w-md items-center justify-center px-10 py-3 rounded-lg text-base font-semibold transition-all duration-200 ease-out bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 overflow-hidden"
           :class="{
-            'cursor-not-allowed opacity-60 pointer-events-none': !canStart,
-            'start-button--processing': !multiSelectMode && selectedTaskStatus === 'processing'
+            'cursor-not-allowed opacity-60 pointer-events-none': !primaryActionEnabled,
+            'start-button--processing': isProcessingButton,
+            'start-button--undo': showUndoButton
           }"
-          :disabled="!canStart"
-          @click="handleStart"
+          :disabled="!primaryActionEnabled"
+          :aria-busy="isProcessingButton"
+          :aria-label="primaryButtonLabel"
+          @click="handlePrimaryAction"
         >
-          <span>{{ t('videoSettings.compress') || '开始压缩' }}</span>
+          <span class="start-button__content">
+            <Loader2
+              v-if="isProcessingButton"
+              class="start-button__icon animate-spin"
+              aria-hidden="true"
+            />
+            <Undo2
+              v-else-if="showUndoButton"
+              class="start-button__icon"
+              aria-hidden="true"
+            />
+            <Play
+              v-else
+              class="start-button__icon"
+              aria-hidden="true"
+            />
+            <span class="start-button__label">{{ primaryButtonLabel }}</span>
+          </span>
           <span
             v-if="multiSelectMode"
-            class="absolute right-6 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/25 dark:bg-white/10 text-sm font-semibold transition-all duration-200 backdrop-blur-sm"
+            class="start-button__badge"
           >
             {{ selectedTaskIds.length }}
           </span>
@@ -141,6 +166,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
  import { invoke } from '@tauri-apps/api/core';
  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
@@ -150,7 +176,7 @@ import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
 import TaskDetails from './TaskDetails.vue';
-import { ListPlus } from 'lucide-vue-next';
+import { ListPlus, Loader2, Undo2, Play } from 'lucide-vue-next';
 import { motion } from 'motion-v';
  
  import type { CompressionTask } from '../../types';
@@ -168,52 +194,128 @@ const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
    selectedTaskId?: string | null;
  }
 
- interface Emits {
-   (e: 'add-files'): void;
-   (e: 'files-selected', files: FileList): void;
-   (e: 'update-task', task: CompressionTask): void;
-   (e: 'delete-task', taskId: string): void;
-   (e: 'resume-compression', taskId: string): void;
+type StartCompressPayload = { mode: 'single' } | { mode: 'batch'; taskIds: string[] };
+
+interface Emits {
+  (e: 'add-files'): void;
+  (e: 'files-selected', files: FileList): void;
+  (e: 'update-task', task: CompressionTask): void;
+  (e: 'delete-task', taskId: string): void;
+  (e: 'resume-compression', taskId: string): void;
    (e: 'pause-task', taskId: string): void;
   (e: 'select-task', taskId: string): void;
   (e: 'clear-all-tasks'): void;
-  (e: 'start-compress'): void;
+  (e: 'start-compress', payload?: StartCompressPayload): void;
+  (e: 'undo-compress'): void;
   (e: 'toggle-output-folder'): void;
- }
+}
 
  const props = defineProps<Props>();
 
  // 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
  const tasks = computed(() => props.tasks || taskStore.tasks);
- const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
- const emit = defineEmits<Emits>();
- const { t } = useI18n();
+const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
+const emit = defineEmits<Emits>();
+const { t } = useI18n();
 const globalSettings = useGlobalSettingsStore();
+const { isDarkMode } = storeToRefs(globalSettings);
 
  // 状态管理
 const selectedTaskIds = ref<string[]>([]);
+const showMultiSelectDots = ref(false);
 const isDragOver = ref(false);
 const multiSelectMode = ref(false);
 const detailTaskId = ref<string | null>(null);
 const detailAnchorElement = ref<HTMLElement | null>(null);
 const detailAnchorRect = ref<DOMRect | null>(null);
 const MotionGlow = motion.div;
-const MotionButton = motion.button;
 const MotionIndicator = motion.div;
-const multiSelectActiveMotion = { scale: 1.08, y: -2, boxShadow: '0 16px 36px rgba(81, 98, 255, 0.28)' } as const;
-const multiSelectInactiveMotion = { scale: 1, y: 0, boxShadow: '0 0 0 rgba(0, 0, 0, 0)' } as const;
-const multiSelectTransition = { type: 'spring', stiffness: 340, damping: 24, mass: 0.6 } as const;
+const multiSelectInactiveClasses =
+  'border border-slate-200/80 bg-white text-slate-700 hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] dark:border-white/12 dark:bg-[#1a2132] dark:text-slate-200 dark:hover:border-[var(--brand-primary)]/40 dark:hover:text-[var(--brand-primary)]';
+const multiSelectActiveClasses = computed(
+  () => 'border border-transparent bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-secondary)] hover:text-white'
+);
 
- // 底部操作区相关：是否可开始、选择与多选切换
-const canStart = computed(() => {
-  return multiSelectMode.value ? selectedTaskIds.value.length > 0 : !!selectedTaskId.value;
-});
+type FileDropEventType = 'hover' | 'drop' | 'cancel' | 'unknown';
 
+const normalizeDropPayload = (payload: unknown): { type: FileDropEventType; paths: string[] } => {
+  if (Array.isArray(payload)) {
+    return {
+      type: 'drop',
+      paths: payload.filter((item): item is string => typeof item === 'string')
+    };
+  }
+  if (typeof payload === 'string') {
+    return { type: 'drop', paths: [payload] };
+  }
+  if (payload && typeof payload === 'object') {
+    const record = payload as Record<string, unknown>;
+    const rawType = typeof record.type === 'string' ? record.type.toLowerCase() : 'unknown';
+    const type: FileDropEventType =
+      rawType === 'hover' || rawType === 'over'
+        ? 'hover'
+        : rawType === 'drop'
+          ? 'drop'
+          : rawType === 'cancel' || rawType === 'leave'
+            ? 'cancel'
+            : 'unknown';
+    const maybePaths = record.paths;
+    const paths = Array.isArray(maybePaths)
+      ? (maybePaths as unknown[]).filter((item): item is string => typeof item === 'string')
+      : [];
+    return { type, paths };
+  }
+  return { type: 'unknown', paths: [] };
+};
+
+// 底部操作区相关：按钮状态与标签
 const selectedTaskStatus = computed(() => {
   const current = selectedTaskId.value;
   if (!current) return null;
   return tasks.value.find(task => task.id === current)?.status || null;
 });
+
+const isProcessingButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'processing');
+const showUndoButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'completed');
+const isResumeButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'paused');
+
+const primaryActionEnabled = computed(() => {
+  if (multiSelectMode.value) {
+    return selectedTaskIds.value.length > 0;
+  }
+  if (showUndoButton.value) {
+    return !!selectedTaskId.value;
+  }
+  if (isProcessingButton.value) {
+    return false;
+  }
+  if (isResumeButton.value) {
+    return !!selectedTaskId.value;
+  }
+  return !!selectedTaskId.value;
+});
+
+const primaryButtonLabel = computed(() => {
+  if (multiSelectMode.value) {
+    return t('videoSettings.compress') || '开始压缩';
+  }
+  if (showUndoButton.value) {
+    return t('videoSettings.undo') || '撤销';
+  }
+  if (isProcessingButton.value) {
+    return t('videoSettings.compressing') || '压缩中...';
+  }
+  if (isResumeButton.value) {
+    return t('videoSettings.resumeCompress') || '继续压缩';
+  }
+  return t('videoSettings.compress') || '开始压缩';
+});
+
+const exitMultiSelectMode = () => {
+  multiSelectMode.value = false;
+  showMultiSelectDots.value = false;
+  selectedTaskIds.value = [];
+};
 
 const activeDetailTask = computed(() => {
   return tasks.value.find(task => task.id === detailTaskId.value) || null;
@@ -232,18 +334,45 @@ const toggleTaskCheck = (taskId: string) => {
 };
 
 const handleStart = () => {
-  emit('start-compress');
+  if (multiSelectMode.value) {
+    const ids = selectedTaskIds.value.filter(Boolean);
+    if (ids.length === 0) {
+      exitMultiSelectMode();
+      return;
+    }
+    emit('start-compress', { mode: 'batch', taskIds: ids });
+    exitMultiSelectMode();
+    return;
+  }
+  emit('start-compress', { mode: 'single' });
+};
+
+const handlePrimaryAction = () => {
+  if (!primaryActionEnabled.value) return;
+  if (isResumeButton.value) {
+    const currentId = selectedTaskId.value;
+    if (currentId) {
+      emit('resume-compression', currentId);
+    }
+    return;
+  }
+  if (showUndoButton.value) {
+    emit('undo-compress');
+    return;
+  }
+  handleStart();
 };
 
 const toggleMultiSelect = () => {
   multiSelectMode.value = !multiSelectMode.value;
   if (multiSelectMode.value) {
+    showMultiSelectDots.value = true;
     const current = selectedTaskId.value;
     if (current && !selectedTaskIds.value.includes(current)) {
       selectedTaskIds.value = [current];
     }
   } else {
-    selectedTaskIds.value = [];
+    exitMultiSelectMode();
   }
 };
 
@@ -283,12 +412,11 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleDetailViewportChange, true);
 });
 
- // Tauri drag-drop listeners
- let unlistenDragDrop: UnlistenFn | null = null;
- let unlistenDragEnter: UnlistenFn | null = null;
- let unlistenDragLeave: UnlistenFn | null = null;
- let unlistenDragOver: UnlistenFn | null = null;
- let unlistenFileDrop: UnlistenFn | null = null;
+// Tauri drag-drop listeners
+let unlistenFileDropPrimary: UnlistenFn | null = null;
+let unlistenFileDropHover: UnlistenFn | null = null;
+let unlistenFileDropCancelled: UnlistenFn | null = null;
+let unlistenWindowFileDrop: UnlistenFn | null = null;
 
  // 计算属性
 const deleteTask = async (taskId: string) => {
@@ -324,27 +452,13 @@ const deleteTask = async (taskId: string) => {
   }
 };
 
- const pauseTask = async (taskId: string) => {
-   try {
-     if (isTauri) {
-       await invoke('pause_task', { taskId });
-     }
-     taskStore.updateTaskStatus(taskId, 'paused');
-   } catch (error) {
-     console.error('Pause task failed:', error);
-   }
- };
+const pauseTask = (taskId: string) => {
+  emit('pause-task', taskId);
+};
 
- const resumeTask = async (taskId: string) => {
-   try {
-     if (isTauri) {
-       await invoke('resume_task', { taskId });
-     }
-     taskStore.updateTaskStatus(taskId, 'processing');
-   } catch (error) {
-     console.error('Resume task failed:', error);
-   }
- };
+const resumeTask = (taskId: string) => {
+  emit('resume-compression', taskId);
+};
 
 const handleClearAllTasks = () => {
   try {
@@ -352,7 +466,7 @@ const handleClearAllTasks = () => {
     detailTaskId.value = null;
     detailAnchorElement.value = null;
     detailAnchorRect.value = null;
-    selectedTaskIds.value = [];
+    exitMultiSelectMode();
   } catch (error) {
     console.error('Clear all tasks failed:', error);
   }
@@ -405,8 +519,6 @@ const handleClearAllTasks = () => {
    }
  };
 
- // Lifecycle: register/unregister Tauri listeners
- let unlistenWindowFileDrop: UnlistenFn | null = null;
 onMounted(async () => {
   if (!isTauri) {
     // Web 环境不注册 Tauri 事件
@@ -429,29 +541,30 @@ onMounted(async () => {
       appWindow = null;
     }
 
-    const ddEnter = await listen('tauri://file-drop', (event) => {
-      const paths = (event as any).payload as string[];
-      if (Array.isArray(paths)) {
+    unlistenFileDropPrimary = await listen('tauri://file-drop', (event) => {
+      const { type, paths } = normalizeDropPayload((event as any)?.payload);
+      if (type === 'hover') {
+        isDragOver.value = true;
+        return;
+      }
+      if (type === 'cancel') {
+        isDragOver.value = false;
+        return;
+      }
+      if (paths.length > 0) {
+        isDragOver.value = false;
+        void handleTauriFileDrop(paths);
+      }
+    });
+    unlistenFileDropCancelled = await listen('tauri://file-drop-cancelled', () => {
+      isDragOver.value = false;
+    });
+    unlistenFileDropHover = await listen('tauri://file-drop-hover', (event) => {
+      const { type } = normalizeDropPayload((event as any)?.payload);
+      if (type === 'hover') {
         isDragOver.value = true;
       }
-     });
-     const ddLeave = await listen('tauri://file-drop-cancelled', () => {
-       isDragOver.value = false;
-     });
-     const ddOver = await listen('tauri://file-drop-hover', () => {
-       isDragOver.value = true;
-     });
-     const ddDrop = await listen('tauri://file-drop', (event) => {
-       const paths = (event as any).payload as string[];
-       if (Array.isArray(paths) && paths.length > 0) {
-         isDragOver.value = false;
-         handleTauriFileDrop(paths);
-       }
-     });
-     unlistenDragEnter = ddEnter;
-     unlistenDragLeave = ddLeave;
-     unlistenDragOver = ddOver;
-     unlistenFileDrop = ddDrop;
+    });
 
     // 额外后备：窗口级别文件拖拽事件（如果可用）
     try {
@@ -461,15 +574,14 @@ onMounted(async () => {
       if (winAny && typeof winAny.onFileDropEvent === 'function') {
         unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
           console.log('[DD] appWindow.onFileDropEvent:', e);
-          const ty = e?.payload?.type;
-          const paths = e?.payload?.paths || e?.payload || [];
-          if (ty === 'hover') {
+          const { type, paths } = normalizeDropPayload(e?.payload);
+          if (type === 'hover') {
             isDragOver.value = true;
-          } else if (ty === 'cancel') {
+          } else if (type === 'cancel') {
             isDragOver.value = false;
-          } else if (ty === 'drop') {
+          } else if (paths.length > 0) {
             isDragOver.value = false;
-            if (Array.isArray(paths)) handleTauriFileDrop(paths);
+            void handleTauriFileDrop(paths);
           }
         });
         console.log('[DD] Registered window-level file-drop listener');
@@ -491,7 +603,7 @@ onMounted(async () => {
         }
       });
     }
-  } catch (error) {
+ } catch (error) {
     console.error('Register drag-drop listeners failed:', error);
   }
 });
@@ -499,26 +611,71 @@ onMounted(async () => {
  onUnmounted(async () => {
    if (!isTauri) return;
    try {
-     const funcs = [unlistenDragEnter, unlistenDragLeave, unlistenDragOver, unlistenFileDrop, unlistenWindowFileDrop];
-     for (const fn of funcs) {
-       if (fn) await fn();
-     }
-     console.log('[DD] Unregistered Tauri drag-drop listeners');
-   } catch (error) {
+    const funcs = [unlistenFileDropPrimary, unlistenFileDropHover, unlistenFileDropCancelled, unlistenWindowFileDrop];
+    for (const fn of funcs) {
+      if (fn) await fn();
+    }
+    console.log('[DD] Unregistered Tauri drag-drop listeners');
+  } catch (error) {
      console.error('Unregister drag-drop listeners failed:', error);
    }
 });
 
 watch(tasks, (newTasks) => {
-  if (!detailTaskId.value) return;
-  const stillExists = newTasks.some(task => task.id === detailTaskId.value);
-  if (!stillExists) {
-    detailTaskId.value = null;
+  if (detailTaskId.value) {
+    const stillExists = newTasks.some(task => task.id === detailTaskId.value);
+    if (!stillExists) {
+      detailTaskId.value = null;
+    }
+  }
+  if (!multiSelectMode.value) return;
+  const processingIds = newTasks
+    .filter(task => selectedTaskIds.value.includes(task.id) && task.status === 'processing')
+    .map(task => task.id);
+  const isSameLength = processingIds.length === selectedTaskIds.value.length;
+  const isSameSet = isSameLength && processingIds.every((id, idx) => id === selectedTaskIds.value[idx]);
+  if (!isSameSet) {
+    selectedTaskIds.value = processingIds;
+  }
+  if (processingIds.length === 0) {
+    showMultiSelectDots.value = true;
   }
 });
 </script>
 
 <style scoped>
+.multi-select-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.85;
+  animation: multi-select-bounce 1.4s ease-in-out infinite;
+}
+
+.multi-select-dot--light {
+  background: #ffffff;
+}
+
+@keyframes multi-select-bounce {
+  0% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+}
+
 .task-stagger-enter-from,
 .task-stagger-leave-to {
   opacity: 0;
@@ -534,6 +691,9 @@ watch(tasks, (newTasks) => {
 .task-stagger-move {
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.task-stagger-no-move {
+  transition: none !important;
+}
 .task-stack__glow {
   position: absolute;
   inset: -18px -8px;
@@ -547,69 +707,101 @@ watch(tasks, (newTasks) => {
 .task-stack--multi .task-stack__glow {
   filter: saturate(1.3);
 }
-.multi-select-pill {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
+.multi-select-flare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 120% at 50% 50%, rgba(255, 255, 255, 0.28), transparent 68%);
+  mix-blend-mode: screen;
+}
+.start-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.start-button__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  position: relative;
+  z-index: 1;
+}
+.start-button__icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.92;
+  flex-shrink: 0;
+}
+.start-button__label {
+  letter-spacing: 0.01em;
+}
+.start-button__badge {
+  position: absolute;
+  right: 1.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0 0.4rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.26);
+  color: #0f172a;
+  font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #4338ca;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  box-shadow: 0 10px 24px -18px rgba(81, 98, 255, 0.4);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
-.dark .multi-select-pill {
-  color: #e0e7ff;
-  background: rgba(129, 140, 248, 0.16);
-  border-color: rgba(129, 140, 248, 0.32);
-  box-shadow: 0 12px 26px -18px rgba(129, 140, 248, 0.45);
+.dark .start-button__badge {
+  background: rgba(15, 23, 42, 0.38);
+  color: #e2e8f0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
-.start-button--processing::before,
+.start-button--processing {
+  background: linear-gradient(135deg, rgba(76, 106, 255, 1) 0%, rgba(37, 99, 235, 0.98) 52%, rgba(14, 165, 233, 0.96) 100%);
+  box-shadow: 0 18px 36px -18px rgba(59, 130, 246, 0.55);
+}
+.start-button--processing::before {
+  content: '';
+  position: absolute;
+  inset: -16%;
+  background: radial-gradient(circle at 22% 15%, rgba(255, 255, 255, 0.42), transparent 58%);
+  opacity: 0.75;
+  z-index: 0;
+}
 .start-button--processing::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  pointer-events: none;
+  inset: -18%;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.58) 48%, rgba(255, 255, 255, 0) 82%);
+  transform: translateX(-120%);
+  animation: start-button-sheen 1.8s ease-in-out infinite;
+  z-index: 0;
+  opacity: 0.85;
 }
-.start-button--processing::before {
-  width: 112%;
-  height: 112%;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.45);
-  border-top-color: transparent;
-  border-left-color: transparent;
-  transform: translate(-50%, -50%) rotate(0deg);
-  animation: start-orbit 1.4s linear infinite;
+.start-button--undo {
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.92) 0%, rgba(59, 130, 246, 0.95) 100%);
+  box-shadow: 0 16px 32px -18px rgba(39, 123, 192, 0.42);
 }
-.start-button--processing::after {
-  width: 138%;
-  height: 138%;
-  border-radius: 999px;
-  transform: translate(-50%, -50%) scale(0.7);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 65%);
-  opacity: 0.75;
-  animation: start-pulse 2.6s ease-out infinite;
+.start-button--undo .start-button__icon {
+  opacity: 1;
+}
+.start-button--undo .start-button__label {
+  letter-spacing: 0.02em;
 }
 
-@keyframes start-orbit {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-@keyframes start-pulse {
+@keyframes start-button-sheen {
   0% {
-    transform: translate(-50%, -50%) scale(0.65);
-    opacity: 0.7;
+    transform: translateX(-120%);
   }
   55% {
-    transform: translate(-50%, -50%) scale(1.1);
-    opacity: 0;
+    transform: translateX(0%);
   }
   100% {
-    transform: translate(-50%, -50%) scale(0.65);
-    opacity: 0;
+    transform: translateX(120%);
   }
 }
 </style>

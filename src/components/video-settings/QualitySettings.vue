@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 transition-all duration-300">
+  <div :class="['quality-settings-shell transition-all duration-300', shellClasses]">
     <div class="space-y-4">
       <div class="flex items-center justify-between">
         <label class="text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -10,25 +10,17 @@
         </span>
       </div>
 
-      <div class="relative pt-2 pb-1">
-        <div
-          class="slider-shell"
-          @pointerenter="handleSliderPointerEnter"
-          @pointerleave="handleSliderPointerLeave"
-          @pointerdown="handleSliderPointerDown"
-          @pointerup="handleSliderPointerUp"
-        >
+      <div class="relative mt-3 pt-0.5 pb-0">
+        <div class="slider-shell">
           <div class="slider-track">
             <div
               class="slider-default-marker"
               :style="{ left: `calc(${defaultSliderPosition}% - 1px)` }"
             ></div>
-            <MotionFill
+            <div
               class="slider-fill"
-              :animate="{ width: qualityValue + '%' }"
-              :initial="false"
-              :transition="{ duration: 0.16, easing: 'linear' }"
-            />
+              :style="{ width: qualityValue + '%' }"
+            ></div>
           </div>
           <div
             class="slider-thumb"
@@ -43,15 +35,9 @@
             :class="{ 'slider-tooltip--visible': showTooltip }"
             :style="{ left: qualityValue + '%' }"
           >
-            <MotionTooltip
-              class="tooltip-bubble"
-              :key="currentParamDisplay"
-              :initial="{ y: 8, opacity: 0 }"
-              :animate="{ y: 0, opacity: 1 }"
-              :transition="{ type: 'spring', stiffness: 320, damping: 20, mass: 0.6 }"
-            >
+            <div class="tooltip-bubble">
               {{ currentParamDisplay }}
-            </MotionTooltip>
+            </div>
           </div>
         </div>
 
@@ -64,12 +50,16 @@
           step="1"
           class="slider-input"
           @input="updateQualityState"
-          @focus="showTooltip = true"
-          @blur="showTooltip = false"
+          @mouseenter="showTooltip = true"
+          @mouseleave="showTooltip = false"
+          @mousedown="showTooltip = true"
+          @mouseup="showTooltip = false"
+          @touchstart.passive="showTooltip = true"
+          @touchend.passive="showTooltip = false"
         />
       </div>
 
-      <div class="pt-4 border-t border-slate-200/80 dark:border-white/10 space-y-3">
+      <div class="pt-2 space-y-2.5">
         <div class="flex items-center justify-between">
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
             {{ t('videoSettings.colorDepth') }}
@@ -96,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, inject, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, inject, nextTick } from 'vue';
 import type { CompressionSettings } from '../../types';
 import {
   getEncoderQualityParam,
@@ -104,7 +94,6 @@ import {
   QUALITY_LEVELS
 } from '../../config/qualityMappings';
 import { useI18n } from 'vue-i18n';
-import { motion } from 'motion-v';
 
 const currentFile = inject<{ value: any }>('currentFile');
 const { t } = useI18n();
@@ -114,24 +103,29 @@ interface Props {
   resolution?: string;
   isHardwareAccelerated?: boolean;
   currentVideoCodec?: string;
+  withCardShell?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isHardwareAccelerated: false,
-  currentVideoCodec: ''
+  currentVideoCodec: '',
+  withCardShell: true
 });
 
 const emit = defineEmits<{
   'update:modelValue': [value: Partial<CompressionSettings>];
 }>();
 
+const shellClasses = computed(() =>
+  props.withCardShell
+    ? 'p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10'
+    : 'p-0 bg-transparent border-0 shadow-none'
+);
+
 const qualityValue = ref(80);
 const showTooltip = ref(false);
 const selectedBitDepth = ref<8 | 10 | 12>(8);
 const isInternalModelUpdate = ref(false);
-const isSliderPointerDown = ref(false);
-const MotionFill = motion.div;
-const MotionTooltip = motion.div;
 
 const getOriginalBitDepth = (): number => {
   const val = currentFile?.value?.metadata?.colorDepth as unknown;
@@ -350,31 +344,6 @@ const updateQualityState = () => {
   emit('update:modelValue', settings.value);
 };
 
-const handleSliderPointerEnter = () => {
-  showTooltip.value = true;
-};
-
-const handleSliderPointerLeave = () => {
-  if (!isSliderPointerDown.value) {
-    showTooltip.value = false;
-  }
-};
-
-const handleSliderPointerDown = () => {
-  isSliderPointerDown.value = true;
-  showTooltip.value = true;
-};
-
-const handleGlobalPointerUp = () => {
-  if (!isSliderPointerDown.value) return;
-  isSliderPointerDown.value = false;
-  showTooltip.value = false;
-};
-
-const handleSliderPointerUp = () => {
-  handleGlobalPointerUp();
-};
-
 // 同步外部传入的 modelValue 到内部状态
 watch(() => props.modelValue, () => {
   if (isInternalModelUpdate.value) {
@@ -392,31 +361,27 @@ watch(maxSupportedBitDepth, (maxDepth) => {
 });
 
 onMounted(async () => {
-  window.addEventListener('pointerup', handleGlobalPointerUp, { passive: true });
   await nextTick();
   isInternalModelUpdate.value = true;
   emit('update:modelValue', settings.value);
 });
 
-onUnmounted(() => {
-  window.removeEventListener('pointerup', handleGlobalPointerUp);
-});
 </script>
 
 <style scoped>
 .slider-shell {
   position: relative;
   width: 100%;
-  height: 40px;
+  height: 32px;
   display: flex;
   align-items: center;
 }
 .slider-track {
   position: relative;
   width: 100%;
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.22);
+  background: rgba(148, 163, 184, 0.2);
   overflow: hidden;
   box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.08);
 }
@@ -449,13 +414,14 @@ onUnmounted(() => {
   inset: 0;
   border-radius: inherit;
   background: rgba(99, 102, 241, 0.92);
+  transition: width 0.18s cubic-bezier(0.33, 1, 0.68, 1);
   box-shadow: 0 10px 22px -16px rgba(99, 102, 241, 0.45);
 }
 .slider-thumb {
   position: absolute;
   top: 50%;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   transform: translateY(-50%);
   pointer-events: none;
   transition: transform 0.18s ease, filter 0.18s ease;
@@ -501,8 +467,8 @@ onUnmounted(() => {
 }
 .slider-input {
   position: absolute;
-  top: -12px;
-  bottom: -12px;
+  top: -10px;
+  bottom: -10px;
   left: 0;
   right: 0;
   width: 100%;

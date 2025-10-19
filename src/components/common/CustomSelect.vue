@@ -3,11 +3,12 @@
     <!-- 触发按钮 -->
     <button
       type="button"
-      class="w-full bg-white dark:bg-[#20242f] border border-slate-200/80 dark:border-white/10 rounded-xl px-4 py-2 text-left hover:bg-white/90 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] relative pr-10 transition-all duration-200"
+      class="select-trigger w-full rounded-xl px-4 py-2.5 pr-11 text-left font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+      :class="{ 'is-open': isOpen }"
       @click.stop="toggleDropdown"
     >
-      <span :class="['block truncate font-medium', isPlaceholder ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-100']">{{ selectedLabel || placeholderText }}</span>
-      <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-300 pointer-events-none transition-transform duration-200" :class="{ 'rotate-180': isOpen }" />
+      <span :class="['block truncate', isPlaceholder ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-100']">{{ selectedLabel || placeholderText }}</span>
+      <ChevronDown class="select-trigger__icon absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-transform duration-200" :class="{ 'rotate-180': isOpen }" />
     </button>
 
     <!-- Teleport 到 body，避免被父容器裁剪 -->
@@ -17,18 +18,19 @@
         <div
           v-if="isOpen"
           ref="dropdownRef"
-          class="fixed z-[9999] bg-white dark:bg-[#161821] border border-slate-200/80 dark:border-white/10 rounded-xl ring-1 ring-white/30 dark:ring-white/10 overflow-auto"
-          :style="menuStyle"
+          class="select-dropdown fixed z-[9999] overflow-auto rounded-xl border border-slate-200/80 dark:border-white/10 ring-1 ring-white/40 dark:ring-white/10"
+          :class="dropdownAppearanceClass"
+          :style="{ ...menuStyle }"
         >
-          <ul class="py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
+          <ul class="select-dropdown__list py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
             <li
               v-for="opt in visibleOptions"
               :key="opt.value"
               :class="[
-                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
+                'select-option px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
                 opt.value === props.modelValue
-                  ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
-                  : 'hover:bg-slate-100 dark:hover:bg-white/5'
+                  ? 'select-option--active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold dark:bg-[var(--brand-primary)]/24 dark:text-slate-100'
+                  : 'hover:bg-slate-100 dark:hover:bg-white/10'
               ]"
               @click.stop="selectOption(opt.value)"
             >
@@ -61,18 +63,19 @@
         <div
           v-if="isOpen"
           ref="dropdownRef"
-          class="absolute z-50 w-full bg-white dark:bg-[#111111] border border-gray-200 dark:border-dark-border rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 max-h-60 overflow-auto"
-          :class="dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'"
+          class="select-dropdown absolute z-50 w-full max-h-60 overflow-auto rounded-lg border border-gray-200 dark:border-dark-border ring-1 ring-black/5 dark:ring-white/10"
+          :class="[dropdownAppearanceClass, dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1']"
+          :style="{ backgroundColor: dropdownBackground }"
         >
-          <ul class="py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
+          <ul class="select-dropdown__list py-2 text-xs text-slate-600 dark:text-slate-200 space-y-1">
             <li
               v-for="opt in visibleOptions"
               :key="opt.value"
               :class="[
-                'px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
+                'select-option px-3 py-2 flex items-start gap-2 cursor-pointer rounded-lg mx-2 transition-all duration-200',
                 opt.value === props.modelValue
-                  ? 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]'
-                  : 'hover:bg-slate-100 dark:hover:bg-white/5'
+                  ? 'select-option--active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] font-semibold dark:bg-[var(--brand-primary)]/24 dark:text-slate-100'
+                  : 'hover:bg-slate-100 dark:hover:bg-white/10'
               ]"
               @click.stop="selectOption(opt.value)"
             >
@@ -101,9 +104,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount, type CSSProperties } from 'vue';
+import { ref, computed, nextTick, onBeforeUnmount, watch, type CSSProperties } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
 import { ChevronDown, Check } from 'lucide-vue-next';
+import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 
 interface Option { value: string; label: string; description?: string; tags?: string[] }
 
@@ -129,6 +134,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { t } = useI18n();
+const globalSettings = useGlobalSettingsStore();
+const { isDarkMode } = storeToRefs(globalSettings);
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -143,6 +150,21 @@ const selectedLabel = computed(() => {
 });
 const isPlaceholder = computed(() => !selectedLabel.value);
 const placeholderText = computed(() => props.placeholder || t('common.pleaseSelect'));
+const dropdownBackground = computed(() =>
+  isDarkMode.value ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.97)'
+);
+const dropdownAppearanceClass = computed(() =>
+  isDarkMode.value
+    ? 'select-dropdown--dark shadow-[0_28px_54px_rgba(3,7,18,0.7)]'
+    : 'shadow-[0_26px_52px_rgba(15,23,42,0.15)]'
+);
+
+watch(dropdownBackground, (color) => {
+  menuStyle.value = {
+    ...menuStyle.value,
+    backgroundColor: color
+  };
+});
 
 // 不再截断 options，使用 maxHeight 控制可视数量
 const visibleOptions = computed(() => props.options);
@@ -200,7 +222,8 @@ function computePosition() {
       width: rect.width + 'px',
       left: rect.left + 'px',
       top: Math.round(top) + 'px',
-      maxHeight: Math.round(Math.min(desiredMax, available)) + 'px'
+      maxHeight: Math.round(Math.min(desiredMax, available)) + 'px',
+      backgroundColor: dropdownBackground.value
     };
   });
 }
@@ -250,6 +273,75 @@ onBeforeUnmount(() => {
 
 // 移除对 modelValue/options 的多处监听，交由 ResizeObserver + 打开时初始化来保证稳定定位
 </script>
+
+<style scoped>
+.select-trigger {
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  color: #1e293b;
+}
+
+.select-trigger:hover,
+.select-trigger.is-open {
+  border-color: rgba(99, 102, 241, 0.48);
+  background: rgba(238, 242, 255, 0.9);
+}
+
+.select-trigger__icon {
+  color: rgba(100, 116, 139, 0.72);
+}
+
+.select-dropdown {
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(18px);
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.select-dropdown__list {
+  background: transparent;
+  border-radius: inherit;
+}
+
+.select-dropdown--dark {
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(71, 85, 105, 0.42);
+}
+
+:global(.dark) .select-trigger {
+  background: rgba(14, 17, 26, 0.96);
+  border-color: rgba(71, 85, 105, 0.45);
+  color: #f8fafc;
+}
+
+:global(.dark) .select-trigger:hover,
+:global(.dark) .select-trigger.is-open {
+  border-color: rgba(148, 163, 184, 0.34);
+  background: rgba(21, 25, 36, 0.94);
+}
+
+:global(.dark) .select-dropdown {
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(71, 85, 105, 0.38);
+}
+
+:global(.dark) .select-dropdown__list {
+  background: rgba(15, 23, 42, 0.96);
+  border-radius: inherit;
+}
+
+:global(.dark) .select-trigger__icon {
+  color: rgba(203, 213, 225, 0.78);
+}
+
+:global(.dark) .select-dropdown .select-option {
+  color: rgba(226, 232, 240, 0.9);
+}
+
+:global(.dark) .select-dropdown .select-option--active {
+  background: rgba(94, 104, 128, 0.28);
+  color: #f8fafc;
+}
+</style>
 
 <style scoped>
 .fade-scale-enter-active,

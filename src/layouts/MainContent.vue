@@ -25,6 +25,8 @@ const taskStore = useTaskStore();
 const tasks = computed(() => props.tasks || taskStore.tasks);
 const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
 
+type StartCompressPayload = { mode: 'single' } | { mode: 'batch'; taskIds: string[] };
+
 const emit = defineEmits([
   'files-selected',
   'compress',
@@ -40,7 +42,9 @@ const emit = defineEmits([
   'update:timeRangeSettings',
   'time-validation-change',
   // 新增：输出文件夹弹窗转发
-  'toggle-output-folder-popup'
+  'toggle-output-folder-popup',
+  'batch-compress',
+  'undo-compress'
 ]);
 
 const showOutputFolder = ref(false);
@@ -115,7 +119,11 @@ const onReset = () => {
 };
 
 // 暴露VideoComparison组件的方法给父组件
-const triggerCompress = () => {
+const triggerCompress = (payload?: StartCompressPayload) => {
+  if (payload?.mode === 'batch') {
+    emit('batch-compress', payload.taskIds ?? []);
+    return;
+  }
   if (videoComparisonRef.value) {
     videoComparisonRef.value.triggerCompress();
   }
@@ -144,9 +152,9 @@ defineExpose({
 
 <template>
   <!-- 主内容区域 -->
-  <main class="flex-grow flex overflow-hidden pr-6 pt-9 gap-6 bg-transparent dark:bg-transparent transition-all duration-300" style="pointer-events: auto;">
+  <main class="flex-grow flex overflow-hidden pr-6 gap-6 bg-transparent dark:bg-transparent transition-all duration-300" style="pointer-events: auto;">
     <!-- 左侧面板: 任务队列 -->
-    <div class="flex h-full w-1/3 max-w-[420px] -mt-9">
+    <div class="flex h-full w-1/3 max-w-[420px]">
       <div class="flex-1 flex flex-col overflow-hidden bg-white/95 dark:bg-[#101621]/95 border-r border-slate-200/60 dark:border-white/10 backdrop-blur-sm">
         <div class="flex-1 flex flex-col overflow-hidden">
           <div
@@ -174,6 +182,7 @@ defineExpose({
               @select-task="emit('select-task', $event)"
               @clear-all-tasks="emit('clear-all-tasks')"
               @start-compress="triggerCompress"
+              @undo-compress="emit('undo-compress')"
               @toggle-output-folder="emit('toggle-output-folder-popup')"
             />
           </div>
@@ -183,7 +192,7 @@ defineExpose({
 
     <!-- 右侧面板: 预览和设置 -->
     <div
-      class="w-2/3 flex flex-col overflow-hidden transition-all duration-300"
+      class="w-2/3 flex flex-col overflow-hidden transition-all duration-300 pt-9"
       :class="isUploaderVisible ? 'space-y-8' : 'space-y-5'"
     >
       <!-- File Upload (Visible by default) -->

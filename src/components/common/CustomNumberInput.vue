@@ -101,46 +101,44 @@ const decrement = () => {
 </script>
 
 <style scoped>
-/* 自定义数字输入框样式 */
 .custom-number-input {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #f8fafb;
+  border: 1px solid rgba(148, 163, 184, 0.45);
   color: #1f2937;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 .custom-number-input::placeholder {
-  color: rgba(148, 163, 184, 0.9);
+  color: rgba(148, 163, 184, 0.75);
 }
 
 .custom-number-input:hover {
-  border-color: rgba(81, 98, 255, 0.35);
+  border-color: rgba(99, 102, 241, 0.42);
 }
 
 .custom-number-input:focus {
   outline: none;
-  border-color: rgba(81, 98, 255, 0.55) !important;
-  box-shadow: 0 0 0 3px rgba(81, 98, 255, 0.18) !important;
+  border-color: rgba(99, 102, 241, 0.58) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
 }
 
-/* 夜间模式样式 */
-.dark .custom-number-input {
-  background: rgba(20, 21, 29, 0.85);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+:global(.dark) .custom-number-input {
+  background: rgba(34, 40, 55, 0.96);
+  border-color: rgba(203, 213, 225, 0.18);
+  color: #f8fafc;
+  box-shadow: none;
 }
 
-.dark .custom-number-input::placeholder {
-  color: rgba(148, 163, 184, 0.65);
+:global(.dark) .custom-number-input::placeholder {
+  color: rgba(203, 213, 225, 0.58);
 }
 
-.dark .custom-number-input:hover {
-  border-color: rgba(122, 139, 255, 0.45);
+:global(.dark) .custom-number-input:hover {
+  border-color: rgba(165, 180, 252, 0.5);
 }
 
-.dark .custom-number-input:focus {
-  border-color: rgba(122, 139, 255, 0.7) !important;
-  box-shadow: 0 0 0 3px rgba(122, 139, 255, 0.24) !important;
+:global(.dark) .custom-number-input:focus {
+  border-color: rgba(165, 180, 252, 0.68) !important;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.22);
 }
 </style>

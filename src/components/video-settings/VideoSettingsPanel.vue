@@ -11,18 +11,24 @@
             <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" :hide-quality="true" />
           </div>
           <div class="space-y-4">
-            <!-- 画质设置 -->
-            <QualitySettings 
-              v-model="qualitySettings" 
-              :resolution="formatSettings.resolution"
-              :is-hardware-accelerated="hardwareSettings.value === 'gpu'"
-              :current-video-codec="formatSettings.videoCodec"
-            />
-            <!-- 硬件加速设置 -->
-            <HardwareAccelerationSettings 
-              v-model="hardwareSettings" 
-              :current-video-codec="formatSettings.videoCodec"
-            />
+            <div class="rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 p-4 transition-all duration-300 space-y-6">
+              <!-- 画质设置 -->
+              <QualitySettings 
+                v-model="qualitySettings" 
+                :resolution="formatSettings.resolution"
+                :is-hardware-accelerated="hardwareSettings.value === 'gpu'"
+                :current-video-codec="formatSettings.videoCodec"
+                :with-card-shell="false"
+              />
+              <div class="space-y-5">
+                <!-- 硬件加速设置 -->
+                <HardwareAccelerationSettings 
+                  v-model="hardwareSettings" 
+                  :current-video-codec="formatSettings.videoCodec"
+                  :with-card-shell="false"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -161,7 +167,7 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
   // 硬件加速
   const accel = s.hardwareAcceleration ?? 'cpu';
   hardwareSettings.value = accel === 'gpu' 
-    ? { value: 'gpu', name: platform.value === 'macos' ? '显卡加速' : 'GPU加速' }
+    ? { value: 'gpu', name: platform.value === 'macos' ? '显卡' : 'GPU加速' }
     : { value: 'cpu', name: 'CPU编码' };
 };
 

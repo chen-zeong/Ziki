@@ -4,7 +4,7 @@
     :class="badgeClass"
   >
     <component :is="iconMap[status]" class="w-3.5 h-3.5" />
-    <span>{{ label }}</span>
+    <span v-if="label">{{ label }}</span>
     <span
       v-if="progressLabel"
       class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tracking-tight shadow-sm transition-colors"
@@ -24,6 +24,7 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps<{
   status: CompressionTask['status'];
   progress?: string | number | null;
+  trend?: 'up' | 'down' | 'flat';
 }>();
 
 const { t } = useI18n();
@@ -40,7 +41,7 @@ const iconMap = {
 
 const label = computed(() => {
   const map: Record<CompressionTask['status'], string> = {
-    completed: t('taskList.statusCompleted'),
+    completed: '',
     paused: t('taskList.statusPaused'),
     pending: t('taskList.statusPending'),
     queued: t('taskList.statusQueued'),
@@ -72,17 +73,23 @@ const badgeClass = computed(() => {
 });
 
 const progressLabel = computed(() => {
-  if (props.status !== 'completed') return '';
   if (props.progress === null || props.progress === undefined) return '';
   const value = typeof props.progress === 'number'
-    ? `${Math.round(props.progress)}%`
-    : String(props.progress).trim();
-  return value.length ? value : '';
+    ? props.progress.toString()
+    : String(props.progress);
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : '';
 });
 
 const progressBadgeClass = computed(() => {
   if (props.status === 'completed') {
-    return 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
+    if (props.trend === 'down') {
+      return 'bg-emerald-100/70 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200';
+    }
+    if (props.trend === 'up') {
+      return 'bg-rose-100/70 text-rose-600 dark:bg-rose-400/20 dark:text-rose-200';
+    }
+    return 'bg-slate-100/75 text-slate-600 dark:bg-white/12 dark:text-slate-200';
   }
   return 'bg-slate-100/80 text-slate-600 dark:bg-white/10 dark:text-slate-200';
 });

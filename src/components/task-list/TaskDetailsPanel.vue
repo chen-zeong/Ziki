@@ -21,47 +21,21 @@
       </header>
 
       <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        <section class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {{ $t('taskList.statusLabel') }}
-            </span>
-            <StatusBadge :status="task.status" :progress="completionPercent" />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 text-xs text-slate-500 dark:text-slate-400">
-            <div>
-              <p class="uppercase tracking-wide text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                {{ $t('taskList.createdAt') }}
-              </p>
-              <p class="mt-1 text-slate-700 dark:text-slate-200">{{ formatDate(task.createdAt) }}</p>
-            </div>
-            <div>
-              <p class="uppercase tracking-wide text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                {{ $t('taskList.progress') }}
-              </p>
-              <p class="mt-1 text-slate-700 dark:text-slate-200">
-                {{ (task.progress || 0).toFixed(1) }}%
-              </p>
-            </div>
-          </div>
-        </section>
-
         <section v-if="metadataRows.length" class="space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+            <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-200">
               {{ $t('taskList.fileInfo') }}
             </h3>
             <span
               v-if="hasAfterData"
-              class="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-500 dark:text-sky-300"
+              class="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-500 dark:text-sky-300"
             >
               {{ $t('taskList.compressionComparison') }}
             </span>
           </div>
-          <div class="overflow-hidden rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5">
+          <div class="overflow-hidden rounded-xl border border-slate-200/60 dark:border-white/10 bg-white/95 dark:bg-slate-900/50 shadow-sm">
             <table class="w-full text-xs">
-              <thead class="bg-slate-50/90 dark:bg-white/5 text-slate-500 dark:text-slate-400">
+              <thead class="bg-slate-100/80 dark:bg-white/10 text-slate-500 dark:text-slate-300">
                 <tr>
                   <th class="py-2 pl-4 text-left font-medium">{{ $t('taskList.metric') }}</th>
                   <th class="py-2 text-right font-medium">{{ $t('taskList.before') }}</th>
@@ -77,7 +51,7 @@
                 <tr
                   v-for="row in metadataRows"
                   :key="row.key"
-                  class="border-t border-slate-100/70 dark:border-white/5"
+                  class="border-t border-slate-100/70 dark:border-white/5 transition-colors duration-150 hover:bg-slate-100/50 dark:hover:bg-white/10"
                 >
                   <td class="py-2 pl-4 font-medium text-slate-500 dark:text-slate-400">
                     {{ row.label }}
@@ -106,7 +80,6 @@
 import { computed } from 'vue';
 import { X } from 'lucide-vue-next';
 import type { CompressionTask, VideoMetadata } from '../../types';
-import StatusBadge from './StatusBadge.vue';
 import { useI18n } from 'vue-i18n';
 
 type InfoRow = {
@@ -132,12 +105,6 @@ const formatFileSize = (bytes?: number | null): string => {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-};
-
-const formatDate = (value?: string | number | Date) => {
-  if (!value) return '--';
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString();
 };
 
 const formatDuration = (seconds?: number | null) => {
@@ -286,13 +253,7 @@ const metadataRows = computed<InfoRow[]>(() => {
 
 const hasAfterData = computed(() => metadataRows.value.some(row => row.after && row.after !== '--'));
 
-const completionPercent = computed(() => {
-  if (props.task.status !== 'completed') return null;
-  const value = Number(props.task.progress);
-  if (Number.isNaN(value)) return '100%';
-  const clamped = Math.min(100, Math.max(value, 0));
-  return `${Math.round(clamped)}%`;
-});
+
 </script>
 
 <style scoped>

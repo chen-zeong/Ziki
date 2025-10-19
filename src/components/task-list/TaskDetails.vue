@@ -10,11 +10,12 @@
         :animate="popoverMotion.animate"
         :exit="popoverMotion.exit"
         :transition="popoverMotion.transition"
+        ref="popoverRef"
         @click.stop
       >
           <header class="task-detail-header">
             <div class="min-w-0">
-              <p class="task-detail-title">
+              <p class="task-detail-title" :title="task?.file.name || ''">
                 {{ task?.file.name }}
               </p>
               <p class="task-detail-subtitle">
@@ -30,45 +31,6 @@
           </header>
 
           <div class="task-detail-body">
-            <section class="task-detail-status">
-              <div>
-                <p class="detail-label">
-                {{ $t('taskList.statusLabel') }}
-                </p>
-                <p class="detail-value">
-                  {{ statusLabel }}
-                </p>
-              </div>
-              <StatusBadge v-if="task" :status="task.status" :progress="completionPercent" />
-            </section>
-
-            <section class="detail-grid">
-              <div>
-                <p class="detail-label">
-                  {{ $t('taskList.createdAt') }}
-                </p>
-                <p class="detail-value">{{ formatDate(task?.createdAt) }}</p>
-              </div>
-              <div>
-                <p class="detail-label">
-                  {{ $t('taskList.updatedAt') }}
-                </p>
-                <p class="detail-value">{{ formatDate(task?.updatedAt) }}</p>
-              </div>
-              <div>
-                <p class="detail-label">
-                  {{ $t('taskList.progress') }}
-                </p>
-                <p class="detail-value">{{ ((task?.progress ?? 0) as number).toFixed(1) }}%</p>
-              </div>
-              <div>
-                <p class="detail-label">
-                  {{ $t('taskList.remaining') }}
-                </p>
-                <p class="detail-value">{{ task?.etaText || '--' }}</p>
-              </div>
-            </section>
-
             <section v-if="metadataRows.length" class="detail-table">
               <div class="detail-table-header">
                 <h3 class="detail-table-title">
@@ -82,7 +44,7 @@
                 </span>
               </div>
               <div class="detail-table-wrapper">
-                <table class="w-full text-xs">
+                <table class="w-full text-[13px] leading-relaxed">
                   <thead>
                     <tr>
                       <th class="py-2 pl-4 text-left font-medium">{{ $t('taskList.metric') }}</th>
@@ -100,15 +62,15 @@
                       v-for="row in metadataRows"
                       :key="row.key"
                     >
-                      <td class="py-2 pl-4 font-medium text-slate-500 dark:text-slate-400">
+                      <td class="py-2.5 pl-4 pr-4 font-medium text-slate-500 dark:text-slate-400">
                         {{ row.label }}
                       </td>
-                      <td class="py-2 text-right pr-4">
+                      <td class="py-2.5 pr-4 text-right font-medium text-slate-700 dark:text-slate-200">
                         {{ row.before }}
                       </td>
                       <td
                         v-if="hasAfterData"
-                        class="py-2 pr-4 text-right"
+                        class="py-2.5 pr-4 text-right font-medium text-slate-600 dark:text-slate-200/90"
                         :class="row.toneClass"
                       >
                         {{ row.after }}
@@ -130,12 +92,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, nextTick, onMounted } from 'vue';
 import type { CSSProperties } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import type { CompressionTask, VideoMetadata } from '../../types';
-import StatusBadge from './StatusBadge.vue';
 import { motion } from 'motion-v';
 
 type InfoRow = {
@@ -162,37 +123,98 @@ const popoverMotion = {
   exit: { opacity: 0, y: 12, scale: 0.96 },
   transition: { type: 'spring', stiffness: 340, damping: 26, mass: 0.65 }
 } as const;
+const popoverRef = ref<HTMLElement | null>(null);
+const popoverTop = ref(0);
+const popoverLeft = ref(0);
+const isAnchored = ref(false);
 
 const task = computed(() => props.task);
 const isVisible = computed(() => props.open && !!task.value);
 const popoverStyle = computed<CSSProperties>(() => {
   if (!isVisible.value) return {};
-  if (props.anchorRect && typeof window !== 'undefined') {
-    const rect = props.anchorRect;
-    const viewportWidth = window.innerWidth + window.scrollX;
-    const desiredLeft = rect.right + 16 + window.scrollX;
-    const maxLeft = viewportWidth - 420;
+  if (!isAnchored.value) {
     return {
-      top: `${rect.top + window.scrollY}px`,
-      left: `${Math.min(desiredLeft, maxLeft)}px`
+      top: `${window.scrollY + window.innerHeight / 2}px`,
+      left: `${window.scrollX + window.innerWidth / 2}px`,
+      transform: 'translate(-50%, -50%)'
     };
   }
   return {
-    top: `${window.scrollY + window.innerHeight / 2}px`,
-    left: `${window.scrollX + window.innerWidth / 2}px`,
-    transform: 'translate(-50%, -50%)'
+    top: `${popoverTop.value}px`,
+    left: `${popoverLeft.value}px`
   };
 });
 
 const popoverClass = computed(() => ({
-  'task-detail-popover--anchored': !!props.anchorRect,
-  'task-detail-popover--centered': !props.anchorRect
+  'task-detail-popover--anchored': isAnchored.value,
+  'task-detail-popover--centered': !isAnchored.value
 }));
 
-const statusLabel = computed(() => {
-  if (!task.value) return '--';
-  const statusKey = `taskList.status${task.value.status.charAt(0).toUpperCase()}${task.value.status.slice(1)}`;
-  return t(statusKey, task.value.status);
+const updatePopoverPosition = async () => {
+  if (!isVisible.value || typeof window === 'undefined') return;
+  await nextTick();
+  await new Promise<void>(resolve => {
+    window.requestAnimationFrame(() => resolve());
+  });
+  const rect = props.anchorRect;
+  const popEl = popoverRef.value;
+  if (rect) {
+    const viewportTop = window.scrollY;
+    const viewportBottom = viewportTop + window.innerHeight;
+    const viewportLeft = window.scrollX;
+    const viewportRight = viewportLeft + window.innerWidth;
+    const width = popEl?.offsetWidth ?? 380;
+    const height = popEl?.offsetHeight ?? 0;
+
+    const desiredLeft = rect.right + 16 + viewportLeft;
+    const maxLeft = viewportRight - width - 16;
+    const minLeft = viewportLeft + 16;
+    popoverLeft.value = Math.max(minLeft, Math.min(desiredLeft, maxLeft));
+
+    const anchorTop = rect.top + viewportTop;
+    const anchorBottom = rect.bottom + viewportTop;
+    const anchorCenter = anchorTop + rect.height / 2;
+    const verticalOffset = Math.min(Math.max(rect.height * 0.3, 28), 96);
+    let desiredCenter = anchorCenter - verticalOffset;
+    if (height > 0) {
+      const margin = 24;
+      const safeTop = viewportTop + margin + height / 2;
+      const safeBottom = viewportBottom - margin - height / 2;
+      const availableBelow = viewportBottom - margin - anchorBottom;
+      const shortage = Math.max(0, height / 2 - availableBelow);
+      if (shortage > 0) {
+        const smoothing = Math.min(Math.max(shortage * 0.45, 18), 72);
+        desiredCenter -= shortage + smoothing;
+      }
+      const maxAnchorAlignedCenter = anchorTop - 16 + height / 2;
+      desiredCenter = Math.min(desiredCenter, maxAnchorAlignedCenter);
+      popoverTop.value = Math.max(safeTop, Math.min(desiredCenter, safeBottom));
+    } else {
+      popoverTop.value = desiredCenter;
+    }
+
+    isAnchored.value = true;
+  } else {
+    isAnchored.value = false;
+  }
+};
+
+watch([isVisible, () => props.anchorRect], () => {
+  if (isVisible.value) {
+    void updatePopoverPosition();
+  }
+});
+
+watch(task, () => {
+  if (isVisible.value) {
+    void updatePopoverPosition();
+  }
+});
+
+onMounted(() => {
+  if (isVisible.value) {
+    void updatePopoverPosition();
+  }
 });
 
 const formatFileSize = (bytes?: number | null) => {
@@ -202,13 +224,6 @@ const formatFileSize = (bytes?: number | null) => {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-};
-
-const formatDate = (value?: string | number | Date | null) => {
-  if (!value) return '--';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '--';
-  return date.toLocaleString();
 };
 
 const formatDuration = (seconds?: number | null) => {
@@ -281,6 +296,8 @@ const getNumericTone = (before?: number | null, after?: number | null, inverse =
     : 'text-rose-500 dark:text-rose-300 font-semibold';
 };
 
+const showAfterData = computed(() => task.value?.status === 'completed');
+
 const metadataRows = computed<InfoRow[]>(() => {
   if (!task.value) return [];
 
@@ -288,83 +305,82 @@ const metadataRows = computed<InfoRow[]>(() => {
   const compressed: Partial<VideoMetadata> = task.value.compressedMetadata ?? {};
   const originalSize = task.value.file.size ?? task.value.originalSize ?? null;
   const compressedSize = task.value.compressedSize ?? null;
+  const allowAfter = showAfterData.value;
+  const afterOrPlaceholder = (value: string) => (allowAfter ? value : '--');
 
   const rows: InfoRow[] = [
     {
       key: 'fileSize',
       label: t('taskList.fileSize'),
       before: formatFileSize(originalSize),
-      after: formatFileSize(compressedSize),
-      toneClass: getNumericTone(originalSize, compressedSize)
+      after: afterOrPlaceholder(formatFileSize(compressedSize)),
+      toneClass: allowAfter ? getNumericTone(originalSize, compressedSize) : ''
     },
     {
       key: 'format',
       label: t('videoSettings.format'),
       before: sanitizeText(toUpper(meta.format)),
-      after: sanitizeText(compressed.format ? toUpper(compressed.format) : toUpper(task.value.settings.format))
+      after: afterOrPlaceholder(
+        sanitizeText(compressed.format ? toUpper(compressed.format) : toUpper(task.value.settings.format))
+      )
     },
     {
       key: 'videoCodec',
       label: t('videoSettings.videoCodec'),
       before: sanitizeText(meta.videoCodec),
-      after: sanitizeText(compressed.videoCodec || task.value.settings.videoCodec)
+      after: afterOrPlaceholder(sanitizeText(compressed.videoCodec || task.value.settings.videoCodec))
     },
     {
       key: 'resolution',
       label: t('videoSettings.resolution'),
       before: sanitizeText(meta.resolution),
-      after: sanitizeText(getTargetResolution(task.value))
+      after: afterOrPlaceholder(sanitizeText(getTargetResolution(task.value)))
     },
     {
       key: 'bitrate',
       label: t('videoSettings.bitrate'),
       before: formatBitrate(meta.bitrate),
-      after: formatBitrate(compressed.bitrate)
+      after: afterOrPlaceholder(formatBitrate(compressed.bitrate))
     },
     {
       key: 'duration',
       label: t('taskList.duration'),
       before: formatDuration(meta.duration ?? null),
-      after: formatDuration(compressed.duration ?? meta.duration ?? null)
+      after: afterOrPlaceholder(formatDuration(compressed.duration ?? meta.duration ?? null))
     },
     {
       key: 'frameRate',
       label: t('taskList.frameRate'),
       before: formatFps(meta.fps),
-      after: formatFps(compressed.fps)
+      after: afterOrPlaceholder(formatFps(compressed.fps))
     },
     {
       key: 'audioCodec',
       label: t('taskList.audioCodec'),
       before: sanitizeText(meta.audioCodec),
-      after: sanitizeText(compressed.audioCodec)
+      after: afterOrPlaceholder(sanitizeText(compressed.audioCodec))
     },
     {
       key: 'audioSampleRate',
       label: t('taskList.audioSampleRate'),
       before: sanitizeText(meta.sampleRate),
-      after: sanitizeText(compressed.sampleRate)
+      after: afterOrPlaceholder(sanitizeText(compressed.sampleRate))
     },
     {
       key: 'colorDepth',
       label: t('taskList.colorDepth'),
       before: sanitizeText(meta.colorDepth),
-      after: sanitizeText(compressed.colorDepth ?? task.value.settings.bitDepth)
+      after: afterOrPlaceholder(sanitizeText(compressed.colorDepth ?? task.value.settings.bitDepth))
     }
   ];
 
   return rows.filter(row => row.before !== '--' || (row.after && row.after !== '--'));
 });
 
-const hasAfterData = computed(() => metadataRows.value.some(row => row.after && row.after !== '--'));
+const hasAfterData = computed(() =>
+  showAfterData.value && metadataRows.value.some(row => row.after && row.after !== '--')
+);
 
-const completionPercent = computed(() => {
-  if (!task.value || task.value.status !== 'completed') return null;
-  const value = Number(task.value.progress);
-  if (Number.isNaN(value)) return '100%';
-  const clamped = Math.min(100, Math.max(value, 0));
-  return `${Math.round(clamped)}%`;
-});
 </script>
 
 <style scoped>
@@ -383,23 +399,23 @@ const completionPercent = computed(() => {
 .task-detail-popover {
   position: absolute;
   pointer-events: auto;
-  min-width: 340px;
-  max-width: 420px;
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 24px 48px -20px rgba(15, 23, 42, 0.3);
-  padding: 18px 0 0;
-  backdrop-filter: blur(12px);
+  width: min(320px, calc(100vw - 48px));
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 36px -22px rgba(15, 23, 42, 0.28);
+  padding: 14px 0 0;
+  backdrop-filter: blur(10px);
   transform-origin: top left;
 }
 .dark .task-detail-popover {
-  border-color: rgba(148, 163, 184, 0.22);
-  background: rgba(23, 28, 40, 0.96);
-  box-shadow: 0 28px 54px -18px rgba(0, 0, 0, 0.6);
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(19, 24, 36, 0.92);
+  box-shadow: 0 22px 42px -22px rgba(0, 0, 0, 0.55);
 }
 .task-detail-popover--anchored {
-  transform: translateY(0);
+  transform: translateY(-50%);
+  transform-origin: left center;
 }
 .task-detail-popover--centered {
   transform: translate(-50%, -50%);
@@ -409,28 +425,33 @@ const completionPercent = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px 16px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0 16px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
 }
 .dark .task-detail-header {
-  border-color: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.1);
 }
 .task-detail-title {
-  font-size: 15px;
+  display: block;
+  max-width: 100%;
+  font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: #1f2937;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dark .task-detail-title {
   color: #e2e8f0;
 }
 .task-detail-subtitle {
   margin-top: 4px;
-  font-size: 12px;
-  color: #64748b;
+  font-size: 11px;
+  color: #94a3b8;
 }
 .dark .task-detail-subtitle {
-  color: #94a3b8;
+  color: #cbd5f5;
 }
 .task-detail-close {
   width: 30px;
@@ -453,46 +474,17 @@ const completionPercent = computed(() => {
   color: #e2e8f0;
 }
 .task-detail-body {
-  max-height: min(60vh, 520px);
+  max-height: min(56vh, 420px);
   overflow-y: auto;
-  padding: 18px 20px 20px;
+  padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-.task-detail-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.detail-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: #94a3b8;
-}
-.dark .detail-label {
-  color: rgba(148, 163, 184, 0.7);
-}
-.detail-value {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #1e293b;
-}
-.dark .detail-value {
-  color: #cbd5f5;
-}
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  font-size: 13px;
+  gap: 12px;
 }
 .detail-table {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .detail-table-header {
   display: flex;
@@ -501,44 +493,66 @@ const completionPercent = computed(() => {
 }
 .detail-table-title {
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #94a3b8;
-}
-.detail-table-hint {
-  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #0ea5e9;
-}
-.dark .detail-table-hint {
-  color: #38bdf8;
-}
-.detail-table-wrapper {
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(241, 245, 255, 0.56);
-  overflow: hidden;
-}
-.detail-table-wrapper table thead {
-  background: rgba(226, 232, 240, 0.6);
   color: #475569;
 }
-.detail-table-wrapper table tbody tr + tr {
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
+.dark .detail-table-title {
+  color: rgba(226, 232, 240, 0.92);
+}
+.detail-table-hint {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(14, 165, 233, 0.9);
+}
+.dark .detail-table-hint {
+  color: rgba(56, 189, 248, 0.88);
+}
+.detail-table-wrapper {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(248, 250, 252, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+}
+.detail-table-wrapper table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.detail-table-wrapper table thead {
+  background: rgba(248, 250, 252, 0.95);
+  color: rgba(71, 85, 105, 0.88);
+}
+.detail-table-wrapper table thead th {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.detail-table-wrapper table tbody td {
+  border: none;
+}
+.detail-table-wrapper table tbody tr {
+  transition: background 0.18s ease;
+}
+.detail-table-wrapper table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.14);
 }
 .dark .detail-table-wrapper {
-  border-color: rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(18, 24, 38, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 .dark .detail-table-wrapper table thead {
-  background: rgba(51, 65, 85, 0.4);
-  color: #cbd5f5;
+  background: rgba(30, 41, 59, 0.55);
+  color: rgba(226, 232, 240, 0.85);
 }
-.dark .detail-table-wrapper table tbody tr + tr {
-  border-color: rgba(148, 163, 184, 0.12);
+.dark .detail-table-wrapper table tbody tr:hover {
+  background: rgba(94, 115, 148, 0.18);
 }
 .detail-error {
   border-radius: 12px;

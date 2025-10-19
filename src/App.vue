@@ -355,23 +355,37 @@ const onReset = () => {
 };
 
 // 批量压缩处理函数
-const handleBatchCompress = async () => {
+const handleBatchCompress = async (taskIds?: string[]) => {
   if (isProcessingBatch.value) {
     // 如果正在批量处理，则停止
     stopBatchCompression();
     return;
   }
-  
-  // 获取当前选中任务类型
-  const selectedTask = currentFile.value && tasks.value.find(t => t.file.id === currentFile.value?.id);
-  const selectedTaskType = selectedTask?.type || null;
-  
-  if (!selectedTaskType) {
+
+  let filteredTasks: CompressionTask[] = [];
+  if (Array.isArray(taskIds) && taskIds.length > 0) {
+    const idSet = new Set(taskIds);
+    filteredTasks = tasks.value.filter(t => idSet.has(t.id));
+  } else {
+    // 获取当前选中任务类型
+    const currentFileTask = currentFile.value && tasks.value.find(t => t.file.id === currentFile.value?.id);
+    const targetType = currentFileTask?.type || null;
+    if (!targetType) {
+      return;
+    }
+    filteredTasks = tasks.value.filter(t => t.type === targetType);
+  }
+
+  if (filteredTasks.length === 0) {
     return;
   }
-  
-  // 仅限定于相同类型的任务
-  const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
+
+  const resolvedTargetType = Array.isArray(taskIds) && taskIds.length > 0
+    ? filteredTasks[0]?.type || null
+    : (selectedTask.value?.type || filteredTasks[0]?.type || null);
+  if (resolvedTargetType) {
+    filteredTasks = filteredTasks.filter(t => t.type === resolvedTargetType);
+  }
 
   // 仅当存在 pending 时才启动批量
   const hasPending = filteredTasks.some(t => t.status === 'pending');
@@ -414,6 +428,10 @@ const handleUndoCompress = async () => {
   const task = selectedTask.value;
 
   try {
+    const defaultSettings: CompressionSettings = task.type === 'video'
+      ? taskSettingsStore.getDefaultVideoSettings()
+      : taskSettingsStore.getDefaultImageSettings();
+
     // 1. 删除压缩后的文件(如果存在)
     if (task.file.compressedPath) {
       try {
@@ -441,6 +459,7 @@ const handleUndoCompress = async () => {
       compressedSize: 0,
       startedAt: undefined,
       completedAt: undefined,
+      settings: { ...defaultSettings },
       file: {
         ...task.file,
         compressedPath: undefined,
@@ -450,11 +469,22 @@ const handleUndoCompress = async () => {
 
     // 4. 更新任务store
     taskStore.updateTask(updatedTask);
+    taskSettingsStore.setTaskSettings(task.id, updatedTask.settings);
 
     // 5. 更新当前文件的显示
     if (currentFile.value && currentFile.value.id === task.file.id) {
       currentFile.value = {
         ...currentFile.value,
+        compressedPath: undefined,
+        compressedUrl: undefined
+      };
+    }
+
+    const selectedIndex = selectedFiles.value.findIndex((file: any) => file.id === task.file.id);
+    if (selectedIndex !== -1) {
+      const targetFile = selectedFiles.value[selectedIndex];
+      selectedFiles.value[selectedIndex] = {
+        ...targetFile,
         compressedPath: undefined,
         compressedUrl: undefined
       };
@@ -712,4 +742,3 @@ watch(tasks, (newTasks) => {
 onUnmounted(() => {
   try { clearBatchSettingsCache(); } catch {}
 });
-

@@ -1,7 +1,7 @@
 <template>
   <!-- 预览窗口 -->
   <div
-    class="relative w-full aspect-[5/3] lg:aspect-[25/16] rounded-2xl bg-white dark:bg-[#181b23] flex items-center justify-center transition-all duration-300 shadow-[0_12px_35px_rgba(15,23,42,0.12)]"
+    class="relative w-full aspect-[5/3] lg:aspect-[25/16] rounded-2xl bg-white dark:bg-[#181b23] flex items-center justify-center transition-all duration-300"
   >
     <VideoPreview
       ref="videoPreviewRef"
@@ -21,11 +21,11 @@
   </div>
   
   <!-- 帧选择器（仅视频显示） -->
-  <div v-if="videoPath" class="my-3 flex items-center justify-center gap-6">
-    <div class="relative">
+  <div v-if="videoPath" class="mt-0.5 mb-1 flex items-center justify-center w-full gap-3.5">
+    <div class="relative flex-shrink-0">
       <button
         type="button"
-        class="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/15 bg-white dark:bg-[#1b2130] text-slate-600 dark:text-slate-200 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-[#222a3b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
+        class="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200/70 dark:border-white/15 bg-white dark:bg-[#1b2130] text-slate-600 dark:text-slate-200 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-[#222a3b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
         :aria-pressed="showTimeRange"
         :aria-label="t('videoComparison.timeRange') || 'Time range'"
         @click.stop="toggleTimeRange"
@@ -49,7 +49,7 @@
         </div>
       </Transition>
     </div>
-    <div class="px-10">
+    <div class="flex-1 flex justify-center items-center py-0">
       <FrameSelector
         :video-path="videoPath"
         :selected-frame="selectedFrame"

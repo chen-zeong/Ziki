@@ -16,10 +16,6 @@
         class="language-dropdown"
         @click.stop
       >
-        <div class="language-dropdown__header">
-          <span>{{ $t('language.title') || 'Language' }}</span>
-          <span class="language-dropdown__hint">{{ $t('language.switchHint') || 'Switch interface language' }}</span>
-        </div>
         <div class="language-dropdown__list">
           <button
             v-for="lang in languages"
@@ -28,10 +24,7 @@
             :class="currentLocale === lang.code ? 'language-item--active' : ''"
             @click="switchLang(lang.code)"
           >
-            <div class="language-item__label">
-              <span class="language-item__name">{{ lang.name }}</span>
-              <span class="language-item__code">{{ lang.code.toUpperCase() }}</span>
-            </div>
+            <span class="language-item__name">{{ lang.name }}</span>
             <MotionCheck
               v-if="currentLocale === lang.code"
               class="language-item__check"
@@ -134,11 +127,11 @@ onUnmounted(() => {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: 220px;
-  border-radius: 18px;
+  width: 180px;
+  border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 24px 48px -18px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 20px 38px -18px rgba(15, 23, 42, 0.24);
   backdrop-filter: blur(10px);
   overflow: hidden;
   z-index: 1200;
@@ -148,40 +141,19 @@ onUnmounted(() => {
   background: rgba(22, 27, 39, 0.95);
   box-shadow: 0 24px 52px -18px rgba(0, 0, 0, 0.55);
 }
-.language-dropdown__header {
-  padding: 14px 18px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.language-dropdown__header span:first-child {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-}
-.language-dropdown__hint {
-  font-size: 11px;
-  color: #94a3b8;
-}
-.dark .language-dropdown__header span:first-child {
-  color: #e2e8f0;
-}
-.dark .language-dropdown__hint {
-  color: rgba(148, 163, 184, 0.75);
-}
 .language-dropdown__list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 10px 12px;
+  padding: 8px;
 }
 .language-item {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 10px 10px 12px;
-  border-radius: 14px;
+  padding: 8px 10px;
+  border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
   color: #1e293b;
@@ -208,24 +180,9 @@ onUnmounted(() => {
   background: rgba(129, 140, 248, 0.18);
   color: #cbd5f5;
 }
-.language-item__label {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
 .language-item__name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-}
-.language-item__code {
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #94a3b8;
-}
-.dark .language-item__code {
-  color: rgba(148, 163, 184, 0.7);
 }
 .language-item__check {
   display: flex;
