@@ -73,7 +73,13 @@ export function useFileHandler() {
   }, { deep: true });
 
   // 切换到指定任务
-  const switchToTask = (taskId: string) => {
+  const switchToTask = (taskId: string | null) => {
+    if (!taskId) {
+      currentFile.value = null;
+      isUploaderVisible.value = true;
+      taskStore.selectedTaskId = null;
+      return;
+    }
     const task = tasks.value.find(t => t.id === taskId);
     if (task) {
       currentFile.value = task.file;

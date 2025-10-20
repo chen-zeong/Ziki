@@ -152,10 +152,10 @@ defineExpose({
 
 <template>
   <!-- 主内容区域 -->
-  <main class="flex-grow flex overflow-hidden pr-6 gap-6 bg-transparent dark:bg-transparent transition-all duration-300" style="pointer-events: auto;">
+  <main class="flex-grow flex overflow-hidden pr-6 gap-6 bg-transparent dark:bg-[#181917] transition-all duration-300" style="pointer-events: auto;">
     <!-- 左侧面板: 任务队列 -->
     <div class="flex h-full w-1/3 max-w-[420px]">
-      <div class="flex-1 flex flex-col overflow-hidden bg-white/95 dark:bg-[#101621]/95 border-r border-slate-200/60 dark:border-white/10 backdrop-blur-sm">
+      <div class="flex-1 flex flex-col overflow-hidden bg-white/95 dark:bg-[#181917] border-r border-slate-200/60 dark:border-white/10 backdrop-blur-sm">
         <div class="flex-1 flex flex-col overflow-hidden">
           <div
             v-if="showOutputFolder"
@@ -197,8 +197,8 @@ defineExpose({
     >
       <!-- File Upload (Visible by default) -->
       <div v-if="isUploaderVisible" class="flex-grow mt-4">
-        <div class="h-full rounded-2xl bg-white/80 dark:bg-dark-primary/80 backdrop-blur-md soft-shadow transition-colors">
-          <div class="h-full p-3 rounded-xl bg-white dark:bg-[#1e1e1e] flex items-center justify-center">
+        <div class="h-full rounded-2xl bg-white/80 dark:bg-[#181917] backdrop-blur-md soft-shadow transition-colors">
+          <div class="h-full p-3 rounded-xl bg-white dark:bg-[#222221] flex items-center justify-center">
             <FileUploader @files-selected="emit('files-selected', $event)" />
           </div>
         </div>

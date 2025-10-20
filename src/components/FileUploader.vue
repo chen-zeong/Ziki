@@ -1,10 +1,9 @@
 <template>
   <div id="drop-zone" class="transition-all duration-300">
     <div
-      class="relative flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-white/75 px-8 py-12 text-center shadow-[0_16px_40px_rgba(15,23,42,0.08)] transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-400 dark:border-white/12 dark:bg-white/[0.04] dark:shadow-[0_22px_48px_rgba(4,9,20,0.45)]"
+      class="relative flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-transparent px-10 py-16 text-center transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]/45 dark:border-white/15"
       :class="{
-        'border-[var(--brand-primary)]/65 bg-white shadow-[0_20px_48px_rgba(99,102,241,0.18)] dark:border-[var(--brand-primary)]/55 dark:bg-white/[0.08]':
-          isDragOver
+        'border-[var(--brand-primary)]/70 bg-[var(--brand-primary)]/5 dark:bg-white/5': isDragOver
       }"
       role="button"
       tabindex="0"
@@ -16,60 +15,13 @@
       @dragleave.prevent="handleDragLeave"
       @drop="handleDrop"
     >
-      <div class="flex w-full max-w-3xl flex-col items-center gap-8">
-        <div class="inline-flex items-center gap-3 rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-medium text-indigo-500 shadow-sm dark:border-white/12 dark:bg-white/[0.06] dark:text-indigo-200">
-          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500 text-white">
+      <div class="flex w-full max-w-2xl flex-col items-center gap-6">
+        <div class="inline-flex items-center gap-3 rounded-full border border-slate-200/70 px-6 py-3 text-base font-semibold text-slate-500 transition-colors duration-200 hover:border-[var(--brand-primary)]/60 hover:text-[var(--brand-primary)] dark:border-white/12 dark:text-slate-200 dark:hover:border-[var(--brand-primary)]/50">
+          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-sm">
             <CloudUpload class="h-5 w-5" />
           </span>
           <span>{{ $t('fileUpload.dragHere') }}</span>
         </div>
-
-        <div class="space-y-3 text-slate-600 dark:text-slate-300">
-          <h3 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-            {{ $t('fileUpload.title') }}
-          </h3>
-          <p class="text-sm sm:text-base">
-            {{ $t('fileUpload.description') }}
-          </p>
-        </div>
-
-        <div class="grid w-full max-w-2xl gap-4 sm:grid-cols-2">
-          <div class="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white/80 px-5 py-4 text-left shadow-sm transition-colors duration-200 hover:border-[var(--brand-primary)]/35 dark:border-white/12 dark:bg-white/[0.05] dark:hover:border-[var(--brand-primary)]/35">
-            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-200">
-              <FileVideo class="h-6 w-6" />
-            </span>
-            <div class="space-y-1">
-              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {{ $t('fileUpload.videoLabel') }}
-              </p>
-              <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                {{ $t('fileUpload.videoHint') }}
-              </p>
-            </div>
-          </div>
-
-          <div class="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white/80 px-5 py-4 text-left shadow-sm transition-colors duration-200 hover:border-[var(--brand-primary)]/35 dark:border-white/12 dark:bg-white/[0.05] dark:hover:border-[var(--brand-primary)]/35">
-            <span class="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-amber-500/15 text-amber-500 dark:bg-amber-500/20 dark:text-amber-200">
-              <ImageIcon class="h-6 w-6" />
-            </span>
-            <div class="space-y-1">
-              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {{ $t('fileUpload.imageLabel') }}
-              </p>
-              <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                {{ $t('fileUpload.imageHint') }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 transition-colors duration-200 hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] dark:border-white/12 dark:bg-white/[0.06] dark:text-slate-200 dark:hover:border-[var(--brand-primary)]/40"
-          @click.stop.prevent="triggerFileInput"
-        >
-          {{ $t('fileUpload.selectFiles') }}
-        </button>
 
         <p class="max-w-xl text-xs font-medium uppercase tracking-[0.22em] text-slate-400 whitespace-pre-line dark:text-slate-500">
           {{ $t('fileUpload.supportedFormats') }}
@@ -92,7 +44,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
-import { CloudUpload, FileVideo, Image as ImageIcon } from 'lucide-vue-next';
+import { CloudUpload } from 'lucide-vue-next';
 
 const emit = defineEmits<{
   filesSelected: [files: FileList]

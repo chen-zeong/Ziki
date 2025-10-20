@@ -36,7 +36,7 @@
       <Transition name="time-range-pop">
         <div
           v-if="showTimeRange"
-          class="time-range-dropdown absolute left-full top-0 ml-3 z-30 w-[min(22rem,calc(100vw-4rem))] origin-left rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#181f2e] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
+          class="time-range-dropdown absolute left-full top-0 ml-3 z-30 w-[min(22rem,calc(100vw-4rem))] origin-left rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#222221] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
           @click.stop
           ref="timeRangeDropdownRef"
         >

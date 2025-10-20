@@ -8,43 +8,19 @@
   >
     <TaskListToolbar
       :tasks="tasks"
+      :multi-select-mode="multiSelectMode"
       @add-files="$emit('add-files')"
       @files-selected="$emit('files-selected', $event)"
       @clear-all-tasks="handleClearAllTasks"
+      @toggle-multi-select="toggleMultiSelect"
     />
 
     <div class="flex-1 overflow-y-auto px-4 pb-4 transition-all duration-200">
       <div v-if="tasks.length === 0" class="flex h-full items-center justify-center px-4">
-        <div class="w-full max-w-lg rounded-2xl border border-dashed border-slate-300/70 bg-white/90 px-10 py-12 text-center shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-white/12 dark:bg-white/[0.04] dark:shadow-[0_24px_55px_rgba(4,9,20,0.55)]">
-          <div class="flex flex-col items-center gap-6 text-slate-600 dark:text-slate-300">
-            <div class="flex h-14 w-14 items-center justify-center rounded-full border border-slate-200/80 bg-white text-[var(--brand-primary)] shadow-sm dark:border-white/15 dark:bg-white/[0.03]">
-              <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" d="M12 4v16m8-8H4" />
-              </svg>
-            </div>
-            <div class="space-y-2">
-              <h3 class="text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">
-                {{ $t('taskList.noTasks') }}
-              </h3>
-              <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                {{ $t('taskList.noTasksDescription') }}
-              </p>
-            </div>
-            <div class="flex flex-col items-center gap-3">
-              <button
-                class="inline-flex items-center gap-2 rounded-full border border-slate-200/70 px-5 py-2.5 text-sm font-medium text-slate-600 transition-colors duration-200 hover:border-[var(--brand-primary)]/50 hover:text-[var(--brand-primary)] dark:border-white/12 dark:text-slate-300 dark:hover:border-[var(--brand-primary)]/40"
-                @click="$emit('add-files')"
-              >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
-                </svg>
-                {{ $t('toolbar.addFiles') }}
-              </button>
-              <span class="text-xs font-medium uppercase tracking-[0.32em] text-slate-400 dark:text-slate-500">
-                {{ $t('taskList.uploadHint') }}
-              </span>
-            </div>
-          </div>
+        <div class="w-full max-w-lg rounded-2xl border border-dashed border-slate-300/70 px-10 py-14 text-center dark:border-white/15">
+          <p class="text-2xl font-semibold tracking-wide text-slate-400 dark:text-slate-500">
+            {{ $t('taskList.noTasks') }}
+          </p>
         </div>
       </div>
 
@@ -82,77 +58,45 @@
       </template>
     </div>
 
-    <div class="flex items-center gap-3 px-4 py-2 bg-transparent">
-      <div class="flex items-center gap-3 flex-[1] min-w-0">
-        <button
-          type="button"
-          class="inline-flex w-full justify-center items-center px-3 py-2 rounded-full transition-colors duration-200"
-          :class="multiSelectMode ? multiSelectActiveClasses : multiSelectInactiveClasses"
-          @click="toggleMultiSelect"
-          :aria-pressed="multiSelectMode"
-          :aria-label="t('taskList.multiSelect') || 'Multi-select'"
-        >
-          <div class="flex h-4 items-center justify-center gap-1.5">
-            <template v-if="showMultiSelectDots">
-              <span
-                v-for="index in 3"
-                :key="index"
-                :class="['multi-select-dot', multiSelectMode && !isDarkMode ? 'multi-select-dot--light' : '']"
-                :style="{ animationDelay: ((index - 1) * 0.22) + 's' }"
-                aria-hidden="true"
-              ></span>
-            </template>
-            <ListPlus v-else class="w-4 h-4" aria-hidden="true" />
-          </div>
-          <span class="sr-only">{{ t('taskList.multiSelect') }}</span>
-        </button>
-        <MotionIndicator
-          v-if="multiSelectMode"
-          class="multi-select-flare"
-          :initial="{ opacity: 0, scale: 0.9 }"
-          :animate="{ opacity: 1, scale: 1 }"
-          :transition="{ duration: 0.28, easing: 'ease-out' }"
-        />
-      </div>
-      <div class="flex items-center gap-3 flex-[3] min-w-0 justify-end">
-        <button
-          class="start-button relative inline-flex w-full max-w-md items-center justify-center px-10 py-3 rounded-lg text-base font-semibold transition-all duration-200 ease-out bg-[var(--brand-primary)] text-white hover:translate-y-[-1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 overflow-hidden"
-          :class="{
-            'cursor-not-allowed opacity-60 pointer-events-none': !primaryActionEnabled,
-            'start-button--processing': isProcessingButton,
-            'start-button--undo': showUndoButton
-          }"
-          :disabled="!primaryActionEnabled"
-          :aria-busy="isProcessingButton"
-          :aria-label="primaryButtonLabel"
-          @click="handlePrimaryAction"
-        >
-          <span class="start-button__content">
-            <Loader2
-              v-if="isProcessingButton"
-              class="start-button__icon animate-spin"
-              aria-hidden="true"
-            />
-            <Undo2
-              v-else-if="showUndoButton"
-              class="start-button__icon"
-              aria-hidden="true"
-            />
-            <Play
-              v-else
-              class="start-button__icon"
-              aria-hidden="true"
-            />
-            <span class="start-button__label">{{ primaryButtonLabel }}</span>
-          </span>
+    <div class="px-4 pb-4">
+      <button
+        class="start-button group relative inline-flex w-full items-center justify-center gap-3 px-6 py-3 rounded-2xl text-base font-semibold text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60"
+        :class="{
+          'cursor-not-allowed opacity-60 pointer-events-none': !primaryActionEnabled,
+          'start-button--processing': isProcessingButton,
+          'start-button--undo': showUndoButton
+        }"
+        :disabled="!primaryActionEnabled"
+        :aria-busy="isProcessingButton"
+        :aria-label="primaryButtonLabel"
+        @click="handlePrimaryAction"
+      >
+        <span class="start-button__content">
+          <Loader2
+            v-if="isProcessingButton"
+            class="start-button__icon animate-spin"
+            aria-hidden="true"
+          />
+          <Undo2
+            v-else-if="showUndoButton"
+            class="start-button__icon"
+            aria-hidden="true"
+          />
+          <Play
+            v-else
+            class="start-button__icon"
+            aria-hidden="true"
+          />
+          <span class="start-button__label">{{ primaryButtonLabel }}</span>
           <span
             v-if="multiSelectMode"
             class="start-button__badge"
           >
             {{ selectedTaskIds.length }}
           </span>
-        </button>
-      </div>
+        </span>
+        <span class="start-button__glow" aria-hidden="true"></span>
+      </button>
     </div>
 
     <TaskDetails
@@ -166,17 +110,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
  import { invoke } from '@tauri-apps/api/core';
  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
  import { Window as TauriWindow } from '@tauri-apps/api/window';
 import { useTaskStore } from '../../stores/useTaskStore';
-import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
 import TaskDetails from './TaskDetails.vue';
-import { ListPlus, Loader2, Undo2, Play } from 'lucide-vue-next';
+import { Loader2, Undo2, Play } from 'lucide-vue-next';
 import { motion } from 'motion-v';
  
  import type { CompressionTask } from '../../types';
@@ -203,7 +145,7 @@ interface Emits {
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
    (e: 'pause-task', taskId: string): void;
-  (e: 'select-task', taskId: string): void;
+  (e: 'select-task', taskId: string | null): void;
   (e: 'clear-all-tasks'): void;
   (e: 'start-compress', payload?: StartCompressPayload): void;
   (e: 'undo-compress'): void;
@@ -217,24 +159,16 @@ interface Emits {
 const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
-const globalSettings = useGlobalSettingsStore();
-const { isDarkMode } = storeToRefs(globalSettings);
 
  // 状态管理
 const selectedTaskIds = ref<string[]>([]);
-const showMultiSelectDots = ref(false);
 const isDragOver = ref(false);
 const multiSelectMode = ref(false);
 const detailTaskId = ref<string | null>(null);
 const detailAnchorElement = ref<HTMLElement | null>(null);
 const detailAnchorRect = ref<DOMRect | null>(null);
 const MotionGlow = motion.div;
-const MotionIndicator = motion.div;
-const multiSelectInactiveClasses =
-  'border border-slate-200/80 bg-white text-slate-700 hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] dark:border-white/12 dark:bg-[#1a2132] dark:text-slate-200 dark:hover:border-[var(--brand-primary)]/40 dark:hover:text-[var(--brand-primary)]';
-const multiSelectActiveClasses = computed(
-  () => 'border border-transparent bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-secondary)] hover:text-white'
-);
+const allowedMultiSelectStatuses = new Set<CompressionTask['status']>(['pending', 'queued']);
 
 type FileDropEventType = 'hover' | 'drop' | 'cancel' | 'unknown';
 
@@ -313,8 +247,17 @@ const primaryButtonLabel = computed(() => {
 
 const exitMultiSelectMode = () => {
   multiSelectMode.value = false;
-  showMultiSelectDots.value = false;
   selectedTaskIds.value = [];
+};
+
+const isTaskEligibleForMultiSelect = (taskId: string) => {
+  const task = tasks.value.find(item => item.id === taskId);
+  if (!task) return false;
+  return allowedMultiSelectStatuses.has(task.status);
+};
+
+const filterEligibleMultiSelectIds = (ids: string[]) => {
+  return ids.filter(id => isTaskEligibleForMultiSelect(id));
 };
 
 const activeDetailTask = computed(() => {
@@ -326,6 +269,8 @@ const activeDetailTask = computed(() => {
  };
 
 const toggleTaskCheck = (taskId: string) => {
+  if (!multiSelectMode.value) return;
+  if (!isTaskEligibleForMultiSelect(taskId)) return;
   if (selectedTaskIds.value.includes(taskId)) {
     selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
   } else {
@@ -366,10 +311,11 @@ const handlePrimaryAction = () => {
 const toggleMultiSelect = () => {
   multiSelectMode.value = !multiSelectMode.value;
   if (multiSelectMode.value) {
-    showMultiSelectDots.value = true;
     const current = selectedTaskId.value;
-    if (current && !selectedTaskIds.value.includes(current)) {
+    if (current && isTaskEligibleForMultiSelect(current)) {
       selectedTaskIds.value = [current];
+    } else {
+      selectedTaskIds.value = [];
     }
   } else {
     exitMultiSelectMode();
@@ -387,7 +333,11 @@ const updateDetailAnchorRect = () => {
 const openDetailPanel = (payload: string | { taskId: string; trigger: HTMLElement | null }) => {
   const taskId = typeof payload === 'string' ? payload : payload.taskId;
   detailTaskId.value = taskId;
-  detailAnchorElement.value = typeof payload === 'string' ? null : payload.trigger;
+  let preferredAnchor: HTMLElement | null = null;
+  if (typeof window !== 'undefined') {
+    preferredAnchor = document.querySelector('.task-stack .task-card') as HTMLElement | null;
+  }
+  detailAnchorElement.value = preferredAnchor || (typeof payload === 'string' ? null : payload.trigger);
   nextTick(updateDetailAnchorRect);
 };
 
@@ -447,6 +397,8 @@ const deleteTask = async (taskId: string) => {
       detailAnchorRect.value = null;
     }
     selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
+    const nextSelectedId = taskStore.selectedTaskId || null;
+    emit('select-task', nextSelectedId);
   } catch (error) {
     console.error('Delete task failed:', error);
   }
@@ -461,15 +413,7 @@ const resumeTask = (taskId: string) => {
 };
 
 const handleClearAllTasks = () => {
-  try {
-    taskStore.clearAllTasks();
-    detailTaskId.value = null;
-    detailAnchorElement.value = null;
-    detailAnchorRect.value = null;
-    exitMultiSelectMode();
-  } catch (error) {
-    console.error('Clear all tasks failed:', error);
-  }
+  emit('clear-all-tasks');
 };
 
  // DOM Drag handlers
@@ -628,54 +572,15 @@ watch(tasks, (newTasks) => {
       detailTaskId.value = null;
     }
   }
+  if (newTasks.length === 0) {
+    exitMultiSelectMode();
+  }
   if (!multiSelectMode.value) return;
-  const processingIds = newTasks
-    .filter(task => selectedTaskIds.value.includes(task.id) && task.status === 'processing')
-    .map(task => task.id);
-  const isSameLength = processingIds.length === selectedTaskIds.value.length;
-  const isSameSet = isSameLength && processingIds.every((id, idx) => id === selectedTaskIds.value[idx]);
-  if (!isSameSet) {
-    selectedTaskIds.value = processingIds;
-  }
-  if (processingIds.length === 0) {
-    showMultiSelectDots.value = true;
-  }
-});
+  selectedTaskIds.value = filterEligibleMultiSelectIds(selectedTaskIds.value);
+}, { deep: true });
 </script>
 
 <style scoped>
-.multi-select-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0.85;
-  animation: multi-select-bounce 1.4s ease-in-out infinite;
-}
-
-.multi-select-dot--light {
-  background: #ffffff;
-}
-
-@keyframes multi-select-bounce {
-  0% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-  40% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
-  80% {
-    transform: translateY(0);
-    opacity: 0.7;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-}
-
 .task-stagger-enter-from,
 .task-stagger-leave-to {
   opacity: 0;
@@ -707,101 +612,122 @@ watch(tasks, (newTasks) => {
 .task-stack--multi .task-stack__glow {
   filter: saturate(1.3);
 }
-.multi-select-flare {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(120% 120% at 50% 50%, rgba(255, 255, 255, 0.28), transparent 68%);
-  mix-blend-mode: screen;
+.dark .task-stack__glow {
+  background: radial-gradient(120% 120% at 50% -12%, rgba(148, 163, 184, 0.22), transparent 68%);
+  opacity: 0.1;
+  filter: saturate(0.8);
 }
 .start-button {
   position: relative;
-  isolation: isolate;
+  border-radius: 0.9rem;
+  --button-bg: #6366f1;
+  --button-bg-hover: #4f46e5;
+  --button-bg-active: #4338ca;
+  --button-shadow: 0 20px 44px -24px rgba(99, 102, 241, 0.45);
+  --button-shadow-hover: 0 22px 48px -24px rgba(79, 70, 229, 0.52);
+  background: var(--button-bg);
+  box-shadow: var(--button-shadow);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
   overflow: hidden;
 }
+.start-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--button-shadow-hover);
+  background: var(--button-bg-hover);
+}
+.start-button:active {
+  transform: translateY(0);
+  background: var(--button-bg-active);
+}
+.start-button__glow {
+  position: absolute;
+  inset: -45% -25%;
+  background: radial-gradient(125% 125% at 30% 15%, rgba(255, 255, 255, 0.35), transparent 68%);
+  opacity: 0.42;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.start-button:hover .start-button__glow {
+  opacity: 0.6;
+}
 .start-button__content {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 .start-button__icon {
-  width: 18px;
-  height: 18px;
-  opacity: 0.92;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  opacity: 0.95;
 }
 .start-button__label {
-  letter-spacing: 0.01em;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
 }
 .start-button__badge {
-  position: absolute;
-  right: 1.4rem;
-  top: 50%;
-  transform: translateY(-50%);
+  margin-left: 0.45rem;
+  padding: 0 0.6rem;
+  min-height: 1.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 1.75rem;
-  min-width: 1.75rem;
-  padding: 0 0.4rem;
-  border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.26);
-  color: #0f172a;
-  font-size: 0.85rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  font-size: 0.78rem;
   font-weight: 600;
-  backdrop-filter: blur(10px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
 }
 .dark .start-button__badge {
-  background: rgba(15, 23, 42, 0.38);
-  color: #e2e8f0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
 }
 .start-button--processing {
-  background: linear-gradient(135deg, rgba(76, 106, 255, 1) 0%, rgba(37, 99, 235, 0.98) 52%, rgba(14, 165, 233, 0.96) 100%);
-  box-shadow: 0 18px 36px -18px rgba(59, 130, 246, 0.55);
+  --button-bg: #4f46e5;
+  --button-bg-hover: #4338ca;
+  --button-bg-active: #3730a3;
+  --button-shadow: 0 22px 48px -24px rgba(79, 70, 229, 0.5);
+  --button-shadow-hover: 0 24px 52px -24px rgba(67, 56, 202, 0.56);
 }
-.start-button--processing::before {
-  content: '';
-  position: absolute;
-  inset: -16%;
-  background: radial-gradient(circle at 22% 15%, rgba(255, 255, 255, 0.42), transparent 58%);
-  opacity: 0.75;
-  z-index: 0;
+.start-button--processing .start-button__glow {
+  background: radial-gradient(130% 130% at 35% 20%, rgba(255, 255, 255, 0.32), transparent 68%);
+  opacity: 0.52;
 }
 .start-button--processing::after {
   content: '';
   position: absolute;
-  inset: -18%;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.58) 48%, rgba(255, 255, 255, 0) 82%);
-  transform: translateX(-120%);
-  animation: start-button-sheen 1.8s ease-in-out infinite;
-  z-index: 0;
-  opacity: 0.85;
+  inset: 0;
+  margin: 0 auto;
+  width: 80%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  opacity: 0.7;
+  pointer-events: none;
+  animation: start-button-ripple 1.8s ease-in-out infinite alternate;
 }
 .start-button--undo {
-  background: linear-gradient(135deg, rgba(14, 116, 144, 0.92) 0%, rgba(59, 130, 246, 0.95) 100%);
-  box-shadow: 0 16px 32px -18px rgba(39, 123, 192, 0.42);
+  --button-bg: rgba(251, 191, 36, 1);
+  --button-bg-hover: rgba(245, 158, 11, 1);
+  --button-bg-active: rgba(217, 119, 6, 1);
+  --button-shadow: 0 20px 42px -24px rgba(251, 191, 36, 0.48);
+  --button-shadow-hover: 0 22px 46px -24px rgba(245, 158, 11, 0.52);
 }
 .start-button--undo .start-button__icon {
   opacity: 1;
 }
 .start-button--undo .start-button__label {
-  letter-spacing: 0.02em;
+  letter-spacing: 0.025em;
 }
 
-@keyframes start-button-sheen {
+@keyframes start-button-ripple {
   0% {
-    transform: translateX(-120%);
-  }
-  55% {
-    transform: translateX(0%);
+    transform: translateX(-35%);
   }
   100% {
-    transform: translateX(120%);
+    transform: translateX(35%);
   }
 }
 </style>

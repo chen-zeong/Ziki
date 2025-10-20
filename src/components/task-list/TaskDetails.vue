@@ -44,11 +44,11 @@
                 </span>
               </div>
               <div class="detail-table-wrapper">
-                <table class="w-full text-[13px] leading-relaxed">
+                <table class="w-full text-[13px] leading-[1.35]">
                   <thead>
                     <tr>
                       <th class="py-2 pl-4 text-left font-medium">{{ $t('taskList.metric') }}</th>
-                      <th class="py-2 text-right font-medium">{{ $t('taskList.before') }}</th>
+                      <th class="py-2 pr-4 text-right font-medium">{{ $t('taskList.before') }}</th>
                       <th
                         v-if="hasAfterData"
                         class="py-2 pr-4 text-right font-medium"
@@ -62,15 +62,15 @@
                       v-for="row in metadataRows"
                       :key="row.key"
                     >
-                      <td class="py-2.5 pl-4 pr-4 font-medium text-slate-500 dark:text-slate-400">
+                      <td class="py-2 pl-4 pr-4 font-medium text-slate-500 dark:text-slate-400">
                         {{ row.label }}
                       </td>
-                      <td class="py-2.5 pr-4 text-right font-medium text-slate-700 dark:text-slate-200">
+                      <td class="py-2 pr-4 text-right font-medium text-slate-700 dark:text-slate-200">
                         {{ row.before }}
                       </td>
                       <td
                         v-if="hasAfterData"
-                        class="py-2.5 pr-4 text-right font-medium text-slate-600 dark:text-slate-200/90"
+                        class="py-2 pr-4 text-right font-medium text-slate-600 dark:text-slate-200/90"
                         :class="row.toneClass"
                       >
                         {{ row.after }}
@@ -278,25 +278,16 @@ const getTargetResolution = (taskItem: CompressionTask) => {
   return taskItem.file.metadata?.resolution || '--';
 };
 
-const getNumericTone = (before?: number | null, after?: number | null, inverse = false) => {
-  if (
-    before === null ||
-    before === undefined ||
-    after === null ||
-    after === undefined ||
-    Number.isNaN(before) ||
-    Number.isNaN(after)
-  ) {
-    return '';
-  }
-  if (after === before) return '';
-  const improved = inverse ? after > before : after < before;
-  return improved
-    ? 'text-emerald-600 dark:text-emerald-300 font-semibold'
-    : 'text-rose-500 dark:text-rose-300 font-semibold';
-};
-
 const showAfterData = computed(() => task.value?.status === 'completed');
+
+const highlightIfChanged = (before: string, after: string, allowHighlight: boolean) => {
+  if (!allowHighlight) return '';
+  const normalizedBefore = before?.toString().trim().toLowerCase();
+  const normalizedAfter = after?.toString().trim().toLowerCase();
+  if (!normalizedAfter || normalizedAfter === '--') return '';
+  if (normalizedBefore === normalizedAfter) return '';
+  return 'detail-value--changed';
+};
 
 const metadataRows = computed<InfoRow[]>(() => {
   if (!task.value) return [];
@@ -308,71 +299,110 @@ const metadataRows = computed<InfoRow[]>(() => {
   const allowAfter = showAfterData.value;
   const afterOrPlaceholder = (value: string) => (allowAfter ? value : '--');
 
-  const rows: InfoRow[] = [
-    {
-      key: 'fileSize',
-      label: t('taskList.fileSize'),
-      before: formatFileSize(originalSize),
-      after: afterOrPlaceholder(formatFileSize(compressedSize)),
-      toneClass: allowAfter ? getNumericTone(originalSize, compressedSize) : ''
-    },
-    {
-      key: 'format',
-      label: t('videoSettings.format'),
-      before: sanitizeText(toUpper(meta.format)),
-      after: afterOrPlaceholder(
-        sanitizeText(compressed.format ? toUpper(compressed.format) : toUpper(task.value.settings.format))
-      )
-    },
-    {
-      key: 'videoCodec',
-      label: t('videoSettings.videoCodec'),
-      before: sanitizeText(meta.videoCodec),
-      after: afterOrPlaceholder(sanitizeText(compressed.videoCodec || task.value.settings.videoCodec))
-    },
-    {
-      key: 'resolution',
-      label: t('videoSettings.resolution'),
-      before: sanitizeText(meta.resolution),
-      after: afterOrPlaceholder(sanitizeText(getTargetResolution(task.value)))
-    },
-    {
-      key: 'bitrate',
-      label: t('videoSettings.bitrate'),
-      before: formatBitrate(meta.bitrate),
-      after: afterOrPlaceholder(formatBitrate(compressed.bitrate))
-    },
-    {
-      key: 'duration',
-      label: t('taskList.duration'),
-      before: formatDuration(meta.duration ?? null),
-      after: afterOrPlaceholder(formatDuration(compressed.duration ?? meta.duration ?? null))
-    },
-    {
-      key: 'frameRate',
-      label: t('taskList.frameRate'),
-      before: formatFps(meta.fps),
-      after: afterOrPlaceholder(formatFps(compressed.fps))
-    },
-    {
-      key: 'audioCodec',
-      label: t('taskList.audioCodec'),
-      before: sanitizeText(meta.audioCodec),
-      after: afterOrPlaceholder(sanitizeText(compressed.audioCodec))
-    },
-    {
-      key: 'audioSampleRate',
-      label: t('taskList.audioSampleRate'),
-      before: sanitizeText(meta.sampleRate),
-      after: afterOrPlaceholder(sanitizeText(compressed.sampleRate))
-    },
-    {
-      key: 'colorDepth',
-      label: t('taskList.colorDepth'),
-      before: sanitizeText(meta.colorDepth),
-      after: afterOrPlaceholder(sanitizeText(compressed.colorDepth ?? task.value.settings.bitDepth))
-    }
-  ];
+  const rows: InfoRow[] = [];
+
+  const sizeBefore = formatFileSize(originalSize);
+  const sizeAfter = afterOrPlaceholder(formatFileSize(compressedSize));
+  rows.push({
+    key: 'fileSize',
+    label: t('taskList.fileSize'),
+    before: sizeBefore,
+    after: sizeAfter,
+    toneClass: highlightIfChanged(sizeBefore, sizeAfter, allowAfter)
+  });
+
+  const formatBefore = sanitizeText(toUpper(meta.format));
+  const formatAfterValue = sanitizeText(
+    compressed.format ? toUpper(compressed.format) : toUpper(task.value.settings.format)
+  );
+  const formatAfter = afterOrPlaceholder(formatAfterValue);
+  rows.push({
+    key: 'format',
+    label: t('videoSettings.format'),
+    before: formatBefore,
+    after: formatAfter,
+    toneClass: highlightIfChanged(formatBefore, formatAfter, allowAfter)
+  });
+
+  const videoCodecBefore = sanitizeText(meta.videoCodec);
+  const videoCodecAfter = afterOrPlaceholder(sanitizeText(compressed.videoCodec || task.value.settings.videoCodec));
+  rows.push({
+    key: 'videoCodec',
+    label: t('videoSettings.videoCodec'),
+    before: videoCodecBefore,
+    after: videoCodecAfter,
+    toneClass: highlightIfChanged(videoCodecBefore, videoCodecAfter, allowAfter)
+  });
+
+  const resolutionBefore = sanitizeText(meta.resolution);
+  const resolutionAfter = afterOrPlaceholder(sanitizeText(getTargetResolution(task.value)));
+  rows.push({
+    key: 'resolution',
+    label: t('videoSettings.resolution'),
+    before: resolutionBefore,
+    after: resolutionAfter,
+    toneClass: highlightIfChanged(resolutionBefore, resolutionAfter, allowAfter)
+  });
+
+  const bitrateBefore = formatBitrate(meta.bitrate);
+  const bitrateAfter = afterOrPlaceholder(formatBitrate(compressed.bitrate));
+  rows.push({
+    key: 'bitrate',
+    label: t('videoSettings.bitrate'),
+    before: bitrateBefore,
+    after: bitrateAfter,
+    toneClass: highlightIfChanged(bitrateBefore, bitrateAfter, allowAfter)
+  });
+
+  const durationBefore = formatDuration(meta.duration ?? null);
+  const durationAfter = afterOrPlaceholder(formatDuration(compressed.duration ?? meta.duration ?? null));
+  rows.push({
+    key: 'duration',
+    label: t('taskList.duration'),
+    before: durationBefore,
+    after: durationAfter,
+    toneClass: highlightIfChanged(durationBefore, durationAfter, allowAfter)
+  });
+
+  const frameRateBefore = formatFps(meta.fps);
+  const frameRateAfter = afterOrPlaceholder(formatFps(compressed.fps));
+  rows.push({
+    key: 'frameRate',
+    label: t('taskList.frameRate'),
+    before: frameRateBefore,
+    after: frameRateAfter,
+    toneClass: highlightIfChanged(frameRateBefore, frameRateAfter, allowAfter)
+  });
+
+  const audioCodecBefore = sanitizeText(meta.audioCodec);
+  const audioCodecAfter = afterOrPlaceholder(sanitizeText(compressed.audioCodec));
+  rows.push({
+    key: 'audioCodec',
+    label: t('taskList.audioCodec'),
+    before: audioCodecBefore,
+    after: audioCodecAfter,
+    toneClass: highlightIfChanged(audioCodecBefore, audioCodecAfter, allowAfter)
+  });
+
+  const audioSampleRateBefore = sanitizeText(meta.sampleRate);
+  const audioSampleRateAfter = afterOrPlaceholder(sanitizeText(compressed.sampleRate));
+  rows.push({
+    key: 'audioSampleRate',
+    label: t('taskList.audioSampleRate'),
+    before: audioSampleRateBefore,
+    after: audioSampleRateAfter,
+    toneClass: highlightIfChanged(audioSampleRateBefore, audioSampleRateAfter, allowAfter)
+  });
+
+  const colorDepthBefore = sanitizeText(meta.colorDepth);
+  const colorDepthAfter = afterOrPlaceholder(sanitizeText(compressed.colorDepth ?? task.value.settings.bitDepth));
+  rows.push({
+    key: 'colorDepth',
+    label: t('taskList.colorDepth'),
+    before: colorDepthBefore,
+    after: colorDepthAfter,
+    toneClass: highlightIfChanged(colorDepthBefore, colorDepthAfter, allowAfter)
+  });
 
   return rows.filter(row => row.before !== '--' || (row.after && row.after !== '--'));
 });
@@ -399,19 +429,19 @@ const hasAfterData = computed(() =>
 .task-detail-popover {
   position: absolute;
   pointer-events: auto;
-  width: min(320px, calc(100vw - 48px));
-  border-radius: 16px;
+  width: min(360px, calc(100vw - 48px));
+  border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 36px -22px rgba(15, 23, 42, 0.28);
-  padding: 14px 0 0;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 22px 44px -26px rgba(15, 23, 42, 0.32);
+  padding: 16px 0 0;
+  backdrop-filter: blur(12px);
   transform-origin: top left;
 }
 .dark .task-detail-popover {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(19, 24, 36, 0.92);
-  box-shadow: 0 22px 42px -22px rgba(0, 0, 0, 0.55);
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(28, 29, 36, 0.94);
+  box-shadow: 0 26px 48px -26px rgba(0, 0, 0, 0.7);
 }
 .task-detail-popover--anchored {
   transform: translateY(-50%);
@@ -429,7 +459,7 @@ const hasAfterData = computed(() =>
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
 }
 .dark .task-detail-header {
-  border-color: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.18);
 }
 .task-detail-title {
   display: block;
@@ -443,7 +473,7 @@ const hasAfterData = computed(() =>
   text-overflow: ellipsis;
 }
 .dark .task-detail-title {
-  color: #e2e8f0;
+  color: #f5f5f5;
 }
 .task-detail-subtitle {
   margin-top: 4px;
@@ -451,7 +481,7 @@ const hasAfterData = computed(() =>
   color: #94a3b8;
 }
 .dark .task-detail-subtitle {
-  color: #cbd5f5;
+  color: rgba(226, 232, 240, 0.7);
 }
 .task-detail-close {
   width: 30px;
@@ -467,24 +497,24 @@ const hasAfterData = computed(() =>
   color: #1e293b;
 }
 .dark .task-detail-close {
-  color: #cbd5f5;
+  color: rgba(226, 232, 240, 0.85);
 }
 .dark .task-detail-close:hover {
-  background: rgba(100, 116, 139, 0.16);
-  color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.22);
+  color: #f5f5f5;
 }
 .task-detail-body {
-  max-height: min(56vh, 420px);
+  max-height: min(72vh, 520px);
   overflow-y: auto;
-  padding: 14px 16px 16px;
+  padding: 16px 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .detail-table {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .detail-table-header {
   display: flex;
@@ -499,7 +529,7 @@ const hasAfterData = computed(() =>
   color: #475569;
 }
 .dark .detail-table-title {
-  color: rgba(226, 232, 240, 0.92);
+  color: rgba(226, 232, 240, 0.9);
 }
 .detail-table-hint {
   font-size: 9px;
@@ -509,7 +539,7 @@ const hasAfterData = computed(() =>
   color: rgba(14, 165, 233, 0.9);
 }
 .dark .detail-table-hint {
-  color: rgba(56, 189, 248, 0.88);
+  color: rgba(226, 232, 240, 0.65);
 }
 .detail-table-wrapper {
   border-radius: 12px;
@@ -517,6 +547,13 @@ const hasAfterData = computed(() =>
   background: rgba(248, 250, 252, 0.92);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
   overflow: hidden;
+}
+.detail-value--changed {
+  color: #7c3aed;
+  font-weight: 600;
+}
+.dark .detail-value--changed {
+  color: #c4b5fd;
 }
 .detail-table-wrapper table {
   width: 100%;
@@ -543,16 +580,16 @@ const hasAfterData = computed(() =>
   background: rgba(148, 163, 184, 0.14);
 }
 .dark .detail-table-wrapper {
-  border-color: rgba(148, 163, 184, 0.12);
-  background: rgba(18, 24, 38, 0.9);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(32, 33, 40, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 .dark .detail-table-wrapper table thead {
-  background: rgba(30, 41, 59, 0.55);
-  color: rgba(226, 232, 240, 0.85);
+  background: rgba(48, 49, 56, 0.6);
+  color: rgba(232, 233, 240, 0.82);
 }
 .dark .detail-table-wrapper table tbody tr:hover {
-  background: rgba(94, 115, 148, 0.18);
+  background: rgba(99, 102, 111, 0.2);
 }
 .detail-error {
   border-radius: 12px;

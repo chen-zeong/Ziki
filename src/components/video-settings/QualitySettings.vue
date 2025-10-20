@@ -118,7 +118,7 @@ const emit = defineEmits<{
 
 const shellClasses = computed(() =>
   props.withCardShell
-    ? 'p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10'
+    ? 'p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10'
     : 'p-0 bg-transparent border-0 shadow-none'
 );
 

@@ -4,7 +4,7 @@
     :class="[
       cardToneClass,
       {
-        'is-selected ring-1 ring-[var(--brand-primary)]/20 text-slate-900/95 dark:text-slate-100': isActive,
+        'is-selected text-slate-900/95 dark:text-slate-100': isActive,
         'is-leaving': isLeavingSelection
       }
     ]"
@@ -30,7 +30,7 @@
         </div>
 
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-slate-900 dark:text-slate-50 truncate" :title="task.file.name">{{ task.file.name }}</p>
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" :title="task.file.name">{{ task.file.name }}</p>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {{ formatFileSize(task.file.size || task.originalSize) }}
             <span v-if="task.status === 'completed' && task.compressedSize" class="ml-2 text-slate-400 dark:text-slate-500">
@@ -167,8 +167,8 @@ const MotionCard = motion.div;
 
 const cardVariants = {
   rest: { y: 0, scale: 1, opacity: 1 },
-  hover: { y: -2, scale: 1.006, opacity: 1 },
-  active: { y: -4, scale: 1.012, opacity: 1 }
+  hover: { y: 0, scale: 1, opacity: 1 },
+  active: { y: 0, scale: 1, opacity: 1 }
 } as const;
 
 const cardTransition = {
@@ -336,11 +336,11 @@ const formatEtaDuration = (milliseconds: number): string => {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   const parts: string[] = [];
-  if (hours > 0) parts.push(`${hours}${t('timeUnits.hours')}`);
-  if (minutes > 0) parts.push(`${minutes}${t('timeUnits.minutes')}`);
-  if (hours === 0 && seconds > 0) parts.push(`${seconds}${t('timeUnits.seconds')}`);
+  if (hours > 0) parts.push(`${hours}${t('timeUnits.hoursShort')}`);
+  if (minutes > 0) parts.push(`${minutes}${t('timeUnits.minutesShort')}`);
+  if (seconds > 0) parts.push(`${seconds}${t('timeUnits.secondsShort')}`);
   if (parts.length === 0) {
-    parts.push(`1${t('timeUnits.seconds')}`);
+    parts.push(`1${t('timeUnits.secondsShort')}`);
   }
   return parts.join(' ');
 };
@@ -388,7 +388,7 @@ const etaLabel = computed(() => {
 
 const etaDisplay = computed(() => {
   if (!etaLabel.value) return '';
-  return `${t('taskList.remainingShort')}: ${etaLabel.value}`;
+  return etaLabel.value;
 });
 
 const failureHint = computed(() => t('taskList.statusFailed'));
@@ -431,15 +431,15 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   --task-card-shadow: none;
   --task-card-overlay: radial-gradient(140% 140% at 16% -22%, rgba(96, 165, 250, 0.22) 0%, transparent 68%);
   --task-card-overlay-opacity: 0.24;
-  --task-card-border-width: 1px;
+  --task-card-border-width: 0.75px;
 }
 .task-card--active {
   --task-card-bg: rgba(248, 250, 255, 0.92);
-  --task-card-border: rgba(99, 102, 241, 0.26);
-  --task-card-shadow: none;
-  --task-card-overlay: radial-gradient(140% 140% at 16% -22%, rgba(96, 165, 250, 0.22) 0%, transparent 68%);
-  --task-card-overlay-opacity: 0.24;
-  --task-card-border-width: 1px;
+  --task-card-border: rgba(59, 130, 246, 0.55);
+  --task-card-shadow: 0 0 0 2px rgba(59, 130, 246, 0.42), 0 20px 36px -22px rgba(59, 130, 246, 0.38);
+  --task-card-overlay: radial-gradient(140% 140% at 16% -22%, rgba(59, 130, 246, 0.28) 0%, transparent 72%);
+  --task-card-overlay-opacity: 0.28;
+  --task-card-border-width: 0.75px;
 }
 .task-card--leaving {
   --task-card-bg: rgba(252, 253, 255, 0.9);
@@ -450,12 +450,12 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   --task-card-border-width: 0.85px;
 }
 .dark .task-card {
-  --task-card-bg: rgba(13, 16, 24, 0.96);
-  --task-card-border: rgba(148, 163, 184, 0.18);
-  --task-card-shadow: 0 24px 48px -34px rgba(5, 6, 12, 0.82);
-  --task-card-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(76, 80, 92, 0.14) 18%, rgba(10, 12, 18, 0) 58%, rgba(0, 0, 0, 0.35) 100%), radial-gradient(90% 120% at 50% -20%, rgba(255, 255, 255, 0.04) 0%, transparent 70%);
+  --task-card-bg: #181917;
+  --task-card-border: rgba(72, 73, 70, 0.55);
+  --task-card-shadow: 0 22px 46px -30px rgba(0, 0, 0, 0.82);
+  --task-card-overlay: rgba(255, 255, 255, 0.015);
   --task-card-overlay-opacity: 1;
-  --task-card-border-width: 0.85px;
+  --task-card-border-width: 1px;
 }
 .task-card.is-leaving::before {
   animation: selectionFade 0.32s ease forwards;
@@ -471,28 +471,31 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   }
 }
 .dark .task-card--hover {
-  --task-card-bg: rgba(18, 21, 30, 0.94);
-  --task-card-border: rgba(168, 174, 189, 0.26);
-  --task-card-shadow: 0 30px 54px -36px rgba(6, 7, 14, 0.86);
-  --task-card-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(92, 96, 110, 0.16) 16%, rgba(12, 14, 20, 0) 60%), radial-gradient(70% 110% at 50% -8%, rgba(255, 255, 255, 0.06) 0%, transparent 78%);
+  --task-card-bg: #1f1f1d;
+  --task-card-border: rgba(118, 120, 117, 0.45);
+  --task-card-shadow: 0 26px 48px -30px rgba(0, 0, 0, 0.84);
+  --task-card-overlay: rgba(255, 255, 255, 0.02);
   --task-card-overlay-opacity: 1;
   --task-card-border-width: 1px;
 }
 .dark .task-card--active {
-  --task-card-bg: rgba(22, 25, 34, 0.94);
-  --task-card-border: rgba(209, 213, 219, 0.32);
-  --task-card-shadow: 0 36px 60px -38px rgba(0, 0, 0, 0.88);
-  --task-card-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(108, 112, 128, 0.22) 18%, rgba(16, 18, 26, 0) 64%), radial-gradient(120% 105% at 50% -16%, rgba(255, 255, 255, 0.08) 0%, transparent 62%);
+  --task-card-bg: #232321;
+  --task-card-border: rgba(168, 170, 165, 0.4);
+  --task-card-shadow: 0 0 0 4px rgba(226, 232, 240, 0.14), 0 30px 54px -32px rgba(0, 0, 0, 0.88);
+  --task-card-overlay: rgba(255, 255, 255, 0.015);
   --task-card-overlay-opacity: 1;
   --task-card-border-width: 1px;
 }
+.dark .task-card--active:hover {
+  --task-card-bg: #282826;
+}
 .dark .task-card--leaving {
-  --task-card-bg: rgba(16, 19, 27, 0.94);
-  --task-card-border: rgba(156, 163, 175, 0.24);
-  --task-card-shadow: 0 26px 52px -36px rgba(4, 5, 10, 0.84);
-  --task-card-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(70, 74, 86, 0.14) 20%, rgba(12, 14, 20, 0) 62%);
+  --task-card-bg: #181917;
+  --task-card-border: rgba(72, 73, 70, 0.5);
+  --task-card-shadow: 0 24px 46px -30px rgba(0, 0, 0, 0.82);
+  --task-card-overlay: rgba(255, 255, 255, 0.015);
   --task-card-overlay-opacity: 1;
-  --task-card-border-width: 0.95px;
+  --task-card-border-width: 1px;
 }
 .task-card-grid {
   display: grid;
@@ -508,7 +511,7 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   border-radius: 999px;
   padding: 0 14px;
   background: rgba(148, 163, 184, 0.16);
-  border: 1px solid rgba(99, 102, 241, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.28);
   overflow: hidden;
 }
 .dark .progress-track {
@@ -530,11 +533,11 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   bottom: 1px;
   left: 1px;
   border-radius: inherit;
-  background: rgba(99, 102, 241, 0.9);
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.9) 0%, rgba(59, 130, 246, 0.92) 100%);
   transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .dark .progress-fill {
-  background: linear-gradient(90deg, rgba(209, 213, 224, 0.86) 0%, rgba(148, 163, 184, 0.82) 100%);
+  background: linear-gradient(90deg, rgba(129, 140, 248, 0.9) 0%, rgba(96, 165, 250, 0.92) 100%);
 }
 .progress-label {
   display: inline-flex;
@@ -572,7 +575,7 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease;
 }
 .action-btn:hover {
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(148, 163, 184, 0.16);
   color: rgba(15, 23, 42, 0.85);
   transform: translateY(-1px);
 }

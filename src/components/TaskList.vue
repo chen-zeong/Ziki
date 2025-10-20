@@ -34,7 +34,7 @@ interface Emits {
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
   (e: 'pause-task', taskId: string): void;
-  (e: 'select-task', taskId: string): void;
+  (e: 'select-task', taskId: string | null): void;
   (e: 'clear-all-tasks'): void;
   (e: 'start-compress', payload?: StartCompressPayload): void;
   (e: 'undo-compress'): void;

@@ -26,7 +26,7 @@ export interface TaskStateControllerOptions {
   // 获取当前输出目录（若需要）
   getOutputDirectory?: () => string | undefined;
   // 切换到指定任务，确保 startCompression 作用于正确的 currentFile
-  switchToTask?: (taskId: string) => void;
+  switchToTask?: (taskId: string | null) => void;
 }
 
 export function useTaskStateController(options: TaskStateControllerOptions) {

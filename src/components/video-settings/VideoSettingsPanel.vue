@@ -11,7 +11,7 @@
             <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" :hide-quality="true" />
           </div>
           <div class="space-y-4">
-            <div class="rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 p-4 transition-all duration-300 space-y-6">
+            <div class="rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 p-4 transition-all duration-300 space-y-6">
               <!-- 画质设置 -->
               <QualitySettings 
                 v-model="qualitySettings" 

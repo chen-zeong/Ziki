@@ -9,7 +9,7 @@
         <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-50': isSettingsLocked }">
           <!-- 左侧：格式 + 分辨率（单独卡片） -->
           <div class="space-y-4">
-            <div class="p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full min-h-[220px] flex flex-col transition-all duration-300">
+            <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full min-h-[220px] flex flex-col transition-all duration-300">
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.format') }}</label>
@@ -89,7 +89,7 @@
 
           <!-- 右侧：画质（单独卡片） -->
           <div class="space-y-4">
-            <div class="p-4 rounded-xl bg-white dark:bg-[#20242f] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full quality-slider-container transition-all duration-300">
+            <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full quality-slider-container transition-all duration-300">
               <div class="space-y-4">
                 <!-- 标题和质量等级 -->
                 <div class="flex justify-between items-center mb-4">

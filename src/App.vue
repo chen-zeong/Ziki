@@ -511,7 +511,13 @@ const updateTask = (updatedTask: CompressionTask) => {
 };
 
 // 处理任务选中
-const selectTask = (taskId: string) => {
+const selectTask = (taskId: string | null) => {
+  if (!taskId) {
+    taskStore.selectedTaskId = null;
+    switchToTask(null);
+    applyTaskTimeRangeToUI(null);
+    return;
+  }
   taskStore.selectTask(taskId);
   switchToTask(taskId);
   // 将该任务的时间段设置应用到右下角时间段UI
@@ -675,21 +681,28 @@ const handleClearAllTasks = async () => {
       if (isTauri) {
         await invoke('delete_task', { taskId });
       }
-      
+
       // 删除压缩文件
       const task = tasks.value.find(t => t.id === taskId);
       if (task) {
         await deleteCompressedFile(task);
       }
-      
+
       deleteTask(taskId);
     } catch (error) {
       // Failed to delete task during clear all
     }
   }
-  
+
   // 重置选中状态
   taskStore.selectedTaskId = null;
+  switchToTask(null);
+  resetUploader();
+  applyTaskTimeRangeToUI(null);
+  clearAllCaches();
+  if (appLayoutRef.value && typeof (appLayoutRef.value as any).refreshPreview === 'function') {
+    (appLayoutRef.value as any).refreshPreview();
+  }
 };
 
 // 组件挂载时初始化
