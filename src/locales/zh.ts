@@ -218,6 +218,7 @@ export default {
     clearAllTasksConfirmSimple: '确定要清空所有任务吗？这将从队列中删除所有任务。',
     multiSelect: '多选',
     selectedCount: '已选择',
+    batchCompress: '批量压缩',
     completed: '完成'
   },
 

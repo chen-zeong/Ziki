@@ -218,6 +218,7 @@ Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     clearAllTasksConfirmSimple: 'Clear all tasks? This will remove all tasks from the queue.',
     multiSelect: 'Multi-select',
     selectedCount: 'Selected',
+    batchCompress: 'Batch Compress',
     completed: 'Completed'
   },
 

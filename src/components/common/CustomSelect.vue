@@ -151,7 +151,7 @@ const selectedLabel = computed(() => {
 const isPlaceholder = computed(() => !selectedLabel.value);
 const placeholderText = computed(() => props.placeholder || t('common.pleaseSelect'));
 const dropdownBackground = computed(() =>
-  isDarkMode.value ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.97)'
+  isDarkMode.value ? 'rgba(28, 30, 38, 0.98)' : 'rgba(255, 255, 255, 0.97)'
 );
 const dropdownAppearanceClass = computed(() =>
   isDarkMode.value
@@ -303,41 +303,41 @@ onBeforeUnmount(() => {
 }
 
 .select-dropdown--dark {
-  background: rgba(15, 23, 42, 0.96);
-  border-color: rgba(71, 85, 105, 0.42);
+  background: rgba(28, 30, 38, 0.98);
+  border-color: rgba(94, 99, 116, 0.45);
 }
 
-:global(.dark) .select-trigger {
-  background: rgba(14, 17, 26, 0.96);
-  border-color: rgba(71, 85, 105, 0.45);
+:global(.dark .select-trigger) {
+  background: #262624;
+  border-color: rgba(98, 104, 122, 0.52);
   color: #f8fafc;
 }
 
-:global(.dark) .select-trigger:hover,
-:global(.dark) .select-trigger.is-open {
-  border-color: rgba(148, 163, 184, 0.34);
-  background: rgba(21, 25, 36, 0.94);
+:global(.dark .select-trigger:hover),
+:global(.dark .select-trigger.is-open) {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: #262624;
 }
 
-:global(.dark) .select-dropdown {
-  background: rgba(15, 23, 42, 0.96);
-  border-color: rgba(71, 85, 105, 0.38);
+:global(.dark .select-dropdown) {
+  background: rgba(28, 30, 38, 0.98);
+  border-color: rgba(94, 99, 116, 0.4);
 }
 
-:global(.dark) .select-dropdown__list {
-  background: rgba(15, 23, 42, 0.96);
+:global(.dark .select-dropdown__list) {
+  background: rgba(28, 30, 38, 0.98);
   border-radius: inherit;
 }
 
-:global(.dark) .select-trigger__icon {
+:global(.dark .select-trigger__icon) {
   color: rgba(203, 213, 225, 0.78);
 }
 
-:global(.dark) .select-dropdown .select-option {
+:global(.dark .select-dropdown .select-option) {
   color: rgba(226, 232, 240, 0.9);
 }
 
-:global(.dark) .select-dropdown .select-option--active {
+:global(.dark .select-dropdown .select-option--active) {
   background: rgba(94, 104, 128, 0.28);
   color: #f8fafc;
 }

@@ -1,6 +1,7 @@
 <template>
   <MotionCard
     class="task-card group relative block rounded-2xl border px-4 py-3 transition-colors duration-300 ease-out cursor-pointer overflow-visible backdrop-blur"
+    :data-task-id="task.id"
     :class="[
       cardToneClass,
       {
@@ -30,7 +31,7 @@
         </div>
 
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" :title="task.file.name">{{ task.file.name }}</p>
+          <p class="text-sm font-medium text-slate-700 dark:text-[#bebfbd] truncate" :title="task.file.name">{{ task.file.name }}</p>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {{ formatFileSize(task.file.size || task.originalSize) }}
             <span v-if="task.status === 'completed' && task.compressedSize" class="ml-2 text-slate-400 dark:text-slate-500">
@@ -72,7 +73,7 @@
         </div>
         <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-300">
           <button
-            v-if="task.status !== 'processing'"
+            v-if="task.status !== 'processing' && task.type === 'video'"
             class="action-btn"
             :title="$t('taskList.details')"
             @click.stop="handleDetailClick"

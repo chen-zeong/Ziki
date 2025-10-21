@@ -305,11 +305,11 @@ const bitDepthButtonClass = (depth: number) => {
   const disabled = !canUseDepth(depth);
   return [
     isSelected
-      ? 'border-[var(--brand-primary)]/45 text-[var(--brand-primary)] bg-[var(--brand-primary)]/12 shadow-[0_10px_22px_-16px_rgba(99,102,241,0.8)]'
+      ? 'border-transparent text-white bg-[#6776ec] shadow-[0_16px_32px_-18px_rgba(103,118,236,0.65)]'
       : 'border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 bg-white dark:bg-white/5',
     disabled
       ? 'opacity-45 cursor-not-allowed'
-      : 'hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10'
+      : 'hover:border-[#6776ec]/45 hover:text-[#6776ec] dark:hover:border-[#6776ec]/55 dark:hover:text-[#aeb6ff]'
   ].join(' ');
 };
 

@@ -3,7 +3,7 @@
     <!-- 左侧工具栏按钮 -->
     <div class="flex items-center gap-2">
       <button
-        class="flex items-center gap-1.5 h-8 px-3 rounded-xl text-sm font-medium transition-colors duration-200 bg-white dark:bg-white/10 border border-slate-200/70 dark:border-white/15 text-slate-700 dark:text-slate-100 hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 shadow-sm dark:shadow-none"
+        class="flex items-center gap-1.5 h-8 px-3 rounded-xl text-sm font-medium transition-colors duration-200 bg-white dark:bg-white/10 border border-slate-200/70 dark:border-white/15 text-slate-700 dark:text-slate-300 hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 shadow-sm dark:shadow-none"
         @click="handleAddFiles"
         :title="t('toolbar.addFiles')"
       >
@@ -12,7 +12,7 @@
       </button>
 
       <button
-        class="flex items-center gap-1.5 h-8 px-3 rounded-xl text-sm font-medium transition-colors duration-200 text-red-500 border border-slate-200/70 dark:border-white/15 bg-white dark:bg-white/5 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 shadow-sm dark:shadow-none"
+        class="flex items-center gap-1.5 h-8 px-3 rounded-xl text-sm font-medium transition-colors duration-200 text-red-500 dark:text-red-300 border border-slate-200/70 dark:border-white/15 bg-white dark:bg-white/5 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 shadow-sm dark:shadow-none"
         @click="handleClearAllTasks"
         :disabled="tasks.length === 0"
         :title="t('taskList.clearAllTasks')"
@@ -70,7 +70,7 @@ const multiSelectMode = computed(() => !!props.multiSelectMode);
 const inactiveMultiSelectClasses =
   'border-slate-200/80 bg-white text-slate-500 hover:text-[#2563eb] hover:border-[#2563eb]/45 dark:border-white/12 dark:bg-[#1f1f26] dark:text-slate-300 dark:hover:border-[#6366f1]/50 dark:hover:text-[#6366f1]';
 const activeMultiSelectClasses =
-  'border-[#60a5fa]/60 bg-[#e6efff] text-[#1d4ed8] shadow-[0_6px_16px_-12px_rgba(59,130,246,0.35)] hover:bg-[#d8e4ff] dark:border-[#b8b9b4]/60 dark:bg-[#232321] dark:text-[#f5f6f3] dark:hover:bg-[#2c2c29]';
+  'border-[#60a5fa]/60 bg-[#e6efff] text-[#1d4ed8] shadow-[0_6px_16px_-12px_rgba(59,130,246,0.35)] hover:bg-[#d8e4ff] dark:border-[rgba(129,140,248,0.35)] dark:bg-[rgba(98,104,241,0.22)] dark:text-[#eef2ff] dark:shadow-[0_12px_28px_-18px_rgba(99,102,241,0.62)] dark:ring-1 dark:ring-inset dark:ring-[rgba(129,140,248,0.3)] dark:hover:bg-[rgba(98,104,241,0.3)] dark:hover:text-[#ffffff]';
 
 // 清空所有任务
 const handleClearAllTasks = () => {

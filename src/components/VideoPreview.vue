@@ -3,7 +3,7 @@
     <!-- 视频预览功能 -->
   <div 
     ref="sliderRef"
-    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-xl border-4 border-sky-300/80 dark:border-sky-700/50"
+    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-xl border-4 border-sky-300/80 dark:border-[#2c353e]"
     v-show="!isFullscreen"
       :style="{ '--position': `${sliderPosition}%` }"
     >
@@ -84,7 +84,7 @@
             
             <div 
                ref="fullscreenSliderRef"
-               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden border-[4px] border-sky-200/60 dark:border-sky-600/45 backdrop-blur-lg"
+               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden border-[4px] border-sky-200/60 dark:border-[#2c353e] backdrop-blur-lg"
                :style="{ '--position': `${sliderPosition}%` }"
                @click.stop
             >

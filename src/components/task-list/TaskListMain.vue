@@ -111,30 +111,30 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
- import { invoke } from '@tauri-apps/api/core';
- import { listen, type UnlistenFn } from '@tauri-apps/api/event';
- import { Window as TauriWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { Window as TauriWindow } from '@tauri-apps/api/window';
 import { useTaskStore } from '../../stores/useTaskStore';
 import TaskListToolbar from './TaskListToolbar.vue';
 import TaskItem from './TaskItem.vue';
 import TaskDetails from './TaskDetails.vue';
 import { Loader2, Undo2, Play } from 'lucide-vue-next';
 import { motion } from 'motion-v';
- 
- import type { CompressionTask } from '../../types';
- 
- // 使用任务store
+
+import type { CompressionTask } from '../../types';
+
+// 使用任务store
 const taskStore = useTaskStore();
- // Tauri 窗口实例（仅在 Tauri 环境下使用）
- let appWindow: TauriWindow | null = null;
+// Tauri 窗口实例（仅在 Tauri 环境下使用）
+let appWindow: TauriWindow | null = null;
 // 新增：环境检测，避免在 Web 端注册 Tauri 事件
 const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
 
- interface Props {
-   // 保持props接口兼容性，但内部使用store
-   tasks?: CompressionTask[];
-   selectedTaskId?: string | null;
- }
+interface Props {
+  // 保持props接口兼容性，但内部使用store
+  tasks?: CompressionTask[];
+  selectedTaskId?: string | null;
+}
 
 type StartCompressPayload = { mode: 'single' } | { mode: 'batch'; taskIds: string[] };
 
@@ -144,7 +144,7 @@ interface Emits {
   (e: 'update-task', task: CompressionTask): void;
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
-   (e: 'pause-task', taskId: string): void;
+  (e: 'pause-task', taskId: string): void;
   (e: 'select-task', taskId: string | null): void;
   (e: 'clear-all-tasks'): void;
   (e: 'start-compress', payload?: StartCompressPayload): void;
@@ -152,15 +152,15 @@ interface Emits {
   (e: 'toggle-output-folder'): void;
 }
 
- const props = defineProps<Props>();
+const props = defineProps<Props>();
 
- // 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
- const tasks = computed(() => props.tasks || taskStore.tasks);
+// 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
+const tasks = computed(() => props.tasks || taskStore.tasks);
 const selectedTaskId = computed(() => props.selectedTaskId || taskStore.selectedTaskId);
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
 
- // 状态管理
+// 状态管理
 const selectedTaskIds = ref<string[]>([]);
 const isDragOver = ref(false);
 const multiSelectMode = ref(false);
@@ -169,6 +169,12 @@ const detailAnchorElement = ref<HTMLElement | null>(null);
 const detailAnchorRect = ref<DOMRect | null>(null);
 const MotionGlow = motion.div;
 const allowedMultiSelectStatuses = new Set<CompressionTask['status']>(['pending', 'queued']);
+const getTaskById = (taskId: string) => tasks.value.find(task => task.id === taskId) || null;
+const multiSelectPrimaryTask = computed(() => {
+  const firstId = selectedTaskIds.value[0];
+  return firstId ? getTaskById(firstId) : null;
+});
+const multiSelectLockedType = computed(() => multiSelectPrimaryTask.value?.type ?? null);
 
 type FileDropEventType = 'hover' | 'drop' | 'cancel' | 'unknown';
 
@@ -185,14 +191,15 @@ const normalizeDropPayload = (payload: unknown): { type: FileDropEventType; path
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>;
     const rawType = typeof record.type === 'string' ? record.type.toLowerCase() : 'unknown';
-    const type: FileDropEventType =
-      rawType === 'hover' || rawType === 'over'
-        ? 'hover'
-        : rawType === 'drop'
-          ? 'drop'
-          : rawType === 'cancel' || rawType === 'leave'
-            ? 'cancel'
-            : 'unknown';
+    const typeMap: Record<string, FileDropEventType> = {
+      hover: 'hover',
+      over: 'hover',
+      enter: 'hover',
+      drop: 'drop',
+      cancel: 'cancel',
+      leave: 'cancel'
+    };
+    const type = typeMap[rawType] ?? 'unknown';
     const maybePaths = record.paths;
     const paths = Array.isArray(maybePaths)
       ? (maybePaths as unknown[]).filter((item): item is string => typeof item === 'string')
@@ -212,10 +219,14 @@ const selectedTaskStatus = computed(() => {
 const isProcessingButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'processing');
 const showUndoButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'completed');
 const isResumeButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'paused');
+const isQueuedButton = computed(() => !multiSelectMode.value && selectedTaskStatus.value === 'queued');
 
 const primaryActionEnabled = computed(() => {
   if (multiSelectMode.value) {
     return selectedTaskIds.value.length > 0;
+  }
+  if (isQueuedButton.value) {
+    return false;
   }
   if (showUndoButton.value) {
     return !!selectedTaskId.value;
@@ -231,10 +242,13 @@ const primaryActionEnabled = computed(() => {
 
 const primaryButtonLabel = computed(() => {
   if (multiSelectMode.value) {
-    return t('videoSettings.compress') || '开始压缩';
+    return t('taskList.batchCompress') || '批量压缩';
   }
   if (showUndoButton.value) {
     return t('videoSettings.undo') || '撤销';
+  }
+  if (isQueuedButton.value) {
+    return t('taskList.statusQueued') || '排队中';
   }
   if (isProcessingButton.value) {
     return t('videoSettings.compressing') || '压缩中...';
@@ -250,14 +264,24 @@ const exitMultiSelectMode = () => {
   selectedTaskIds.value = [];
 };
 
-const isTaskEligibleForMultiSelect = (taskId: string) => {
-  const task = tasks.value.find(item => item.id === taskId);
+const isTaskEligibleForMultiSelect = (
+  taskId: string,
+  constrainedType: CompressionTask['type'] | null = null
+) => {
+  const task = getTaskById(taskId);
   if (!task) return false;
-  return allowedMultiSelectStatuses.has(task.status);
+  if (!allowedMultiSelectStatuses.has(task.status)) return false;
+  const typeConstraint = constrainedType ?? multiSelectLockedType.value;
+  if (typeConstraint && task.type !== typeConstraint) return false;
+  return true;
 };
 
 const filterEligibleMultiSelectIds = (ids: string[]) => {
-  return ids.filter(id => isTaskEligibleForMultiSelect(id));
+  const firstValidTask = ids
+    .map(id => getTaskById(id))
+    .find((task): task is CompressionTask => !!task && allowedMultiSelectStatuses.has(task.status));
+  const lockedType = firstValidTask?.type ?? multiSelectLockedType.value ?? null;
+  return ids.filter(id => isTaskEligibleForMultiSelect(id, lockedType));
 };
 
 const activeDetailTask = computed(() => {
@@ -333,11 +357,14 @@ const updateDetailAnchorRect = () => {
 const openDetailPanel = (payload: string | { taskId: string; trigger: HTMLElement | null }) => {
   const taskId = typeof payload === 'string' ? payload : payload.taskId;
   detailTaskId.value = taskId;
-  let preferredAnchor: HTMLElement | null = null;
-  if (typeof window !== 'undefined') {
-    preferredAnchor = document.querySelector('.task-stack .task-card') as HTMLElement | null;
+  const providedAnchor = typeof payload === 'string' ? null : payload.trigger;
+  if (providedAnchor) {
+    detailAnchorElement.value = providedAnchor;
+  } else if (typeof window !== 'undefined') {
+    detailAnchorElement.value = document.querySelector(`.task-stack .task-card[data-task-id="${taskId}"]`) as HTMLElement | null;
+  } else {
+    detailAnchorElement.value = null;
   }
-  detailAnchorElement.value = preferredAnchor || (typeof payload === 'string' ? null : payload.trigger);
   nextTick(updateDetailAnchorRect);
 };
 
@@ -363,12 +390,13 @@ onUnmounted(() => {
 });
 
 // Tauri drag-drop listeners
-let unlistenFileDropPrimary: UnlistenFn | null = null;
-let unlistenFileDropHover: UnlistenFn | null = null;
-let unlistenFileDropCancelled: UnlistenFn | null = null;
-let unlistenWindowFileDrop: UnlistenFn | null = null;
+let unlistenDragDrop: UnlistenFn | null = null;
+let unlistenDragEnter: UnlistenFn | null = null;
+let unlistenDragOver: UnlistenFn | null = null;
+let unlistenDragLeave: UnlistenFn | null = null;
+let unlistenWindowDragDrop: UnlistenFn | null = null;
 
- // 计算属性
+// 计算属性
 const deleteTask = async (taskId: string) => {
   try {
     const task = tasks.value.find(t => t.id === taskId);
@@ -377,16 +405,13 @@ const deleteTask = async (taskId: string) => {
        return;
      }
 
-     // 如果任务正在压缩或已暂停（FFmpeg已开始），需要先取消系统任务
-     if (task.status === 'processing' || task.status === 'paused') {
-       console.log('Cancelling system task before deletion:', taskId);
+     // 若在 Tauri 环境下，确保同时删除底层系统任务
+     if (isTauri) {
        try {
-         if (isTauri) {
-           await invoke('pause_task', { taskId });
-         }
-         console.log('System task cancelled successfully:', taskId);
+         await invoke('delete_task', { taskId });
+         console.log('System task deleted successfully:', taskId);
        } catch (err) {
-         console.warn('Failed to cancel system task:', err);
+         console.warn('Failed to delete system task:', err);
        }
      }
 
@@ -416,52 +441,56 @@ const handleClearAllTasks = () => {
   emit('clear-all-tasks');
 };
 
- // DOM Drag handlers
- const handleDragOver = (event: DragEvent) => {
-   event.preventDefault();
-   isDragOver.value = true;
- };
+// DOM Drag handlers
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault();
+  isDragOver.value = true;
+};
 
- const handleDragLeave = (event: DragEvent) => {
-   event.preventDefault();
-   isDragOver.value = false;
- };
+const handleDragLeave = (event: DragEvent) => {
+  event.preventDefault();
+  isDragOver.value = false;
+};
 
- const handleDrop = (event: DragEvent) => {
-   event.preventDefault();
-   isDragOver.value = false;
-   const files = event.dataTransfer?.files;
-   if (files && files.length > 0) {
-     console.log('[DD] DOM drop: emitting files-selected with length:', files.length);
-     emit('files-selected', files);
-   }
- };
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault();
+  isDragOver.value = false;
+  if (isTauri) {
+    // 在 Tauri 环境下由底层事件负责派发，避免重复导入
+    return;
+  }
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    console.log('[DD] DOM drop: emitting files-selected with length:', files.length);
+    emit('files-selected', files);
+  }
+};
 
- // Tauri FileDrop handlers
- const handleTauriFileDrop = async (paths: string[]) => {
-   try {
-     console.log('[DD] Emitting files-selected with length:', paths.length);
-     // 将路径转换为 FileList（仿造）
-     const fileList = await Promise.all(paths.map(async (filePath) => {
-       const fileName = filePath.split(/\\\\|\//).pop() || 'unknown';
-       const extension = (fileName.split('.').pop() || '').toLowerCase();
-       let mimeType = 'application/octet-stream';
-       const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'];
-       const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl'];
-       if (videoExts.includes(extension)) {
-         mimeType = `video/${extension === 'mov' ? 'quicktime' : extension === 'wmv' ? 'x-ms-wmv' : extension === 'avi' ? 'x-msvideo' : extension === '3gp' ? '3gpp' : extension === 'ogv' ? 'ogg' : extension}`;
-       } else if (imageExts.includes(extension)) {
-         mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-       }
-       const mockFile = new File([], fileName, { type: mimeType });
-       (mockFile as any).path = filePath;
-       return mockFile;
-     }));
-     emit('files-selected', fileList as unknown as FileList);
-   } catch (error) {
-     console.error('[DD] handleTauriFileDrop failed:', error);
-   }
- };
+// Tauri FileDrop handlers
+const handleTauriFileDrop = async (paths: string[]) => {
+  try {
+    console.log('[DD] Emitting files-selected with length:', paths.length);
+    // 将路径转换为 FileList（仿造）
+    const fileList = await Promise.all(paths.map(async (filePath) => {
+      const fileName = filePath.split(/\\\\|\//).pop() || 'unknown';
+      const extension = (fileName.split('.').pop() || '').toLowerCase();
+      let mimeType = 'application/octet-stream';
+      const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'webm', 'flv', 'm4v', 'm4s', 'm4p', 'mpg', 'mpeg', 'mpe', 'mpv', 'mp2', 'mts', 'm2ts', 'ts', '3gp', '3g2', 'asf', 'vob', 'ogv', 'ogg', 'rm', 'rmvb', 'f4v', 'f4p', 'f4a', 'f4b', 'mod', 'mxf', 'qt', 'yuv', 'amv', 'svi', 'roq', 'nsv'];
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'ico', 'heic', 'heif', 'avif', 'jxl'];
+      if (videoExts.includes(extension)) {
+        mimeType = `video/${extension === 'mov' ? 'quicktime' : extension === 'wmv' ? 'x-ms-wmv' : extension === 'avi' ? 'x-msvideo' : extension === '3gp' ? '3gpp' : extension === 'ogv' ? 'ogg' : extension}`;
+      } else if (imageExts.includes(extension)) {
+        mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+      }
+      const mockFile = new File([], fileName, { type: mimeType });
+      (mockFile as any).path = filePath;
+      return mockFile;
+    }));
+    emit('files-selected', fileList as unknown as FileList);
+  } catch (error) {
+    console.error('[DD] handleTauriFileDrop failed:', error);
+  }
+};
 
 onMounted(async () => {
   if (!isTauri) {
@@ -485,56 +514,84 @@ onMounted(async () => {
       appWindow = null;
     }
 
-    unlistenFileDropPrimary = await listen('tauri://file-drop', (event) => {
-      const { type, paths } = normalizeDropPayload((event as any)?.payload);
-      if (type === 'hover') {
-        isDragOver.value = true;
-        return;
-      }
-      if (type === 'cancel') {
-        isDragOver.value = false;
-        return;
-      }
-      if (paths.length > 0) {
-        isDragOver.value = false;
-        void handleTauriFileDrop(paths);
-      }
-    });
-    unlistenFileDropCancelled = await listen('tauri://file-drop-cancelled', () => {
-      isDragOver.value = false;
-    });
-    unlistenFileDropHover = await listen('tauri://file-drop-hover', (event) => {
-      const { type } = normalizeDropPayload((event as any)?.payload);
-      if (type === 'hover') {
-        isDragOver.value = true;
-      }
-    });
+    let dragDropRegistered = false;
 
-    // 额外后备：窗口级别文件拖拽事件（如果可用）
     try {
-      const winAny = appWindow
-        ? (appWindow as unknown as { onFileDropEvent?: (cb: (e: any) => void) => Promise<() => void> })
-        : null;
-      if (winAny && typeof winAny.onFileDropEvent === 'function') {
-        unlistenWindowFileDrop = await winAny.onFileDropEvent((e: any) => {
-          console.log('[DD] appWindow.onFileDropEvent:', e);
-          const { type, paths } = normalizeDropPayload(e?.payload);
-          if (type === 'hover') {
-            isDragOver.value = true;
-          } else if (type === 'cancel') {
-            isDragOver.value = false;
-          } else if (paths.length > 0) {
-            isDragOver.value = false;
-            void handleTauriFileDrop(paths);
-          }
-        });
-        console.log('[DD] Registered window-level file-drop listener');
-      } else {
-        console.log('[DD] appWindow.onFileDropEvent not available in this Tauri version');
+      unlistenDragDrop = await listen('tauri://drag-drop', (event) => {
+        const { paths } = normalizeDropPayload((event as any)?.payload);
+        if (paths.length > 0) {
+          isDragOver.value = false;
+          void handleTauriFileDrop(paths);
+        }
+      });
+      dragDropRegistered = true;
+    } catch (err) {
+      console.warn('[DD] Failed to register tauri://drag-drop listener:', err);
+      unlistenDragDrop = null;
+    }
+
+    try {
+      unlistenDragEnter = await listen('tauri://drag-enter', (event) => {
+        const { type } = normalizeDropPayload((event as any)?.payload);
+        if (type === 'cancel') {
+          isDragOver.value = false;
+          return;
+        }
+        isDragOver.value = true;
+      });
+    } catch (err) {
+      console.warn('[DD] Failed to register tauri://drag-enter listener:', err);
+      unlistenDragEnter = null;
+    }
+
+    try {
+      unlistenDragOver = await listen('tauri://drag-over', () => {
+        isDragOver.value = true;
+      });
+    } catch (err) {
+      console.warn('[DD] Failed to register tauri://drag-over listener:', err);
+      unlistenDragOver = null;
+    }
+
+    try {
+      unlistenDragLeave = await listen('tauri://drag-leave', () => {
+        isDragOver.value = false;
+      });
+    } catch (err) {
+      console.warn('[DD] Failed to register tauri://drag-leave listener:', err);
+      unlistenDragLeave = null;
+    }
+
+    const shouldUseWindowFallback = !dragDropRegistered;
+
+    if (shouldUseWindowFallback) {
+      try {
+        const winAny = appWindow
+          ? (appWindow as unknown as { onDragDropEvent?: (cb: (e: any) => void) => Promise<() => void> })
+          : null;
+        if (winAny && typeof winAny.onDragDropEvent === 'function') {
+          unlistenWindowDragDrop = await winAny.onDragDropEvent((e: any) => {
+            console.log('[DD] appWindow.onDragDropEvent:', e);
+            const { type, paths } = normalizeDropPayload(e?.payload);
+            if (type === 'hover') {
+              isDragOver.value = true;
+            } else if (type === 'cancel') {
+              isDragOver.value = false;
+            } else if (paths.length > 0) {
+              isDragOver.value = false;
+              void handleTauriFileDrop(paths);
+            }
+          });
+          console.log('[DD] Registered window-level drag-drop listener (fallback)');
+        } else {
+          console.log('[DD] appWindow.onDragDropEvent not available in this Tauri version');
+        }
+      } catch (werr) {
+        console.warn('[DD] Failed to register window-level drag-drop listener:', werr);
       }
-     } catch (werr) {
-       console.warn('[DD] Failed to register window-level file-drop listener:', werr);
-     }
+    } else {
+      console.log('[DD] Window-level drag-drop fallback not required');
+    }
 
     console.log('[DD] Registered Tauri drag-drop listeners');
 
@@ -552,17 +609,17 @@ onMounted(async () => {
   }
 });
 
- onUnmounted(async () => {
-   if (!isTauri) return;
-   try {
-    const funcs = [unlistenFileDropPrimary, unlistenFileDropHover, unlistenFileDropCancelled, unlistenWindowFileDrop];
+onUnmounted(async () => {
+  if (!isTauri) return;
+  try {
+    const funcs = [unlistenDragDrop, unlistenDragEnter, unlistenDragOver, unlistenDragLeave, unlistenWindowDragDrop];
     for (const fn of funcs) {
       if (fn) await fn();
     }
     console.log('[DD] Unregistered Tauri drag-drop listeners');
   } catch (error) {
-     console.error('Unregister drag-drop listeners failed:', error);
-   }
+    console.error('Unregister drag-drop listeners failed:', error);
+  }
 });
 
 watch(tasks, (newTasks) => {
@@ -709,17 +766,24 @@ watch(tasks, (newTasks) => {
   animation: start-button-ripple 1.8s ease-in-out infinite alternate;
 }
 .start-button--undo {
-  --button-bg: rgba(251, 191, 36, 1);
-  --button-bg-hover: rgba(245, 158, 11, 1);
-  --button-bg-active: rgba(217, 119, 6, 1);
-  --button-shadow: 0 20px 42px -24px rgba(251, 191, 36, 0.48);
-  --button-shadow-hover: 0 22px 46px -24px rgba(245, 158, 11, 0.52);
+  --button-bg: rgba(233, 168, 59, 1);
+  --button-bg-hover: rgba(233, 168, 59, 1);
+  --button-bg-active: rgba(205, 132, 44, 1);
+  --button-shadow: 0 20px 42px -24px rgba(246, 196, 79, 0.42);
+  --button-shadow-hover: 0 22px 46px -24px rgba(233, 168, 59, 0.46);
 }
 .start-button--undo .start-button__icon {
   opacity: 1;
 }
 .start-button--undo .start-button__label {
   letter-spacing: 0.025em;
+}
+:global(.dark) .start-button:not(.start-button--undo) {
+  --button-bg: var(--button-bg-hover);
+  background: var(--button-bg-hover);
+}
+:global(.dark) .start-button:not(.start-button--undo):hover {
+  background: var(--button-bg-active);
 }
 
 @keyframes start-button-ripple {
