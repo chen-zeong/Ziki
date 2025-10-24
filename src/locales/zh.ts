@@ -234,9 +234,7 @@ export default {
     optionWithRandom: '+随机编号',
     descOriginal: '保持原始文件名',
     descWithTime: '文件名_20240101_120000',
-    descWithRandom: '文件名_abc123',
-    deleteCompressedFileOnTaskDelete: '同步删除压缩文件',
-    deleteCompressedFileOnTaskDeleteDesc: '删除任务记录时同时删除对应的压缩文件'
+    descWithRandom: '文件名_abc123'
   },
 
   // 视频对比
@@ -335,6 +333,8 @@ export default {
     minimize: '最小化',
     maximizeRestore: '最大化/还原',
     maximize: '最大化',
-    close: '关闭'
+    close: '关闭',
+    previewToggleOff: '预览 Win 控件',
+    previewToggleOn: '退出 Win 控件预览'
   }
 };

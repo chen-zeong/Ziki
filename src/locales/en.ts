@@ -218,7 +218,7 @@ Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     clearAllTasksConfirmSimple: 'Clear all tasks? This will remove all tasks from the queue.',
     multiSelect: 'Multi-select',
     selectedCount: 'Selected',
-    batchCompress: 'Batch Compress',
+    batchCompress: 'Compress All',
     completed: 'Completed'
   },
 
@@ -234,9 +234,7 @@ Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     optionWithRandom: 'Original\n+Random',
     descOriginal: 'Keep original file name',
     descWithTime: 'filename_20240101_120000',
-    descWithRandom: 'filename_abc123',
-    deleteCompressedFileOnTaskDelete: 'Sync delete compressed files',
-    deleteCompressedFileOnTaskDeleteDesc: 'Delete compressed files when deleting task records'
+    descWithRandom: 'filename_abc123'
   },
 
   // Video Comparison
@@ -335,6 +333,8 @@ Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     minimize: 'Minimize',
     maximizeRestore: 'Maximize/Restore',
     maximize: 'Maximize',
-    close: 'Close'
+    close: 'Close',
+    previewToggleOff: 'Preview Win Controls',
+    previewToggleOn: 'Exit Win Controls Preview'
   }
 };

@@ -162,6 +162,7 @@ const { t } = useI18n();
 
 // 状态管理
 const selectedTaskIds = ref<string[]>([]);
+const multiSelectAnchorId = ref<string | null>(null);
 const isDragOver = ref(false);
 const multiSelectMode = ref(false);
 const detailTaskId = ref<string | null>(null);
@@ -171,6 +172,13 @@ const MotionGlow = motion.div;
 const allowedMultiSelectStatuses = new Set<CompressionTask['status']>(['pending', 'queued']);
 const getTaskById = (taskId: string) => tasks.value.find(task => task.id === taskId) || null;
 const multiSelectPrimaryTask = computed(() => {
+  const anchorId = multiSelectAnchorId.value;
+  if (anchorId) {
+    const anchorTask = getTaskById(anchorId);
+    if (anchorTask) {
+      return anchorTask;
+    }
+  }
   const firstId = selectedTaskIds.value[0];
   return firstId ? getTaskById(firstId) : null;
 });
@@ -262,6 +270,7 @@ const primaryButtonLabel = computed(() => {
 const exitMultiSelectMode = () => {
   multiSelectMode.value = false;
   selectedTaskIds.value = [];
+  multiSelectAnchorId.value = null;
 };
 
 const isTaskEligibleForMultiSelect = (
@@ -277,11 +286,48 @@ const isTaskEligibleForMultiSelect = (
 };
 
 const filterEligibleMultiSelectIds = (ids: string[]) => {
-  const firstValidTask = ids
-    .map(id => getTaskById(id))
-    .find((task): task is CompressionTask => !!task && allowedMultiSelectStatuses.has(task.status));
-  const lockedType = firstValidTask?.type ?? multiSelectLockedType.value ?? null;
-  return ids.filter(id => isTaskEligibleForMultiSelect(id, lockedType));
+  const uniqueIds = Array.from(new Set(ids));
+  const anchorId = multiSelectAnchorId.value;
+  const anchorTask = anchorId ? getTaskById(anchorId) : null;
+
+  let lockedType = anchorTask?.type ?? null;
+  if (!lockedType) {
+    const firstValidTask = uniqueIds
+      .map(id => getTaskById(id))
+      .find((task): task is CompressionTask => !!task && allowedMultiSelectStatuses.has(task.status));
+    lockedType = firstValidTask?.type ?? null;
+  }
+
+  const eligibleIds: string[] = [];
+  for (const id of uniqueIds) {
+    if (id === anchorId) {
+      if (anchorTask) {
+        eligibleIds.push(id);
+      }
+      continue;
+    }
+    if (isTaskEligibleForMultiSelect(id, lockedType)) {
+      eligibleIds.push(id);
+    }
+  }
+
+  if (anchorTask) {
+    if (!eligibleIds.includes(anchorTask.id)) {
+      eligibleIds.unshift(anchorTask.id);
+    } else {
+      const anchorIndex = eligibleIds.indexOf(anchorTask.id);
+      if (anchorIndex > 0) {
+        eligibleIds.splice(anchorIndex, 1);
+        eligibleIds.unshift(anchorTask.id);
+      }
+    }
+  } else if (eligibleIds.length > 0) {
+    multiSelectAnchorId.value = eligibleIds[0];
+  } else {
+    multiSelectAnchorId.value = null;
+  }
+
+  return eligibleIds;
 };
 
 const activeDetailTask = computed(() => {
@@ -294,11 +340,13 @@ const activeDetailTask = computed(() => {
 
 const toggleTaskCheck = (taskId: string) => {
   if (!multiSelectMode.value) return;
+  if (taskId === multiSelectAnchorId.value) return;
   if (!isTaskEligibleForMultiSelect(taskId)) return;
   if (selectedTaskIds.value.includes(taskId)) {
-    selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
+    const nextIds = selectedTaskIds.value.filter(id => id !== taskId);
+    selectedTaskIds.value = filterEligibleMultiSelectIds(nextIds);
   } else {
-    selectedTaskIds.value = [...selectedTaskIds.value, taskId];
+    selectedTaskIds.value = filterEligibleMultiSelectIds([...selectedTaskIds.value, taskId]);
   }
 };
 
@@ -335,11 +383,26 @@ const handlePrimaryAction = () => {
 const toggleMultiSelect = () => {
   multiSelectMode.value = !multiSelectMode.value;
   if (multiSelectMode.value) {
-    const current = selectedTaskId.value;
-    if (current && isTaskEligibleForMultiSelect(current)) {
-      selectedTaskIds.value = [current];
+    const currentId = selectedTaskId.value;
+    const currentTask = currentId ? getTaskById(currentId) : null;
+    if (currentTask) {
+      multiSelectAnchorId.value = currentTask.id;
+      const sameTypeIds = tasks.value
+        .filter(task => task.type === currentTask.type && allowedMultiSelectStatuses.has(task.status))
+        .map(task => task.id);
+      const initialIds = sameTypeIds.includes(currentTask.id)
+        ? sameTypeIds
+        : [currentTask.id, ...sameTypeIds];
+      selectedTaskIds.value = filterEligibleMultiSelectIds(initialIds);
     } else {
-      selectedTaskIds.value = [];
+      const firstEligibleTask = tasks.value.find(task => allowedMultiSelectStatuses.has(task.status));
+      if (firstEligibleTask) {
+        multiSelectAnchorId.value = firstEligibleTask.id;
+        selectedTaskIds.value = filterEligibleMultiSelectIds([firstEligibleTask.id]);
+      } else {
+        multiSelectAnchorId.value = null;
+        selectedTaskIds.value = [];
+      }
     }
   } else {
     exitMultiSelectMode();
@@ -421,7 +484,7 @@ const deleteTask = async (taskId: string) => {
       detailAnchorElement.value = null;
       detailAnchorRect.value = null;
     }
-    selectedTaskIds.value = selectedTaskIds.value.filter(id => id !== taskId);
+    selectedTaskIds.value = filterEligibleMultiSelectIds(selectedTaskIds.value.filter(id => id !== taskId));
     const nextSelectedId = taskStore.selectedTaskId || null;
     emit('select-task', nextSelectedId);
   } catch (error) {

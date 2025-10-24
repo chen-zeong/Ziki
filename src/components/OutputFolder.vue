@@ -16,37 +16,6 @@
       >
         <div class="space-y-4">
 
-          <!-- 删除记录时同步删除压缩文件开关 -->
-          <div>
-            <label class="flex items-center justify-between cursor-pointer group">
-              <div class="flex-1">
-                <div class="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-                  {{ $t('outputFolder.deleteCompressedFileOnTaskDelete') }}
-                </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {{ $t('outputFolder.deleteCompressedFileOnTaskDeleteDesc') }}
-                </div>
-              </div>
-              <div class="relative ml-4">
-                <input
-                  type="checkbox"
-                  :checked="globalSettings.deleteCompressedFileOnTaskDelete"
-                  @change="globalSettings.setDeleteCompressedFileOnTaskDelete(($event.target as HTMLInputElement).checked)"
-                  class="sr-only"
-                />
-                <span
-                  class="relative flex items-center h-7 w-12 rounded-full transition-all duration-300"
-                  :class="globalSettings.deleteCompressedFileOnTaskDelete ? 'bg-[var(--brand-primary)]' : 'bg-slate-200 dark:bg-white/15'"
-                >
-                  <span
-                    class="absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-white dark:bg-[#1f2230] shadow-md transition-all duration-300"
-                    :class="globalSettings.deleteCompressedFileOnTaskDelete ? 'translate-x-5' : ''"
-                  ></span>
-                </span>
-              </div>
-            </label>
-          </div>
-          
           <!-- 输出文件名格式 -->
           <div>
             <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">

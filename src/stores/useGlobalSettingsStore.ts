@@ -20,8 +20,6 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
   // 默认语言与 i18n 的默认语言保持一致（根据系统语言自动判定）
   const language = ref<Language>(i18n.global.locale.value as Language)
   const isInitialized = ref(false)
-  // 删除记录时同步删除压缩文件开关
-  const deleteCompressedFileOnTaskDelete = ref(false)
 
   const { t } = i18n.global
 
@@ -58,11 +56,6 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
 
   const setLanguage = (lang: Language) => {
     language.value = lang
-    saveSettings()
-  }
-
-  const setDeleteCompressedFileOnTaskDelete = (enabled: boolean) => {
-    deleteCompressedFileOnTaskDelete.value = enabled
     saveSettings()
   }
 
@@ -136,8 +129,7 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
       outputPath: outputPath.value,
       outputFileNameFormat: outputFileNameFormat.value,
       theme: theme.value,
-      language: language.value,
-      deleteCompressedFileOnTaskDelete: deleteCompressedFileOnTaskDelete.value
+      language: language.value
     }
     localStorage.setItem('globalSettings', JSON.stringify(settings))
   }
@@ -153,8 +145,6 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
         theme.value = settings.theme || 'auto'
         // 未保存语言时，回退到按系统自动判定的 i18n 默认语言
         language.value = settings.language || (i18n.global.locale.value as Language)
-        // 加载删除压缩文件设置，默认为 false
-        deleteCompressedFileOnTaskDelete.value = settings.deleteCompressedFileOnTaskDelete || false
       } else {
         // 没有任何保存记录时，使用 i18n 的默认语言（系统语言）
         language.value = i18n.global.locale.value as Language
@@ -205,7 +195,6 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     theme,
     language,
     isInitialized,
-    deleteCompressedFileOnTaskDelete,
     
     // 计算属性
     isDarkMode,
@@ -216,7 +205,6 @@ export const useGlobalSettingsStore = defineStore('globalSettings', () => {
     setOutputFileNameFormat,
     setTheme,
     setLanguage,
-    setDeleteCompressedFileOnTaskDelete,
     toggleTheme,
     generateOutputFileName,
     initialize,

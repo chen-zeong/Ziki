@@ -100,42 +100,31 @@
                 </div>
 
                 <!-- 滑动条 -->
-                <div class="relative mb-2">
-                  <!-- 滑动条轨道和自定义UI -->
-                  <div class="relative h-8 flex items-center">
-                    <!-- 轨道背景 -->
-                    <div class="absolute w-full h-3 bg-slate-200/80 dark:bg-slate-700/70 rounded-full z-0"></div>
-
-                    <!-- 默认值平衡点 -->
+                <div class="relative mt-2">
+                  <div class="slider-shell">
+                    <div class="slider-track">
+                      <div
+                        class="slider-default-marker"
+                        :style="{ left: `calc(${defaultImageSliderPosition}% - 1px)` }"
+                        aria-hidden="true"
+                      ></div>
+                      <div
+                        class="slider-fill"
+                        :style="{ width: qualityValue + '%' }"
+                      ></div>
+                    </div>
                     <div
-                      class="absolute top-1/2 -translate-y-1/2 w-[2px] h-3 rounded bg-slate-300 dark:bg-white/50 pointer-events-none z-30"
-                      :style="{ left: `calc(${defaultImageSliderPosition}% - 1.5px)` }"
-                      aria-hidden="true"
-                    ></div>
-
-                    <!-- 已填充的进度条 -->
-                    <div
-                      class="absolute h-3 rounded-full z-10 bg-[var(--brand-primary)]/90"
-                      :style="{ width: qualityValue + '%' }"
-                    ></div>
-
-                    <!-- 自定义的滑块 -->
-                    <div
-                      class="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full cursor-pointer transition-transform duration-120 ease-out hover:scale-105 z-30"
-                      :class="{ 'scale-105': showTooltip }"
+                      class="slider-thumb"
+                      :class="{ 'is-active': showTooltip }"
                       :style="{ left: `calc(${qualityValue}% - 14px)` }"
                     >
-                      <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
+                      <span class="thumb-core"></span>
+                      <span class="thumb-ring"></span>
                     </div>
-                    
-                    <!-- 气泡提示框（显示参数提示，如 -q:v / 色彩位数 / 无损） -->
-                    <div 
-                      class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-10 transition duration-150 ease-out"
-                      :class="{ 
-                        'opacity-100 translate-y-0 scale-100': showTooltip, 
-                        'opacity-0 -translate-y-1 scale-95': !showTooltip
-                      }"
-                      :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
+                    <div
+                      class="slider-tooltip"
+                      :class="{ 'slider-tooltip--visible': showTooltip }"
+                      :style="{ left: qualityValue + '%' }"
                     >
                       <div class="tooltip-bubble">
                         {{ qualityHintText.paramHint }}
@@ -143,7 +132,6 @@
                     </div>
                   </div>
 
-                  <!-- 透明的 range input 处理逻辑 -->
                   <input
                     type="range"
                     id="image-quality-slider"
@@ -151,12 +139,14 @@
                     min="2"
                     max="98"
                     step="1"
-                    class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-40"
+                    class="slider-input"
                     @input="updateQualityState"
                     @mouseenter="showTooltip = true"
                     @mouseleave="showTooltip = false"
                     @mousedown="showTooltip = true"
                     @mouseup="showTooltip = false"
+                    @touchstart.passive="showTooltip = true"
+                    @touchend.passive="showTooltip = false"
                   />
                 </div>
                 
@@ -631,17 +621,128 @@ const updateQualityState = () => {
 </script>
 
 <style scoped>
+.slider-shell {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+.slider-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.25), transparent 65%);
+  pointer-events: none;
+}
+.dark .slider-track {
+  background: rgba(71, 85, 105, 0.45);
+  box-shadow: inset 0 1px 1px rgba(2, 6, 23, 0.55);
+}
+.slider-default-marker {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 70%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, rgba(79, 70, 229, 0.82), rgba(129, 140, 248, 0.72));
+  pointer-events: none;
+  opacity: 0.95;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.dark .slider-default-marker {
+  background: linear-gradient(180deg, rgba(234, 236, 244, 0.92), rgba(148, 163, 184, 0.7));
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5);
+  opacity: 1;
+}
+.slider-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(99, 102, 241, 0.92);
+  transition: width 0.18s cubic-bezier(0.33, 1, 0.68, 1);
+  box-shadow: 0 10px 22px -16px rgba(99, 102, 241, 0.45);
+}
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.slider-thumb.is-active {
+  transform: translateY(-50%) scale(1.08);
+  filter: brightness(1.05);
+}
+.thumb-core {
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: #6366f1;
+  border: none;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+.dark .thumb-core {
+  background: rgba(99, 102, 241, 0.92);
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.7);
+}
+.thumb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(99, 102, 241, 0.32);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.slider-thumb.is-active .thumb-ring {
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: none;
+}
+.slider-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(6px) scale(0.96);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.slider-tooltip--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+.slider-input {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 40;
+  touch-action: none;
+}
 .tooltip-bubble {
   position: relative;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  background: rgba(15, 23, 42, 0.96);
   color: white;
   font-size: 11px;
   line-height: 1;
   padding: 6px 8px;
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  white-space: nowrap; /* 强制单行显示 */
+  white-space: nowrap;
 }
 .tooltip-bubble::after {
   content: '';
@@ -649,16 +750,17 @@ const updateQualityState = () => {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  width: 0; height: 0;
+  width: 0;
+  height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid rgba(30, 41, 59, 0.96);
+  border-top: 6px solid rgba(15, 23, 42, 0.96);
 }
 :deep(.dark) .tooltip-bubble {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  background: rgba(2, 6, 23, 0.96);
   border-color: rgba(100, 116, 139, 0.25);
 }
 :deep(.dark) .tooltip-bubble::after {
-  border-top-color: rgba(15, 23, 42, 0.96);
+  border-top-color: rgba(2, 6, 23, 0.96);
 }
 </style>

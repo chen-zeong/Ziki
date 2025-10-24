@@ -31,7 +31,7 @@
         </div>
 
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-slate-700 dark:text-[#bebfbd] truncate" :title="task.file.name">{{ task.file.name }}</p>
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-100 truncate" :title="task.file.name">{{ task.file.name }}</p>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {{ formatFileSize(task.file.size || task.originalSize) }}
             <span v-if="task.status === 'completed' && task.compressedSize" class="ml-2 text-slate-400 dark:text-slate-500">
@@ -121,6 +121,7 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
+import { storeToRefs } from 'pinia';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../../stores/useTaskStore';
 import StatusBadge from './StatusBadge.vue';
@@ -149,6 +150,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
 const globalSettings = useGlobalSettingsStore();
+const { isDarkMode } = storeToRefs(globalSettings);
 const taskStore = useTaskStore();
 
 const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
@@ -172,11 +174,20 @@ const cardVariants = {
   active: { y: 0, scale: 1, opacity: 1 }
 } as const;
 
-const cardTransition = {
-  default: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
-  scale: { type: 'spring', stiffness: 220, damping: 28, mass: 0.85 },
-  y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] }
-};
+const cardTransition = computed(() => {
+  if (isDarkMode.value) {
+    return {
+      default: { duration: 0.13, ease: [0.22, 1, 0.36, 1] },
+      scale: { type: 'spring', stiffness: 220, damping: 24, mass: 0.82 },
+      y: { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
+    };
+  }
+  return {
+    default: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+    scale: { type: 'spring', stiffness: 220, damping: 28, mass: 0.85 },
+    y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] }
+  };
+});
 
 const cardToneClass = computed(() => {
   if (isActive.value) return 'task-card--active';
@@ -190,6 +201,8 @@ const cardState = computed(() => {
   if (isHovering.value) return 'hover';
   return 'rest';
 });
+
+const leavingAnimationDuration = computed(() => (isDarkMode.value ? 130 : 260));
 
 const handleHover = (isEntering: boolean) => {
   isHovering.value = isEntering;
@@ -221,10 +234,11 @@ watch(isActive, (current, previous) => {
   if (previous && !current) {
     isLeavingSelection.value = true;
     if (typeof window !== 'undefined') {
+      const duration = leavingAnimationDuration.value;
       leavingTimer.value = window.setTimeout(() => {
         isLeavingSelection.value = false;
         leavingTimer.value = null;
-      }, 260);
+      }, duration);
     }
   } else if (current) {
     isLeavingSelection.value = false;
@@ -457,9 +471,13 @@ const failureHint = computed(() => t('taskList.statusFailed'));
   --task-card-overlay: rgba(255, 255, 255, 0.015);
   --task-card-overlay-opacity: 1;
   --task-card-border-width: 1px;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.22s ease;
 }
 .task-card.is-leaving::before {
   animation: selectionFade 0.32s ease forwards;
+}
+.dark .task-card.is-leaving::before {
+  animation-duration: 0.16s;
 }
 @keyframes selectionFade {
   0% {

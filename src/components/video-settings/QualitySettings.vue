@@ -399,15 +399,18 @@ onMounted(async () => {
 .slider-default-marker {
   position: absolute;
   top: 50%;
-  width: 2px;
+  width: 3px;
   height: 70%;
   transform: translateY(-50%);
-  background: rgba(226, 232, 240, 0.75);
+  background: linear-gradient(180deg, rgba(79, 70, 229, 0.82), rgba(129, 140, 248, 0.72));
   pointer-events: none;
-  opacity: 0.85;
+  opacity: 0.95;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
 }
 .dark .slider-default-marker {
-  background: rgba(148, 163, 184, 0.5);
+  background: linear-gradient(180deg, rgba(234, 236, 244, 0.92), rgba(148, 163, 184, 0.7));
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5);
+  opacity: 1;
 }
 .slider-fill {
   position: absolute;

@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { Sun, Moon, Minus, Square, X, FolderCog } from 'lucide-vue-next';
+import { Sun, Moon, FolderCog } from 'lucide-vue-next';
 import LanguageSwitcher from '../components/LanguageSwitcher.vue';
 import LogPanel from '../components/LogPanel.vue';
 import OutputFolder from '../components/OutputFolder.vue';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { Window as TauriWindow } from '@tauri-apps/api/window';
+import WindowsTitlebarControls from '../components/window/WindowsTitlebarControls.vue';
 
 const globalSettings = useGlobalSettingsStore();
 
 const isWindows = ref(false);
+const platformChecked = ref(false);
+const previewWindowsControls = ref(false);
 let appWindow: TauriWindow | null = null;
+
+const shouldShowWindowsControls = computed(() => isWindows.value || previewWindowsControls.value);
 
 // 从父组件接收输出路径和弹窗显隐
 interface Props {
@@ -29,7 +34,10 @@ const emit = defineEmits<{
 onMounted(async () => {
   // 仅在 Tauri 环境下检查平台并隐藏原生标题栏（Windows）
   const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
-  if (!isTauri) return;
+  if (!isTauri) {
+    platformChecked.value = true;
+    return;
+  }
 
   try {
     appWindow = TauriWindow.getCurrent();
@@ -45,6 +53,7 @@ onMounted(async () => {
     const platform = await invoke<string>('get_platform');
     isWindows.value = platform === 'windows';
     if (isWindows.value) {
+      previewWindowsControls.value = false;
       try {
         await appWindow.setDecorations(false);
       } catch (e) {
@@ -53,81 +62,47 @@ onMounted(async () => {
     }
   } catch (e) {
     console.warn('Failed to detect platform or initialize app window:', e);
+  } finally {
+    platformChecked.value = true;
   }
 });
 
-const handleMinimize = async () => {
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
-  if (!isTauri || !appWindow) return;
-  try { await appWindow.minimize(); } catch (e) { console.warn('minimize failed', e); }
-};
-
-const handleMaximize = async () => {
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
-  if (!isTauri || !appWindow) return;
-  try {
-    const max = await appWindow.isMaximized();
-    if (max) await appWindow.unmaximize(); else await appWindow.maximize();
-  } catch (e) { console.warn('maximize toggle failed', e); }
-};
-
-const handleClose = async () => {
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
-  if (!isTauri || !appWindow) return;
-  try { await appWindow.close(); } catch (e) { console.warn('close failed', e); }
-};
-
 const toggleOutputFolderPopup = () => emit('toggle-output-folder-popup');
 const handleOutputPathUpdate = (path: string) => emit('output-path-update', path);
+const togglePreviewWindowsControls = () => {
+  previewWindowsControls.value = !previewWindowsControls.value;
+};
+
+const separatorStyle = computed(() => ({
+  backgroundColor: globalSettings.isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(17, 24, 39, 0.22)',
+  height: '16px',
+  margin: '0.35rem 0.25rem 0.35rem 0'
+}));
 </script>
 
 <template>
   <!-- 顶部标题栏：透明背景，不占据布局高度（由父容器绝对定位） -->
-  <div class="h-9 flex-shrink-0 bg-transparent dark:bg-transparent flex items-center justify-between px-2 pr-4 border-b border-transparent" data-tauri-drag-region>
-    <div v-if="isWindows" class="flex items-center space-x-1">
-      <!-- 关闭（放到最左侧，突出视觉层级） -->
-      <button
-        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-red-500/90 hover:text-white focus:outline-none focus:ring-0 hover-lift"
-        @click="handleClose"
-        :data-tauri-drag-region="false"
-        :title="$t('window.close') || '关闭'"
-        aria-label="Close"
-      >
-        <X class="w-4 h-4" />
-      </button>
-      <!-- 最小化 -->
-      <button
-        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0 hover-lift"
-        @click="handleMinimize"
-        :data-tauri-drag-region="false"
-        :title="$t('window.minimize') || '最小化'"
-        aria-label="Minimize"
-      >
-        <Minus class="w-4 h-4" />
-      </button>
-      <!-- 最大化/还原 -->
-      <button
-        class="h-7 w-7 flex items-center justify-center rounded-md transition-all duration-200 text-gray-600 dark:text-gray-300 hover:bg-gray-500/15 dark:hover:bg-gray-300/15 hover:text-gray-900 dark:hover:text-white active:scale-95 focus:outline-none focus:ring-0 hover-lift"
-        @click="handleMaximize"
-        :data-tauri-drag-region="false"
-        :title="$t('window.maximize') || '最大化'"
-        aria-label="Maximize/Restore"
-      >
-        <Square class="w-4 h-4" />
-      </button>
-    </div>
-    
+  <div
+    class="h-9 flex-shrink-0 bg-transparent dark:bg-transparent flex items-center justify-between px-2 pr-4 border-b border-transparent"
+    :class="{ 'windows-header': shouldShowWindowsControls }"
+    data-tauri-drag-region
+  >
     <!-- 中间：标题留白（不显示任何文字） -->
     <div class="flex-1" />
 
     <!-- 右侧：输出文件夹、日志、语言、主题切换 -->
-    <div class="flex items-center space-x-2 mt-1" :data-tauri-drag-region="false">
+    <div
+      class="header-actions flex items-center gap-2 mt-1"
+      :class="{ 'windows-mode': shouldShowWindowsControls }"
+      :data-tauri-drag-region="false"
+    >
       <!-- 自定义输出文件夹按钮（移动到日志按钮左侧） -->
       <div class="relative">
         <button 
-          class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200/80 dark:hover:bg-dark-border rounded-md transition-colors"
+          :class="['header-icon-button', { 'is-active': props.showOutputFolderPopup }]"
           @click="toggleOutputFolderPopup"
           :title="$t('outputFolder.title') || '输出文件夹'"
+          :data-tauri-drag-region="false"
         >
           <FolderCog class="w-4 h-4" />
         </button>
@@ -154,9 +129,20 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
         <LogPanel />
       </div>
       
+      <button
+        v-if="platformChecked && !isWindows"
+        class="header-preview-toggle"
+        :class="{ active: previewWindowsControls }"
+        type="button"
+        @click="togglePreviewWindowsControls"
+      >
+        <span class="preview-dot" aria-hidden="true" />
+        <span>{{ previewWindowsControls ? $t('window.previewToggleOn') : $t('window.previewToggleOff') }}</span>
+      </button>
+
       <LanguageSwitcher />
       <button 
-        class="h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary rounded-md transition-colors hover:bg-gray-200/80 dark:hover:bg-dark-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
+        :class="['header-icon-button', 'theme-toggle', { 'windows-theme': shouldShowWindowsControls }]"
         @click="globalSettings.toggleTheme"
         :aria-pressed="globalSettings.isDarkMode"
         :data-tauri-drag-region="false"
@@ -166,6 +152,13 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
           <Moon v-else key="moon" class="theme-icon" />
         </Transition>
       </button>
+      <div
+        v-if="shouldShowWindowsControls"
+        class="win-controls-separator"
+        :style="separatorStyle"
+        aria-hidden="true"
+      />
+      <WindowsTitlebarControls v-if="shouldShowWindowsControls" />
     </div>
   </div>
 </template>
@@ -199,5 +192,63 @@ const handleOutputPathUpdate = (path: string) => emit('output-path-update', path
 .theme-icon-leave-to {
   opacity: 0;
   transform: rotate(90deg) scale(0.6);
+}
+
+.win-controls-separator {
+  width: 1px;
+  align-self: center;
+  border-radius: 9999px;
+}
+
+.header-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(17, 24, 39, 0.72);
+  background-color: rgba(17, 24, 39, 0.06);
+  transition: background-color 160ms ease, color 160ms ease;
+  line-height: 1;
+}
+
+.header-preview-toggle:hover {
+  background-color: rgba(17, 24, 39, 0.12);
+}
+
+.header-preview-toggle:active {
+  background-color: rgba(17, 24, 39, 0.18);
+}
+
+.header-preview-toggle.active {
+  color: #2563eb;
+  background-color: rgba(37, 99, 235, 0.12);
+}
+
+.header-preview-toggle .preview-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: currentColor;
+}
+
+:global(.dark) .header-preview-toggle {
+  color: rgba(226, 232, 240, 0.74);
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+:global(.dark) .header-preview-toggle:hover {
+  background-color: rgba(148, 163, 184, 0.2);
+}
+
+:global(.dark) .header-preview-toggle:active {
+  background-color: rgba(148, 163, 184, 0.26);
+}
+
+:global(.dark) .header-preview-toggle.active {
+  color: #93c5fd;
+  background-color: rgba(37, 99, 235, 0.32);
 }
 </style>

@@ -196,9 +196,11 @@ const onTrackClick = (ev: MouseEvent) => {
 <template>
   <div class="relative">
     <button
-      class="log-trigger"
+      class="header-icon-button"
+      :class="{ 'is-active': open }"
       @click.stop="toggle"
       :title="$t('logPanel.' + (open ? 'close' : 'open')) || (open ? '关闭日志' : '打开日志')"
+      data-tauri-drag-region="false"
     >
       <Logs class="w-4 h-4" />
     </button>
@@ -275,28 +277,6 @@ const onTrackClick = (ev: MouseEvent) => {
   </div>
 </template>
 <style scoped>
-.log-trigger {
-  position: relative;
-  height: 24px;
-  width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: #475569;
-  transition: background 0.18s ease, color 0.18s ease;
-}
-.log-trigger:hover {
-  background: rgba(148, 163, 184, 0.2);
-  color: #1e293b;
-}
-.dark .log-trigger {
-  color: #cbd5f5;
-}
-.dark .log-trigger:hover {
-  background: rgba(100, 116, 139, 0.18);
-  color: #f8fafc;
-}
 .log-popover-container {
   position: absolute;
   right: 0;

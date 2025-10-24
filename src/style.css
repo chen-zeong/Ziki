@@ -100,6 +100,46 @@ html {
   box-shadow: 0 18px 32px rgba(81, 98, 255, 0.18);
 }
 
+.header-icon-button {
+  position: relative;
+  height: 24px;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #475569;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.22s ease;
+  outline: none;
+}
+.header-icon-button:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: #1e293b;
+}
+.header-icon-button.is-active {
+  transform: scale(1.05);
+  background: rgba(99, 102, 241, 0.14);
+  color: #4338ca;
+}
+.header-icon-button:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline-offset: 2px;
+}
+.dark .header-icon-button {
+  color: #cbd5f5;
+}
+.dark .header-icon-button:hover {
+  background: rgba(100, 116, 139, 0.2);
+  color: #f8fafc;
+}
+.dark .header-icon-button.is-active {
+  background: rgba(129, 140, 248, 0.24);
+  color: #e0e7ff;
+}
+.dark .header-icon-button:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.5);
+}
+
 /* 选择高亮 */
 ::selection {
   background: rgba(81, 98, 255, 0.3);
@@ -108,6 +148,41 @@ html {
 .dark ::selection {
   background: rgba(122, 139, 255, 0.28);
   color: #e5e7eb;
+}
+
+/* Windows header alignment */
+.windows-header {
+  padding-right: 0;
+  align-items: stretch;
+}
+
+.windows-header .header-actions {
+  margin-top: 0 !important;
+  height: 100%;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.windows-header .header-actions > *:not(.win-controls-separator) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.windows-header .header-actions .header-icon-button {
+  height: 32px;
+  width: 32px;
+  border-radius: 0.6rem;
+}
+
+.windows-header .header-actions .header-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.windows-header .header-preview-toggle {
+  height: 32px;
+  align-self: center;
 }
 
 /* 弹层动画（与 <transition name="fade-up"> 配合） */

@@ -1,8 +1,7 @@
 <template>
   <div class="relative" ref="rootRef">
     <button 
-      class="language-trigger"
-      :class="{ 'is-active': showDropdown }"
+      :class="['header-icon-button', 'language-trigger', { 'is-active': showDropdown }]"
       @click="toggleDropdown"
       :title="$t('language.switch')"
       data-tauri-drag-region="false"
@@ -99,30 +98,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.language-trigger {
-  height: 24px;
-  width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: #475569;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.25s ease;
-}
-.language-trigger:hover {
-  background: rgba(148, 163, 184, 0.2);
-  color: #1e293b;
-}
-.language-trigger.is-active {
-  transform: scale(1.06);
-}
-.dark .language-trigger {
-  color: #cbd5f5;
-}
-.dark .language-trigger:hover {
-  background: rgba(100, 116, 139, 0.18);
-  color: #f8fafc;
-}
 .language-dropdown {
   position: absolute;
   right: 0;

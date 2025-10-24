@@ -41,7 +41,7 @@
         
         <!-- Theme Toggle -->
         <button 
-          class="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+          :class="['header-icon-button', { 'is-active': isDark }]"
           @click="$emit('toggleTheme')"
           data-tauri-drag-region="false"
         >
