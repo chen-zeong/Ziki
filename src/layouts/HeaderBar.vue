@@ -29,6 +29,35 @@ const emit = defineEmits<{
   'output-path-update': [path: string];
 }>();
 
+// 新增：Windows 下为拖拽区域提供微弱不透明背景，避免完全透明导致拖拽失效
+const windowsHeaderStyle = computed(() => ({
+  backgroundColor: globalSettings.isDarkMode ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'
+}));
+
+// 新增：在 Windows 下直接调用 startDragging，提升拖拽可靠性
+const onHeaderMouseDown = async (e: MouseEvent) => {
+  try {
+    // 仅响应左键按下，且不在交互子元素上
+    if (e.button !== 0) return;
+    if (!isWindows.value) return;
+    if (!appWindow) return;
+    // 如果事件源位于标记了 data-tauri-drag-region="false" 的元素中，跳过
+    const target = e.target as HTMLElement | null;
+    if (target) {
+      let el: HTMLElement | null = target;
+      while (el) {
+        if (el.getAttribute && el.getAttribute('data-tauri-drag-region') === 'false') {
+          return; // 不触发窗口拖拽
+        }
+        el = el.parentElement;
+      }
+    }
+    await appWindow.startDragging();
+  } catch (err) {
+    console.warn('startDragging failed:', err);
+  }
+};
+
 onMounted(async () => {
   // 仅在 Tauri 环境下检查平台并隐藏原生标题栏（Windows）
   const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
@@ -79,6 +108,8 @@ const separatorStyle = computed(() => ({
     class="h-9 flex-shrink-0 bg-transparent dark:bg-transparent flex items-center justify-between px-2 pr-4 border-b border-transparent"
     :class="{ 'windows-header': shouldShowWindowsControls }"
     data-tauri-drag-region
+    :style="isWindows ? windowsHeaderStyle : undefined"
+    @mousedown="onHeaderMouseDown"
   >
     <!-- 中间：标题留白（不显示任何文字） -->
     <div class="flex-1" />

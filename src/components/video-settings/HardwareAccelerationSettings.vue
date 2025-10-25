@@ -119,14 +119,7 @@
             </Teleport>
           </div>
         </div>
-        <div
-          v-if="isHardwareAvailable"
-          class="mt-3 text-xs text-slate-500 dark:text-slate-300 leading-relaxed"
-        >
-          {{ isGpuSelected
-            ? t('videoSettings.gpuSupportedDesc')
-            : t('videoSettings.cpuEncodingDesc') }}
-        </div>
+
       </div>
     </div>
   </div>

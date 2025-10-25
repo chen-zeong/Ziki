@@ -14,6 +14,7 @@
     "windows": [
       {
         "titleBarStyle": "Overlay",
+        "decorations": false,
         "title": "",
         "width": 1000,
         "height": 800,
