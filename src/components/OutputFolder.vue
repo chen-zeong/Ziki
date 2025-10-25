@@ -12,50 +12,13 @@
     >
       <div 
         v-if="showOutputFolder"
-        class="bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4 mb-3 overflow-hidden"
+        class="bg-white dark:bg-[#181b23] border border-slate-200/80 dark:border-white/10 rounded-xl px-5 py-4 mb-4 overflow-hidden transition-all duration-300"
       >
         <div class="space-y-4">
 
-          <!-- 删除记录时同步删除压缩文件开关 -->
-          <div>
-            <label class="flex items-center justify-between cursor-pointer group">
-              <div class="flex-1">
-                <div class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
-                  {{ $t('outputFolder.deleteCompressedFileOnTaskDelete') }}
-                </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {{ $t('outputFolder.deleteCompressedFileOnTaskDeleteDesc') }}
-                </div>
-              </div>
-              <div class="relative ml-4">
-                <input
-                  type="checkbox"
-                  :checked="globalSettings.deleteCompressedFileOnTaskDelete"
-                  @change="globalSettings.setDeleteCompressedFileOnTaskDelete(($event.target as HTMLInputElement).checked)"
-                  class="sr-only"
-                />
-                <div
-                  :class="[
-                    'w-11 h-6 rounded-full transition-colors duration-200 ease-in-out',
-                    globalSettings.deleteCompressedFileOnTaskDelete
-                      ? 'bg-[#558ee1]'
-                      : 'bg-gray-300 dark:bg-gray-600'
-                  ]"
-                >
-                  <div
-                    :class="[
-                      'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out',
-                      globalSettings.deleteCompressedFileOnTaskDelete ? 'translate-x-5' : 'translate-x-0'
-                    ]"
-                  ></div>
-                </div>
-              </div>
-            </label>
-          </div>
-          
           <!-- 输出文件名格式 -->
           <div>
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
               {{ $t('outputFolder.fileNameFormat') }}
             </label>
             <div class="flex space-x-2">
@@ -64,49 +27,43 @@
                 :key="option.value"
                 @click="setOutputFormat(option.value)"
                 :class="[
-                  'flex-1 px-3 py-2 text-xs font-medium rounded-md border transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] whitespace-pre-line text-center',
+                  'flex-1 px-4 py-2 text-xs font-semibold rounded-xl border transition-all duration-250 whitespace-pre-line text-center hover:-translate-y-[1px]',
                   globalSettings.outputFileNameFormat === option.value
-                    ? 'bg-[#558ee1] text-white border-[#558ee1] shadow-md shadow-[#558ee1]/25'
-                    : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                    ? 'bg-[var(--brand-primary)] text-white border-transparent'
+                    : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/10 hover:bg-white/85 dark:hover:bg-white/10'
                 ]"
                 :title="option.description"
               >
                 {{ option.label }}
               </button>
             </div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
               {{ currentFormatDescription }}
             </p>
           </div>
           
           <!-- 输出文件夹路径 -->
           <div>
-            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
               {{ $t('outputFolder.title') || '输出文件夹' }}
             </label>
-            <div class="flex items-center space-x-2">
-              <div class="flex-1 relative">
-                <input 
-                  v-model="globalSettings.outputPath"
-                  type="text" 
-                   class="w-full px-3 py-2 pr-12 border rounded-md bg-white dark:bg-[#222221] text-gray-900 dark:text-gray-100 text-sm border-gray-300 dark:border-gray-600 focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:border-amber-500"
-                   :placeholder="$t('outputFolder.selectFolder') || '选择输出路径...'"
-                   readonly
-                 />
-                 <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
-                   <button 
-                     class="p-2 rounded-md transition-colors group text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                     @click="selectOutputFolder"
-                     :title="$t('outputFolder.selectFolder') || '选择文件夹'"
-                   >
-                     <FolderPen class="w-4 h-4 group-hover:animate-pulse" />
-                   </button>
-                 </div>
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
+            <div class="flex items-center gap-3">
+              <div class="flex-1">
+                <div class="px-4 py-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-sm text-slate-600 dark:text-slate-200 flex items-center justify-between hover:bg-white/90 dark:hover:bg-white/10 transition-all duration-200">
+                  <span class="truncate">{{ globalSettings.outputPath || ($t('outputFolder.selectFolder') || '选择输出路径...') }}</span>
+                  <button 
+                    class="ml-3 h-8 w-8 flex items-center justify-center rounded-full bg-[var(--brand-primary)] text-white hover:scale-105 transition-all duration-200"
+                    @click="selectOutputFolder"
+                    :title="$t('outputFolder.selectFolder') || '选择文件夹'"
+                  >
+                    <FolderPen class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </transition>
   </div>
 </template>

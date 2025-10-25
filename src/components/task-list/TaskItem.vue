@@ -1,81 +1,145 @@
 <template>
-  <div 
-    class="rounded-lg transition-colors duration-200 cursor-pointer"
-    :class="{
-      'bg-[#e6e6e6] dark:bg-[#3a3a3a] border border-gray-200 dark:border-transparent shadow-md': isSelected,
-      'bg-white dark:bg-[#1e1e1e] hover:bg-gray-50 border border-gray-200 dark:border-transparent': !isSelected
-    }"
-    :style="!isSelected && globalSettings.isDarkMode ? 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);' : ''"
-    @click="$emit('select', task.id)"
+  <MotionCard
+    class="task-card group relative block rounded-2xl border px-4 py-3 transition-colors duration-300 ease-out cursor-pointer overflow-visible backdrop-blur"
+    :data-task-id="task.id"
+    :class="[
+      cardToneClass,
+      {
+        'is-selected text-slate-900/95 dark:text-slate-100': isActive,
+        'is-leaving': isLeavingSelection
+      }
+    ]"
+    :variants="cardVariants"
+    :animate="cardState"
+    :initial="false"
+    :transition="cardTransition"
+    @click="handleCardClick"
+    @mouseenter="handleHover(true)"
+    @mouseleave="handleHover(false)"
   >
-    <!-- 主要任务信息 -->
-    <div class="p-3 space-y-3">
-      <!-- 第一行：缩略图、标题和体积大小 -->
-      <div class="flex items-center space-x-3">
-        <!-- 文件缩略图 -->
-        <div class="flex-shrink-0">
-          <div class="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-            <img 
-              v-if="task.file.thumbnailUrl || task.type === 'image'"
-              :src="task.file.thumbnailUrl || task.file.originalUrl"
-              :alt="task.file.name"
-              class="w-full h-full object-cover"
-              @error="handleThumbnailError"
-            />
-            <Video v-else class="w-6 h-6 text-white" />
-          </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="h-10 w-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5 grid place-items-center border border-slate-200/70 dark:border-white/10">
+          <img
+            v-if="task.file.thumbnailUrl || task.type === 'image'"
+            :src="task.file.thumbnailUrl || task.file.originalUrl"
+            :alt="task.file.name"
+            class="w-full h-full object-cover"
+            @error="handleThumbnailError"
+          />
+          <Video v-else class="h-5 w-5 text-slate-500 dark:text-slate-300" />
         </div>
-        
-        <!-- 文件信息 -->
+
         <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" :title="task.file.name">
-            {{ task.file.name }}
-          </h3>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-100 truncate" :title="task.file.name">{{ task.file.name }}</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
             {{ formatFileSize(task.file.size || task.originalSize) }}
-            <span v-if="task.status === 'completed' && task.compressedSize" class="ml-2">
-              → {{ formatFileSize(task.compressedSize) }}
+            <span
+              v-if="task.status === 'completed' && task.compressedSize"
+              class="inline-flex items-center gap-2"
+            >
+              <span>→ {{ formatFileSize(task.compressedSize) }}</span>
+              <span v-if="estimatedFullSizeLabel" class="estimated-size-pill">
+                {{ estimatedFullSizeLabel }}
+              </span>
             </span>
           </p>
         </div>
-      </div>
-      
-      <!-- 第二行：状态显示 -->
-      <div class="w-full">
-        <TaskStatusDisplay 
-          :task="task" 
-          :is-expanded="isExpanded"
-          @delete="$emit('delete', task.id)"
-          @toggle-expand="$emit('toggle-expand', task.id)"
-          @open-folder="openOutputFolder(task)"
-          @pause="$emit('pause', task.id)"
-          @resume="$emit('resume', task.id)"
-        />
+
       </div>
     </div>
-    
-    <!-- 详细信息展开区域 -->
-    <TaskDetails 
-      :task="task" 
-      :is-expanded="isExpanded" 
-    />
-  </div>
+
+    <div class="mt-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <StatusBadge
+            v-if="task.status !== 'processing'"
+            :status="task.status"
+            :progress="task.status === 'completed' ? compressionChange?.label ?? null : null"
+            :trend="task.status === 'completed' ? compressionChange?.trend : undefined"
+          />
+          <div
+            v-if="task.status === 'processing'"
+            class="progress-wrapper flex items-center w-full max-w-[340px]"
+          >
+            <div class="progress-track flex-1 min-w-0">
+              <div
+                class="progress-fill"
+                :style="{ width: normalizedProgress + '%' }"
+              ></div>
+              <div class="progress-content">
+                <span class="progress-label">{{ progressLabel }}</span>
+                <span v-if="etaDisplay" class="progress-eta">{{ etaDisplay }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="task.status === 'failed'" class="text-[11px] text-rose-500 dark:text-rose-300">
+            {{ failureHint }}
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-300">
+          <button
+            v-if="task.status !== 'processing' && task.type === 'video'"
+            class="action-btn"
+            :title="$t('taskList.details')"
+            @click.stop="handleDetailClick"
+          >
+            <Info class="w-4 h-4" />
+          </button>
+          <button
+            v-if="task.status === 'processing'"
+            class="action-btn"
+            :title="$t('taskList.pauseTask')"
+            @click.stop="$emit('pause', task.id)"
+          >
+            <Pause class="w-4 h-4" />
+          </button>
+          <button
+            v-else-if="task.status === 'paused' || task.status === 'queued'"
+            class="action-btn"
+            :title="$t('taskList.resumeTask')"
+            @click.stop="$emit('resume', task.id)"
+          >
+            <Play class="w-4 h-4" />
+          </button>
+          <button
+            v-if="task.status === 'completed'"
+            class="action-btn"
+            :title="$t('taskList.openOutputFolder')"
+            @click.stop="openOutputFolder(task)"
+          >
+            <Folder class="w-4 h-4" />
+          </button>
+          <button
+            class="action-btn text-rose-500 hover:text-rose-600"
+            :title="$t('taskList.delete')"
+            @click.stop="$emit('delete', task.id)"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </MotionCard>
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { invoke } from '@tauri-apps/api/core';
+import { storeToRefs } from 'pinia';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useTaskStore } from '../../stores/useTaskStore';
-import TaskStatusDisplay from './TaskStatusDisplay.vue';
-import TaskDetails from './TaskDetails.vue';
-import { Video } from 'lucide-vue-next';
+import StatusBadge from './StatusBadge.vue';
+import { Video, Pause, Play, Folder, Info, X } from 'lucide-vue-next';
+import { motion } from 'motion-v';
 import type { CompressionTask } from '../../types';
 
 interface Props {
   task: CompressionTask;
-  isExpanded: boolean;
   isSelected?: boolean;
+  isMultiSelect?: boolean;
+  isChecked?: boolean;
 }
 
 interface Emits {
@@ -84,13 +148,114 @@ interface Emits {
   (e: 'pause', taskId: string): void;
   (e: 'resume', taskId: string): void;
   (e: 'select', taskId: string): void;
+  (e: 'toggle-check', taskId: string): void;
+  (e: 'show-details', payload: { taskId: string; trigger: HTMLElement | null }): void;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const { t } = useI18n();
 const globalSettings = useGlobalSettingsStore();
+const { isDarkMode } = storeToRefs(globalSettings);
 const taskStore = useTaskStore();
+
+const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+
+const progressValue = computed(() => Number(props.task.progress ?? 0));
+const normalizedProgress = computed(() => {
+  const value = progressValue.value;
+  if (value === 0) return 2;
+  return Math.min(100, Math.max(value, 2));
+});
+
+const isActive = computed(() => props.isSelected || (props.isMultiSelect && props.isChecked));
+const isHovering = ref(false);
+const isLeavingSelection = ref(false);
+const leavingTimer = ref<number | null>(null);
+const MotionCard = motion.div;
+
+const cardVariants = {
+  rest: { y: 0, scale: 1, opacity: 1 },
+  hover: { y: 0, scale: 1, opacity: 1 },
+  active: { y: 0, scale: 1, opacity: 1 }
+} as const;
+
+const cardTransition = computed(() => {
+  if (isDarkMode.value) {
+    return {
+      default: { duration: 0.13, ease: [0.22, 1, 0.36, 1] },
+      scale: { type: 'spring', stiffness: 220, damping: 24, mass: 0.82 },
+      y: { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
+    };
+  }
+  return {
+    default: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+    scale: { type: 'spring', stiffness: 220, damping: 28, mass: 0.85 },
+    y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] }
+  };
+});
+
+const cardToneClass = computed(() => {
+  if (isActive.value) return 'task-card--active';
+  if (isLeavingSelection.value) return 'task-card--leaving';
+  if (isHovering.value) return 'task-card--hover';
+  return 'task-card--rest';
+});
+
+const cardState = computed(() => {
+  if (isActive.value) return 'active';
+  if (isHovering.value) return 'hover';
+  return 'rest';
+});
+
+const leavingAnimationDuration = computed(() => (isDarkMode.value ? 130 : 260));
+
+const handleHover = (isEntering: boolean) => {
+  isHovering.value = isEntering;
+};
+
+const toggleCheckbox = () => {
+  emit('toggle-check', props.task.id);
+};
+
+const handleCardClick = () => {
+  if (props.isMultiSelect) {
+    toggleCheckbox();
+  } else {
+    emit('select', props.task.id);
+  }
+};
+
+const handleDetailClick = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement | null;
+  const cardAnchor = target ? (target.closest('.task-card') as HTMLElement | null) : null;
+  emit('show-details', { taskId: props.task.id, trigger: cardAnchor || target });
+};
+
+watch(isActive, (current, previous) => {
+  if (leavingTimer.value !== null && typeof window !== 'undefined') {
+    window.clearTimeout(leavingTimer.value);
+    leavingTimer.value = null;
+  }
+  if (previous && !current) {
+    isLeavingSelection.value = true;
+    if (typeof window !== 'undefined') {
+      const duration = leavingAnimationDuration.value;
+      leavingTimer.value = window.setTimeout(() => {
+        isLeavingSelection.value = false;
+        leavingTimer.value = null;
+      }, duration);
+    }
+  } else if (current) {
+    isLeavingSelection.value = false;
+  }
+});
+
+onBeforeUnmount(() => {
+  if (leavingTimer.value !== null && typeof window !== 'undefined') {
+    window.clearTimeout(leavingTimer.value);
+  }
+});
 
 const formatFileSize = (bytes: number): string => {
   if (!bytes || bytes === 0 || isNaN(bytes)) return '0 B';
@@ -102,10 +267,7 @@ const formatFileSize = (bytes: number): string => {
 
 const openOutputFolder = async (task: CompressionTask) => {
   try {
-    // 获取输出文件夹路径
     let folderPath = task.outputDirectory;
-    
-    // 如果任务没有记录输出目录，尝试从压缩文件路径中提取
     if (!folderPath && task.file.compressedPath) {
       const path = task.file.compressedPath;
       const lastSlashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
@@ -113,13 +275,19 @@ const openOutputFolder = async (task: CompressionTask) => {
         folderPath = path.substring(0, lastSlashIndex);
       }
     }
-    
-    // 如果还是没有路径，使用默认桌面路径
     if (!folderPath) {
-      folderPath = await invoke<string>('get_desktop_path');
+      if (isTauri) {
+        folderPath = await invoke<string>('get_desktop_path');
+      } else {
+        console.warn('非 Tauri 环境，无法获取桌面路径');
+        return;
+      }
     }
-    
-    await invoke('open_output_folder', { folderPath });
+    if (isTauri) {
+      await invoke('open_output_folder', { folderPath });
+    } else {
+      console.warn('非 Tauri 环境，无法打开本地文件夹');
+    }
   } catch (error) {
     console.error('Failed to open output folder:', error);
   }
@@ -129,4 +297,376 @@ const handleThumbnailError = (event: Event) => {
   const img = event.target as HTMLImageElement;
   img.style.display = 'none';
 };
+
+const estimatedFullSize = computed(() => {
+  if (props.task.type !== 'video' || props.task.status !== 'completed') return null;
+  const timeRange = props.task.settings?.timeRange;
+  if (!timeRange) return null;
+
+  const originalDuration = props.task.file.metadata?.duration;
+  if (!originalDuration || !Number.isFinite(originalDuration) || originalDuration <= 0) return null;
+
+  const compressedSizeSource = props.task.compressedSize ?? props.task.file.compressedSize;
+  const compressedSize = compressedSizeSource === undefined || compressedSizeSource === null ? null : Number(compressedSizeSource);
+  if (!compressedSize || !Number.isFinite(compressedSize) || compressedSize <= 0) return null;
+
+  const start = typeof timeRange.start === 'number' && Number.isFinite(timeRange.start) ? Math.max(timeRange.start, 0) : 0;
+  const end = typeof timeRange.end === 'number' && Number.isFinite(timeRange.end) ? Math.max(timeRange.end, 0) : null;
+
+  let rangeDuration: number | null = null;
+  if (end !== null) {
+    rangeDuration = Math.max(end - start, 0);
+  }
+
+  if (!rangeDuration || rangeDuration <= 0) {
+    const compressedDuration = props.task.compressedMetadata?.duration;
+    if (compressedDuration && Number.isFinite(compressedDuration) && compressedDuration > 0) {
+      rangeDuration = compressedDuration;
+    }
+  }
+
+  if (!rangeDuration || rangeDuration <= 0) return null;
+  if (rangeDuration >= originalDuration * 0.95) return null;
+
+  const estimate = (compressedSize / rangeDuration) * originalDuration;
+  if (!Number.isFinite(estimate) || estimate <= 0) return null;
+  return estimate;
+});
+
+const estimatedFullSizeLabel = computed(() => {
+  if (!estimatedFullSize.value) return '';
+  return formatFileSize(estimatedFullSize.value);
+});
+
+const compressionChange = computed(() => {
+  if (props.task.status !== 'completed') return null;
+  const original = Number(props.task.originalSize ?? props.task.file.size ?? 0);
+  const compressedSource = props.task.compressedSize ?? props.task.file.compressedSize;
+  const compressed = compressedSource === undefined || compressedSource === null ? null : Number(compressedSource);
+  if (!original || !Number.isFinite(original) || original <= 0) return null;
+  const estimatedSize = estimatedFullSize.value;
+  const comparisonSize = estimatedSize && Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : compressed;
+  if (comparisonSize === null || comparisonSize === undefined || !Number.isFinite(comparisonSize) || comparisonSize <= 0) return null;
+  const delta = ((comparisonSize - original) / original) * 100;
+  if (!Number.isFinite(delta)) return null;
+  const magnitude = Math.abs(delta);
+  if (magnitude < 0.1) {
+    return { label: '→ 0%', trend: 'flat' as const };
+  }
+  const percentText = magnitude >= 10
+    ? `${Math.round(magnitude)}%`
+    : `${magnitude.toFixed(1).replace(/\\.0$/, '')}%`;
+  if (delta > 0) {
+    return { label: `↑ ${percentText}`, trend: 'up' as const };
+  }
+  if (delta < 0) {
+    return { label: `↓ ${percentText}`, trend: 'down' as const };
+  }
+  return { label: '→ 0%', trend: 'flat' as const };
+});
+
+const progressLabel = computed(() => {
+  const raw = Number.isFinite(progressValue.value) ? progressValue.value : 0;
+  const clamped = Math.min(100, Math.max(raw, 0));
+  const percent = clamped >= 10 ? clamped.toFixed(0) : clamped.toFixed(1);
+  const compact = percent.replace(/\\.0$/, '');
+  const compressingRaw = t('taskList.compressing');
+  const compressingText = compressingRaw.replace(/\\.*$/, '') || compressingRaw;
+  return `${compressingText} ${compact}%`;
+});
+
+const toTimestamp = (value: unknown): number | null => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const formatEtaDuration = (milliseconds: number): string => {
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) return '';
+  const totalSeconds = Math.round(milliseconds / 1000);
+  if (totalSeconds <= 0) return '';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}${t('timeUnits.hoursShort')}`);
+  if (minutes > 0) parts.push(`${minutes}${t('timeUnits.minutesShort')}`);
+  if (seconds > 0) parts.push(`${seconds}${t('timeUnits.secondsShort')}`);
+  if (parts.length === 0) {
+    parts.push(`1${t('timeUnits.secondsShort')}`);
+  }
+  return parts.join(' ');
+};
+
+const parseEtaClockText = (text: string): number | null => {
+  if (!text) return null;
+  const match = text.trim().match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const seconds = parseInt(match[3], 10);
+  if ([hours, minutes, seconds].some(v => Number.isNaN(v))) return null;
+  return ((hours * 60 + minutes) * 60 + seconds) * 1000;
+};
+
+const etaComputed = computed(() => {
+  const progress = progressValue.value;
+  const startedAtMs = toTimestamp(props.task.startedAt);
+  if (startedAtMs && progress > 0 && progress < 100) {
+    const elapsed = Date.now() - startedAtMs;
+    if (elapsed > 0) {
+      const fraction = progress / 100;
+      if (fraction > 0) {
+        const total = elapsed / fraction;
+        const remaining = total - elapsed;
+        const formatted = formatEtaDuration(remaining);
+        if (formatted) return formatted;
+      }
+    }
+  }
+  return '';
+});
+
+const etaLabel = computed(() => {
+  if (etaComputed.value) return etaComputed.value;
+  const raw = props.task.etaText?.trim();
+  if (!raw || raw === '--') return '';
+  const parsed = parseEtaClockText(raw);
+  if (parsed !== null) {
+    const formatted = formatEtaDuration(parsed);
+    if (formatted) return formatted;
+  }
+  return raw;
+});
+
+const etaDisplay = computed(() => {
+  if (!etaLabel.value) return '';
+  return etaLabel.value;
+});
+
+const failureHint = computed(() => t('taskList.statusFailed'));
 </script>
+
+<style scoped>
+.estimated-size-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.dark .estimated-size-pill {
+  background: rgba(129, 140, 248, 0.22);
+  color: rgba(219, 234, 254, 0.92);
+}
+.task-card {
+  position: relative;
+  isolation: isolate;
+  border-width: var(--task-card-border-width, 1px);
+  border-style: solid;
+  border-color: var(--task-card-border);
+  background: var(--task-card-bg);
+  box-shadow: var(--task-card-shadow);
+  backdrop-filter: blur(14px);
+  transition: background 0.32s ease, border-color 0.32s ease, box-shadow 0.38s ease;
+}
+.task-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--task-card-overlay);
+  opacity: var(--task-card-overlay-opacity);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+.task-card--rest {
+  --task-card-bg: rgba(255, 255, 255, 0.95);
+  --task-card-border: rgba(148, 163, 184, 0.7);
+  --task-card-shadow: none;
+  --task-card-overlay: radial-gradient(120% 120% at 12% -18%, rgba(99, 102, 241, 0.18) 0%, transparent 70%);
+  --task-card-overlay-opacity: 0.2;
+  --task-card-border-width: 0.75px;
+}
+.task-card--hover {
+  --task-card-bg: rgba(248, 250, 255, 0.92);
+  --task-card-border: rgba(99, 102, 241, 0.26);
+  --task-card-shadow: none;
+  --task-card-overlay: radial-gradient(140% 140% at 16% -22%, rgba(96, 165, 250, 0.22) 0%, transparent 68%);
+  --task-card-overlay-opacity: 0.24;
+  --task-card-border-width: 0.75px;
+}
+.task-card--active {
+  --task-card-bg: rgba(248, 250, 255, 0.92);
+  --task-card-border: rgba(59, 130, 246, 0.55);
+  --task-card-shadow: 0 0 0 2px rgba(59, 130, 246, 0.42), 0 20px 36px -22px rgba(59, 130, 246, 0.38);
+  --task-card-overlay: radial-gradient(140% 140% at 16% -22%, rgba(59, 130, 246, 0.28) 0%, transparent 72%);
+  --task-card-overlay-opacity: 0.28;
+  --task-card-border-width: 0.75px;
+}
+.task-card--leaving {
+  --task-card-bg: rgba(252, 253, 255, 0.9);
+  --task-card-border: rgba(148, 163, 184, 0.52);
+  --task-card-shadow: none;
+  --task-card-overlay: radial-gradient(135% 135% at 12% -18%, rgba(148, 163, 184, 0.24) 0%, transparent 70%);
+  --task-card-overlay-opacity: 0.22;
+  --task-card-border-width: 0.85px;
+}
+.dark .task-card {
+  --task-card-bg: #181917;
+  --task-card-border: rgba(72, 73, 70, 0.55);
+  --task-card-shadow: 0 22px 46px -30px rgba(0, 0, 0, 0.82);
+  --task-card-overlay: rgba(255, 255, 255, 0.015);
+  --task-card-overlay-opacity: 1;
+  --task-card-border-width: 1px;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.22s ease;
+}
+.task-card.is-leaving::before {
+  animation: selectionFade 0.32s ease forwards;
+}
+.dark .task-card.is-leaving::before {
+  animation-duration: 0.16s;
+}
+@keyframes selectionFade {
+  0% {
+    opacity: 0.45;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: var(--task-card-overlay-opacity);
+    transform: translateY(0);
+  }
+}
+.dark .task-card--hover {
+  --task-card-bg: #1f1f1d;
+  --task-card-border: rgba(118, 120, 117, 0.45);
+  --task-card-shadow: 0 26px 48px -30px rgba(0, 0, 0, 0.84);
+  --task-card-overlay: rgba(255, 255, 255, 0.02);
+  --task-card-overlay-opacity: 1;
+  --task-card-border-width: 1px;
+}
+.dark .task-card--active {
+  --task-card-bg: #232321;
+  --task-card-border: rgba(168, 170, 165, 0.4);
+  --task-card-shadow: 0 0 0 4px rgba(226, 232, 240, 0.14), 0 30px 54px -32px rgba(0, 0, 0, 0.88);
+  --task-card-overlay: rgba(255, 255, 255, 0.015);
+  --task-card-overlay-opacity: 1;
+  --task-card-border-width: 1px;
+}
+.dark .task-card--active:hover {
+  --task-card-bg: #282826;
+}
+.dark .task-card--leaving {
+  --task-card-bg: #181917;
+  --task-card-border: rgba(72, 73, 70, 0.5);
+  --task-card-shadow: 0 24px 46px -30px rgba(0, 0, 0, 0.82);
+  --task-card-overlay: rgba(255, 255, 255, 0.015);
+  --task-card-overlay-opacity: 1;
+  --task-card-border-width: 1px;
+}
+.task-card-grid {
+  display: grid;
+  grid-template-columns: 0fr auto;
+  transition: grid-template-columns 0.3s ease-in-out;
+}
+.progress-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 30px;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: rgba(148, 163, 184, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  overflow: hidden;
+}
+.dark .progress-track {
+  background: rgba(38, 43, 56, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+.progress-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+.progress-fill {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.9) 0%, rgba(59, 130, 246, 0.92) 100%);
+  transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dark .progress-fill {
+  background: linear-gradient(90deg, rgba(129, 140, 248, 0.9) 0%, rgba(96, 165, 250, 0.92) 100%);
+}
+.progress-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  color: rgba(30, 41, 59, 0.88);
+  font-weight: 700;
+}
+.dark .progress-label {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+.progress-eta {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(71, 85, 105, 0.88);
+  flex-shrink: 0;
+  text-align: right;
+}
+.dark .progress-eta {
+  color: rgba(203, 213, 225, 0.82);
+}
+.action-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+.action-btn:hover {
+  background: rgba(148, 163, 184, 0.16);
+  color: rgba(15, 23, 42, 0.85);
+  transform: translateY(-1px);
+}
+.dark .action-btn:hover {
+  background: rgba(148, 163, 184, 0.22);
+  color: #e2e8f0;
+}
+.action-btn:active {
+  transform: translateY(0);
+}
+</style>

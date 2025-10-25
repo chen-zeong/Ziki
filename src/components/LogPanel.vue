@@ -196,132 +196,303 @@ const onTrackClick = (ev: MouseEvent) => {
 <template>
   <div class="relative">
     <button
-      class="relative h-6 w-6 flex items-center justify-center text-gray-600 dark:text-dark-secondary hover:bg-gray-200 dark:hover:bg-dark-border rounded-md transition-colors"
+      class="header-icon-button"
+      :class="{ 'is-active': open }"
       @click.stop="toggle"
       :title="$t('logPanel.' + (open ? 'close' : 'open')) || (open ? '关闭日志' : '打开日志')"
+      data-tauri-drag-region="false"
     >
       <Logs class="w-4 h-4" />
-      <!-- 移除未读红点 -->
     </button>
 
-    <!-- Floating Panel -->
-    <transition name="fade-slide">
-      <div v-if="open" class="absolute right-0 mt-2 w-[460px] max-h-[60vh] bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-50">
-        <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#262626]">
-          <div class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-            <MessageSquareText class="w-4 h-4" />
-            {{ $t('logPanel.title') || '日志' }}
-          </div>
-          <div class="flex items-center gap-1">
-            <button
-              class="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-[#333]"
-              @click="logStore.clear()"
-              :title="$t('logPanel.clear') || '清空日志'"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
-            <button
-              class="h-7 w-7 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-[#333]"
-              @click="open = false"
-              :title="$t('common.close') || '关闭'"
-            >
-              <X class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-        <div class="relative">
-          <div
-            ref="scrollContainer"
-            class="p-3 space-y-2 overflow-auto max-h-[50vh] custom-scroll-area"
-          >
-            <div v-if="entries.length === 0" class="text-center text-sm text-gray-500 dark:text-gray-400 py-6">{{ $t('logPanel.empty') || '暂无日志' }}</div>
-            <div
-              v-for="e in entries"
-              :key="e.id"
-              class="relative rounded-lg border border-gray-100 dark:border-gray-800 p-2.5 bg-white/60 dark:bg-white/5"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-[11px] px-1.5 py-0.5 rounded-md font-medium" :class="levelBadge(e.level)">{{ e.level.toUpperCase() }}</span>
-                    <span class="text-xs text-gray-400">{{ timefmt(e.timestamp) }}</span>
-                  </div>
-                  <div class="mt-1 text-sm leading-relaxed break-all" :class="levelColor(e.level)">{{ e.message }}</div>
-                  <pre v-if="e.meta" class="mt-1 text-xs text-gray-500 whitespace-pre-wrap break-all">{{ JSON.stringify(e.meta, null, 2) }}</pre>
-                </div>
-                <button class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300" @click.stop="copyLog(e)" :title="$t('logPanel.copy') || '复制'">
-                  <Copy class="w-4 h-4" />
-                </button>
-              </div>
-              <div v-if="lastCopiedId === e.id" class="absolute right-2 top-2 text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/90 text-white">{{ $t('logPanel.copied') || '已复制' }}</div>
+    <Transition name="log-pop">
+      <div v-if="open" class="log-popover-container">
+        <div class="log-popover">
+          <div class="log-header">
+            <div class="log-header-title">
+              <MessageSquareText class="w-4 h-4" />
+              {{ $t('logPanel.title') || '日志' }}
+            </div>
+            <div class="log-header-actions">
+              <button
+                class="log-header-action"
+                @click="logStore.clear()"
+                :title="$t('logPanel.clear') || '清空日志'"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+              <button
+                class="log-header-action"
+                @click="open = false"
+                :title="$t('common.close') || '关闭'"
+              >
+                <X class="w-4 h-4" />
+              </button>
             </div>
           </div>
-
-          <!-- 自绘滚动条（不受全局隐藏影响） -->
-          <div
-            class="fake-scrollbar"
-            :class="{ 'invisible': state.client <= 0 || state.scroll <= state.client }"
-            @mousedown.stop.prevent="onTrackClick"
-          >
+          <div class="log-body">
             <div
-              class="fake-thumb"
-              :style="{ height: thumbSize + 'px', transform: `translateY(${thumbOffset}px)` }"
-              @mousedown.stop.prevent="onThumbDown"
-            />
+              ref="scrollContainer"
+              class="log-scroll"
+            >
+              <div v-if="entries.length === 0" class="log-empty">
+                {{ $t('logPanel.empty') || '暂无日志' }}
+              </div>
+              <div
+                v-for="e in entries"
+                :key="e.id"
+                class="log-entry"
+              >
+                <div class="log-entry-content">
+                  <div class="log-entry-header">
+                    <span class="log-entry-level" :class="levelBadge(e.level)">{{ e.level.toUpperCase() }}</span>
+                    <span class="log-entry-time">{{ timefmt(e.timestamp) }}</span>
+                  </div>
+                  <div class="log-entry-message" :class="levelColor(e.level)">{{ e.message }}</div>
+                  <pre v-if="e.meta" class="log-entry-meta">{{ JSON.stringify(e.meta, null, 2) }}</pre>
+                </div>
+                <button class="log-entry-copy" @click.stop="copyLog(e)" :title="$t('logPanel.copy') || '复制'">
+                  <Copy class="w-4 h-4" />
+                </button>
+                <div v-if="lastCopiedId === e.id" class="log-entry-copied">
+                  {{ $t('logPanel.copied') || '已复制' }}
+                </div>
+              </div>
+            </div>
+            <div
+              class="log-scrollbar"
+              :class="{ 'invisible': state.client <= 0 || state.scroll <= state.client }"
+              @mousedown.stop.prevent="onTrackClick"
+            >
+              <div
+                class="log-scrollbar-thumb"
+                :style="{ height: thumbSize + 'px', transform: `translateY(${thumbOffset}px)` }"
+                @mousedown.stop.prevent="onThumbDown"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </transition>
+    </Transition>
   </div>
 </template>
-
 <style scoped>
-.fade-slide-enter-active, .fade-slide-leave-active { transition: all .18s ease; }
-.fade-slide-enter-from { opacity: 0; transform: translateY(-6px); }
-.fade-slide-leave-to { opacity: 0; transform: translateY(-6px); }
-
-/* 允许该区域显示滚动条（覆盖全局）且作为第三方风格容器 */
-.custom-scroll-area {
-  scrollbar-width: none !important; /* Firefox 隐藏原生，使用自绘 */
-}
-.custom-scroll-area::-webkit-scrollbar { display: none !important; }
-
-/* 自绘滚动条容器 */
-.fake-scrollbar {
+.log-popover-container {
   position: absolute;
-  top: 0;
-  right: 2px;
-  width: 8px;
-  height: 100%;
-  pointer-events: auto;
-  z-index: 10;
+  right: 0;
+  margin-top: 8px;
+  width: min(480px, calc(100vw - 40px));
+  z-index: 1050;
 }
-
-/* 轨道 */
-.fake-scrollbar::before {
+.log-popover {
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 60px -18px rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.dark .log-popover {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(22, 28, 40, 0.95);
+  box-shadow: 0 28px 64px -16px rgba(0, 0, 0, 0.6);
+}
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 255, 0.7);
+}
+.dark .log-header {
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(30, 41, 59, 0.55);
+}
+.log-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.dark .log-header-title {
+  color: #e2e8f0;
+}
+.log-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.log-header-action {
+  height: 30px;
+  width: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #64748b;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.log-header-action:hover {
+  background: rgba(148, 163, 184, 0.18);
+  color: #1e293b;
+}
+.dark .log-header-action {
+  color: rgba(226, 232, 240, 0.85);
+}
+.dark .log-header-action:hover {
+  background: rgba(148, 163, 184, 0.18);
+  color: #f8fafc;
+}
+.log-body {
+  position: relative;
+  max-height: min(60vh, 520px);
+}
+.log-scroll {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: inherit;
+  scrollbar-width: none;
+}
+.log-scroll::-webkit-scrollbar {
+  display: none;
+}
+.log-empty {
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+  padding: 28px 0;
+}
+.dark .log-empty {
+  color: #cbd5f5;
+}
+.log-entry {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 255, 0.85);
+  padding: 12px 14px;
+}
+.dark .log-entry {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(30, 41, 59, 0.65);
+}
+.log-entry-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.log-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.log-entry-level {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.log-entry-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.dark .log-entry-time {
+  color: rgba(148, 163, 184, 0.75);
+}
+.log-entry-message {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-all;
+}
+.log-entry-meta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.dark .log-entry-meta {
+  color: #cbd5f5;
+}
+.log-entry-copy {
+  flex: 0 0 auto;
+  color: #94a3b8;
+  transition: color 0.18s ease;
+}
+.log-entry-copy:hover {
+  color: #1e293b;
+}
+.dark .log-entry-copy {
+  color: rgba(226, 232, 240, 0.7);
+}
+.dark .log-entry-copy:hover {
+  color: #f8fafc;
+}
+.log-entry-copied {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.85);
+  color: #ffffff;
+}
+.log-scrollbar {
+  position: absolute;
+  top: 12px;
+  right: 8px;
+  width: 8px;
+  bottom: 12px;
+  pointer-events: auto;
+}
+.log-scrollbar::before {
   content: '';
   position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
+  inset: 0;
+  border-radius: 4px;
   background: transparent;
-  border-radius: 4px;
 }
-
-/* 滑块 */
-.fake-thumb {
+.log-scrollbar-thumb {
   position: absolute;
-  top: 0; right: 0; left: 0;
+  left: 0;
+  right: 0;
   width: 8px;
-  background: rgba(156, 163, 175, 0.6); /* gray-400 */
   border-radius: 4px;
-  transition: background-color .2s ease;
+  background: rgba(148, 163, 184, 0.65);
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
-.fake-thumb:hover { background: rgba(156, 163, 175, 0.8); }
-
-:host(.dark) .fake-thumb, .dark .fake-thumb {
-  background: rgba(75, 85, 99, 0.6); /* gray-600 */
+.log-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.9);
 }
-:host(.dark) .fake-thumb:hover, .dark .fake-thumb:hover {
-  background: rgba(75, 85, 99, 0.8);
+.dark .log-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+}
+.dark .log-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.75);
+}
+.log-pop-enter-active,
+.log-pop-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.log-pop-enter-from,
+.log-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
+}
+.log-pop-enter-active .log-popover,
+.log-pop-leave-active .log-popover {
+  transform-origin: top right;
 }
 </style>

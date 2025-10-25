@@ -10,7 +10,7 @@
       :placeholder="placeholder"
       :disabled="disabled"
       type="number"
-      class="w-full h-10 px-3 pr-8 border rounded-lg text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield] custom-number-input"
+      class="w-full h-11 px-4 pr-10 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield] custom-number-input shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]"
     />
     <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col">
       <button
@@ -101,44 +101,44 @@ const decrement = () => {
 </script>
 
 <style scoped>
-/* 自定义数字输入框样式 */
 .custom-number-input {
-  background-color: #f3f4f6;
-  border-color: #dcdcdc;
-  color: #2c3e50;
+  background: #f8fafb;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #1f2937;
+  box-shadow: none;
 }
 
 .custom-number-input::placeholder {
-  color: #7f8c8d;
+  color: rgba(148, 163, 184, 0.75);
 }
 
 .custom-number-input:hover {
-  border-color: #a0a0a0;
+  border-color: rgba(99, 102, 241, 0.42);
 }
 
 .custom-number-input:focus {
   outline: none;
-  border-color: #a0a0a0 !important;
-  box-shadow: 0 0 0 3px rgba(160, 160, 160, 0.3) !important;
+  border-color: rgba(99, 102, 241, 0.58) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.18);
 }
 
-/* 夜间模式样式 */
-.dark .custom-number-input {
-  background-color: #232529;
-  border-color: #383A3F;
-  color: #E1E3E8;
+:global(.dark) .custom-number-input {
+  background: rgba(34, 40, 55, 0.96);
+  border-color: rgba(203, 213, 225, 0.18);
+  color: #f8fafc;
+  box-shadow: none;
 }
 
-.dark .custom-number-input::placeholder {
-  color: #969BAD;
+:global(.dark) .custom-number-input::placeholder {
+  color: rgba(203, 213, 225, 0.58);
 }
 
-.dark .custom-number-input:hover {
-  border-color: #60687A;
+:global(.dark) .custom-number-input:hover {
+  border-color: rgba(165, 180, 252, 0.5);
 }
 
-.dark .custom-number-input:focus {
-  border-color: #60687A !important;
-  box-shadow: 0 0 0 3px rgba(120, 130, 150, 0.35) !important;
+:global(.dark) .custom-number-input:focus {
+  border-color: rgba(165, 180, 252, 0.68) !important;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.22);
 }
 </style>

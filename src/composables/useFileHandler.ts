@@ -73,7 +73,13 @@ export function useFileHandler() {
   }, { deep: true });
 
   // 切换到指定任务
-  const switchToTask = (taskId: string) => {
+  const switchToTask = (taskId: string | null) => {
+    if (!taskId) {
+      currentFile.value = null;
+      isUploaderVisible.value = true;
+      taskStore.selectedTaskId = null;
+      return;
+    }
     const task = tasks.value.find(t => t.id === taskId);
     if (task) {
       currentFile.value = task.file;
@@ -184,8 +190,12 @@ export function useFileHandler() {
 
     // 重新设置进度监听器
     const unlisten = await listen(`compression-progress-${task.id}`, (event: any) => {
-      const { taskId, progress } = event.payload;
+      const { taskId, progress } = event?.payload || {};
       if (taskId === task.id) {
+        const liveTask = taskStore.getTaskById(task.id);
+        if (liveTask && liveTask.status !== 'processing' && liveTask.status !== 'completed' && liveTask.status !== 'failed' && liveTask.status !== 'cancelled') {
+          taskStore.updateTaskStatus(task.id, 'processing');
+        }
         const progressValue = Math.min(100, Math.max(0, parseFloat((progress as number).toFixed(1))));
         const prev = lastProgressMap.get(task.id);
         if (prev !== progressValue) {
@@ -511,6 +521,10 @@ export function useFileHandler() {
     unlistenProg = await listen(`compression-progress-${task.id}`, (event: any) => {
       const { taskId, progress } = event?.payload || {};
       if (taskId === task.id) {
+        const liveTask = taskStore.getTaskById(task.id);
+        if (liveTask && liveTask.status !== 'processing' && liveTask.status !== 'completed' && liveTask.status !== 'failed' && liveTask.status !== 'cancelled') {
+          taskStore.updateTaskStatus(task.id, 'processing');
+        }
         const progressValue = Math.min(100, Math.max(0, parseFloat((progress as number).toFixed(1))));
         const prev = lastProgressMap.get(task.id);
         if (prev !== progressValue) {

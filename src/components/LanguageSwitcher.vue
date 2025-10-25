@@ -1,51 +1,38 @@
 <template>
-  <div class="relative">
+  <div class="relative" ref="rootRef">
     <button 
-      class="h-6 px-2 rounded-md text-xs text-gray-600 dark:text-dark-secondary bg-gray-200 dark:bg-dark-border hover:bg-gray-300 dark:hover:bg-dark-panel focus:outline-none transition-colors flex items-center space-x-1"
+      :class="['header-icon-button', 'language-trigger', { 'is-active': showDropdown }]"
       @click="toggleDropdown"
       :title="$t('language.switch')"
       data-tauri-drag-region="false"
     >
-      <span>{{ currentLanguageName }}</span>
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-      </svg>
+      <Languages class="w-4 h-4" />
     </button>
     
-    <!-- 下拉菜单 -->
-    <Transition
-      enter-active-class="transition ease-out duration-200"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-150"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
+    <Transition name="lang-pop">
       <div 
         v-if="showDropdown" 
-        class="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-dark-panel rounded-lg shadow-lg border border-gray-200 dark:border-dark-border z-50"
+        class="language-dropdown"
         @click.stop
       >
-        <div class="py-1">
+        <div class="language-dropdown__list">
           <button
             v-for="lang in languages"
             :key="lang.code"
-            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-dark-border transition-colors flex items-center justify-between"
-            :class="{
-              'text-amber-600 dark:text-dark-accent bg-amber-50 dark:bg-dark-accent/20': currentLocale === lang.code,
-              'text-gray-700 dark:text-dark-text': currentLocale !== lang.code
-            }"
+            class="language-item"
+            :class="currentLocale === lang.code ? 'language-item--active' : ''"
             @click="switchLang(lang.code)"
           >
-            <span>{{ lang.name }}</span>
-            <svg 
-              v-if="currentLocale === lang.code" 
-              class="w-4 h-4 text-amber-600 dark:text-dark-accent" 
-              fill="currentColor" 
-              viewBox="0 0 20 20"
+            <span class="language-item__name">{{ lang.name }}</span>
+            <MotionCheck
+              v-if="currentLocale === lang.code"
+              class="language-item__check"
+              :initial="{ opacity: 0, scale: 0.7 }"
+              :animate="{ opacity: 1, scale: 1 }"
+              :transition="{ duration: 0.18, easing: 'ease-out' }"
             >
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-            </svg>
+              <Check class="w-4 h-4" />
+            </MotionCheck>
           </button>
         </div>
       </div>
@@ -55,15 +42,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { switchLanguage, getCurrentLocale } from '../i18n';
+import { switchLanguage } from '../i18n';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import type { Language } from '../stores/useGlobalSettingsStore';
+import { Languages, Check } from 'lucide-vue-next';
+import { motion } from 'motion-v';
 
-const { locale } = useI18n();
 const globalSettings = useGlobalSettingsStore();
 
 const showDropdown = ref(false);
+const rootRef = ref<HTMLElement | null>(null);
+const MotionCheck = motion.div;
 
 const languages = [
   { code: 'zh' as Language, name: '简体中文' },
@@ -71,11 +60,6 @@ const languages = [
 ];
 
 const currentLocale = computed(() => globalSettings.language);
-
-const currentLanguageName = computed(() => {
-  const lang = languages.find(l => l.code === currentLocale.value);
-  return lang ? lang.name : 'English';
-});
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value;
@@ -97,8 +81,8 @@ watch(
 
 // 点击外部关闭下拉菜单
 const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement;
-  if (!target.closest('.relative')) {
+  const target = event.target as Node;
+  if (rootRef.value && !rootRef.value.contains(target)) {
     showDropdown.value = false;
   }
 };
@@ -112,3 +96,91 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
+
+<style scoped>
+.language-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 180px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 20px 38px -18px rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  z-index: 1200;
+}
+.dark .language-dropdown {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(22, 27, 39, 0.95);
+  box-shadow: 0 24px 52px -18px rgba(0, 0, 0, 0.55);
+}
+.language-dropdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+.language-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1e293b;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.language-item:hover {
+  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(99, 102, 241, 0.08);
+}
+.language-item--active {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+.dark .language-item {
+  color: #e2e8f0;
+}
+.dark .language-item:hover {
+  border-color: rgba(129, 140, 248, 0.32);
+  background: rgba(129, 140, 248, 0.12);
+}
+.dark .language-item--active {
+  border-color: rgba(129, 140, 248, 0.45);
+  background: rgba(129, 140, 248, 0.18);
+  color: #cbd5f5;
+}
+.language-item__name {
+  font-size: 12px;
+  font-weight: 600;
+}
+.language-item__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.16);
+  color: rgba(79, 70, 229, 0.95);
+}
+.dark .language-item__check {
+  background: rgba(129, 140, 248, 0.16);
+  color: rgba(129, 140, 248, 0.9);
+}
+.lang-pop-enter-active,
+.lang-pop-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  transform-origin: top right;
+}
+.lang-pop-enter-from,
+.lang-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+}
+</style>

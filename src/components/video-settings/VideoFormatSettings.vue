@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full min-h-[280px] flex flex-col">
+  <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible min-h-[280px] flex flex-col transition-all duration-300">
     <div class="space-y-4">
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.format') }}</label>
-          <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600">{{ metadata.format.toUpperCase() }}</span>
+          <div v-if="metadata" class="text-xs text-slate-500 dark:text-slate-300">
+            <span class="font-medium text-slate-600 dark:text-slate-200 px-2 py-0.5 rounded-full bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/15">{{ metadata.format.toUpperCase() }}</span>
           </div>
         </div>
         <CustomSelect 
@@ -23,8 +23,8 @@
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.videoCodec') }}</label>
-          <div v-if="metadata" class="text-xs text-gray-500 dark:text-dark-secondary">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-600">{{ metadata.videoCodec?.toUpperCase() || t('common.unknown') }}</span>
+          <div v-if="metadata" class="text-xs text-slate-500 dark:text-slate-300">
+            <span class="font-medium text-slate-600 dark:text-slate-200 px-2 py-0.5 rounded-full bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/15">{{ metadata.videoCodec?.toUpperCase() || t('common.unknown') }}</span>
           </div>
         </div>
         <CustomSelect 
@@ -43,12 +43,12 @@
         <div class="flex items-center justify-between mb-2">
           <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ $t('videoSettings.resolution') }}</label>
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600 dark:text-dark-secondary">{{ t('videoSettings.custom') }}</span>
+            <span class="text-sm text-slate-600 dark:text-slate-200">{{ t('videoSettings.custom') }}</span>
             <button
               type="button"
-              class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-              :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
-              :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
+              class="relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]"
+              :style="{ backgroundColor: isCustomResolution ? 'var(--brand-primary)' : '' }"
+              :class="isCustomResolution ? '' : 'bg-slate-200/80 dark:bg-dark-border'"
               @click="toggleCustomResolution"
             >
               <span
@@ -68,9 +68,8 @@
             />
             <button
               type="button"
-              class="flex-shrink-0 p-2 text-gray-500 hover:text-orange-500 transition-colors duration-200 rounded-md hover:bg-gray-100 dark:hover:bg-dark-border"
-              :class="{ 'hover:bg-blue-50': isAspectRatioLocked }"
-              :style="{ color: isAspectRatioLocked ? '#5492dc' : '' }"
+              class="flex-shrink-0 p-2 rounded-lg transition-all duration-200 text-slate-400 hover:bg-white/80 dark:hover:bg-white/10"
+              :style="{ color: isAspectRatioLocked ? 'var(--brand-primary)' : '' }"
               @click="toggleAspectRatioLock"
               :title="t('videoSettings.lockAspectRatio')"
             >
@@ -227,9 +226,9 @@ const videoCodecOptions = computed(() => {
 // 获取视频编码标签
 const getVideoCodecTags = (codec: string): string[] => {
   const c = (codec || '').toUpperCase();
-  if (c.includes('H.264') || c === 'H264') return [t('videoSettings.tagHighCompatibility'), t('videoSettings.tagPopular')];
-  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return [t('videoSettings.tagHighEfficiency'), t('videoSettings.tagTenBitSupport')];
-  if (c.includes('AV1')) return [t('videoSettings.tagMoreEfficient'), t('videoSettings.tagComplexEncoding')];
+  if (c.includes('H.264') || c === 'H264') return [t('videoSettings.tagPopular')];
+  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return [t('videoSettings.tagTenBitSupport')];
+  if (c.includes('AV1')) return [t('videoSettings.tagMoreEfficient')];
   if (c.includes('VP9')) return ['Web', 'Google'];
   if (c.includes('VP8')) return ['Web', t('videoSettings.tagLegacy')];
   if (c.includes('PRORES')) return [t('videoSettings.tagProfessional'), t('videoSettings.tagApple')];

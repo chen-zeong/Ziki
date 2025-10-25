@@ -67,7 +67,7 @@ export function useBatchProcessor() {
   const startBatchCompression = async (
     tasks: CompressionTask[],
     startCompressionFn: (settings: CompressionSettings, outputDirectory?: string, isBatchMode?: boolean) => Promise<void>,
-    switchToTaskFn: (taskId: string) => void,
+    switchToTaskFn: (taskId: string | null) => void,
     outputDirectory?: string,
     overrideSettings?: CompressionSettings | null
   ) => {
@@ -206,7 +206,7 @@ export function useBatchProcessor() {
   const resumeBatchCompression = async (
     tasks: CompressionTask[],
     startCompressionFn: (settings: CompressionSettings, outputDirectory?: string, isBatchMode?: boolean) => Promise<void>,
-    switchToTaskFn: (taskId: string) => void,
+    switchToTaskFn: (taskId: string | null) => void,
     outputDirectory?: string,
     overrideSettings?: CompressionSettings | null
   ) => {

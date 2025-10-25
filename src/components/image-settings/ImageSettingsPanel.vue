@@ -1,15 +1,15 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col transition-all duration-300">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
       <div class="h-full relative">
         <!-- 已完成任务时的交互遮罩 -->
         <div v-if="isSettingsLocked" class="absolute inset-0 z-10 cursor-not-allowed" style="background: transparent;"></div>
         <!-- 基础设置内容 -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-60': isSettingsLocked }">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-50': isSettingsLocked }">
           <!-- 左侧：格式 + 分辨率（单独卡片） -->
           <div class="space-y-4">
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full min-h-[220px] flex flex-col">
+            <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full min-h-[220px] flex flex-col transition-all duration-300">
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.format') }}</label>
@@ -26,12 +26,12 @@
                 <div class="flex items-center justify-between mb-2">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.resolution') }}</label>
                    <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold text-gray-600 dark:text-dark-secondary opacity-80">{{ t('videoSettings.custom') }}</span>
+                    <span class="text-xs font-semibold text-slate-600 dark:text-dark-secondary opacity-80">{{ t('videoSettings.custom') }}</span>
                      <button
                        type="button"
-                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-                       :style="{ backgroundColor: isCustomResolution ? '#5492dc' : '' }"
-                       :class="isCustomResolution ? '' : 'bg-gray-200 dark:bg-dark-border'"
+                       class="relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]"
+                       :style="{ backgroundColor: isCustomResolution ? 'var(--brand-primary)' : '' }"
+                       :class="isCustomResolution ? '' : 'bg-slate-200/80 dark:bg-dark-border'"
                        @click="toggleCustomResolution"
                      >
                        <span
@@ -53,9 +53,8 @@
                     />
                     <button
                       type="button"
-                      class="flex-shrink-0 p-2 text-gray-500 hover:text-orange-500 transition-colors duration-200 rounded-md hover:bg-gray-100 dark:hover:bg-dark-border"
-                      :class="{ 'hover:bg-blue-50': isAspectRatioLocked }"
-                      :style="{ color: isAspectRatioLocked ? '#5492dc' : '' }"
+                      class="flex-shrink-0 p-2 rounded-lg transition-all duration-200 text-slate-400 hover:bg-white/80 dark:hover:bg-white/10"
+                      :style="{ color: isAspectRatioLocked ? 'var(--brand-primary)' : '' }"
                       @click="toggleAspectRatioLock"
                       :title="t('videoSettings.lockAspectRatio')"
                     >
@@ -90,54 +89,42 @@
 
           <!-- 右侧：画质（单独卡片） -->
           <div class="space-y-4">
-            <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full quality-slider-container">
+            <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible max-h-full quality-slider-container transition-all duration-300">
               <div class="space-y-4">
                 <!-- 标题和质量等级 -->
                 <div class="flex justify-between items-center mb-4">
                   <label class="font-semibold text-sm text-slate-700 dark:text-dark-secondary opacity-90">{{ t('videoSettings.quality') }}</label>
                   <div class="text-right">
-                    <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
+                    <span class="font-medium text-slate-600 dark:text-slate-200 px-2 py-0.5 rounded-full text-xs bg-white/80 dark:bg-white/10 border border-white/60 dark:border-white/15">{{ qualityText }}</span>
                   </div>
                 </div>
 
                 <!-- 滑动条 -->
-                <div class="relative mb-2">
-                  <!-- 滑动条轨道和自定义UI -->
-                  <div class="relative h-8 flex items-center">
-                    <!-- 轨道背景 -->
-                    <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner z-0"></div>
-
-                    <!-- 默认值平衡点 -->
+                <div class="relative mt-2">
+                  <div class="slider-shell">
+                    <div class="slider-track">
+                      <div
+                        class="slider-default-marker"
+                        :style="{ left: `calc(${defaultImageSliderPosition}% - 1px)` }"
+                        aria-hidden="true"
+                      ></div>
+                      <div
+                        class="slider-fill"
+                        :style="{ width: qualityValue + '%' }"
+                      ></div>
+                    </div>
                     <div
-                      class="absolute top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-[1px] overflow-hidden bg-white/95 dark:bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.12)] pointer-events-none z-30 before:content-[''] before:absolute before:left-1/2 before:-translate-x-1/2 before:top-0 before:border-l-[1.5px] before:border-r-[1.5px] before:border-b-[4px] before:border-l-transparent before:border-r-transparent before:border-b-white dark:before:border-b-white after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:border-l-[1.5px] after:border-r-[1.5px] after:border-t-[4px] after:border-l-transparent after:border-r-transparent after:border-t-white dark:after:border-t-white"
-                      :style="{ left: `calc(${defaultImageSliderPosition}% - 1.5px)` }"
-                      aria-hidden="true"
-                    ></div>
-
-                    <!-- 已填充的进度条 -->
-                    <div
-                      class="absolute h-3 rounded-full shadow-sm z-10"
-                      :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
-                    ></div>
-
-                    <!-- 自定义的滑块 -->
-                    <div
-                      class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105 z-30"
-                      :class="{ 'scale-105': showTooltip }"
-                      :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
+                      class="slider-thumb"
+                      :class="{ 'is-active': showTooltip }"
+                      :style="{ left: `calc(${qualityValue}% - 14px)` }"
                     >
-                       <!-- 滑块内部高光效果 -->
-                       <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
-                     </div>
-                    
-                    <!-- 气泡提示框（显示参数提示，如 -q:v / 色彩位数 / 无损） -->
-                    <div 
-                      class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-10 transition duration-150 ease-out"
-                      :class="{ 
-                        'opacity-100 translate-y-0 scale-100': showTooltip, 
-                        'opacity-0 -translate-y-1 scale-95': !showTooltip
-                      }"
-                      :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
+                      <span class="thumb-core"></span>
+                      <span class="thumb-ring"></span>
+                    </div>
+                    <div
+                      class="slider-tooltip"
+                      :class="{ 'slider-tooltip--visible': showTooltip }"
+                      :style="{ left: qualityValue + '%' }"
                     >
                       <div class="tooltip-bubble">
                         {{ qualityHintText.paramHint }}
@@ -145,7 +132,6 @@
                     </div>
                   </div>
 
-                  <!-- 透明的 range input 处理逻辑 -->
                   <input
                     type="range"
                     id="image-quality-slider"
@@ -153,17 +139,19 @@
                     min="2"
                     max="98"
                     step="1"
-                    class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-40"
+                    class="slider-input"
                     @input="updateQualityState"
                     @mouseenter="showTooltip = true"
                     @mouseleave="showTooltip = false"
                     @mousedown="showTooltip = true"
                     @mouseup="showTooltip = false"
+                    @touchstart.passive="showTooltip = true"
+                    @touchend.passive="showTooltip = false"
                   />
                 </div>
                 
                 <!-- 画质提示：只在需要时显示 PNG 色彩缺失的提示 -->
-                <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                <div class="text-xs text-slate-500 dark:text-slate-300 space-y-1">
                   <div v-if="qualityHintText.colorWarning" class="flex items-start gap-2 px-3 py-2 rounded-md border shadow-sm bg-gradient-to-r from-amber-50 to-amber-100/60 dark:from-[#34260f] dark:to-[#3b2a12] border-amber-200/80 dark:border-amber-700/60 text-amber-800 dark:text-amber-200">
                     <svg class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-7.5 13A1 1 0 003.62 19h16.76a1 1 0 00.87-1.5l-7.5-13a1 1 0 00-1.76 0z" />
@@ -633,17 +621,128 @@ const updateQualityState = () => {
 </script>
 
 <style scoped>
+.slider-shell {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+.slider-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.25), transparent 65%);
+  pointer-events: none;
+}
+.dark .slider-track {
+  background: rgba(71, 85, 105, 0.45);
+  box-shadow: inset 0 1px 1px rgba(2, 6, 23, 0.55);
+}
+.slider-default-marker {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 70%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, rgba(79, 70, 229, 0.82), rgba(129, 140, 248, 0.72));
+  pointer-events: none;
+  opacity: 0.95;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.dark .slider-default-marker {
+  background: linear-gradient(180deg, rgba(234, 236, 244, 0.92), rgba(148, 163, 184, 0.7));
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5);
+  opacity: 1;
+}
+.slider-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(99, 102, 241, 0.92);
+  transition: width 0.18s cubic-bezier(0.33, 1, 0.68, 1);
+  box-shadow: 0 10px 22px -16px rgba(99, 102, 241, 0.45);
+}
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.slider-thumb.is-active {
+  transform: translateY(-50%) scale(1.08);
+  filter: brightness(1.05);
+}
+.thumb-core {
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: #6366f1;
+  border: none;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+.dark .thumb-core {
+  background: rgba(99, 102, 241, 0.92);
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.7);
+}
+.thumb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(99, 102, 241, 0.32);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.slider-thumb.is-active .thumb-ring {
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: none;
+}
+.slider-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(6px) scale(0.96);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.slider-tooltip--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+.slider-input {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 40;
+  touch-action: none;
+}
 .tooltip-bubble {
   position: relative;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  background: rgba(15, 23, 42, 0.96);
   color: white;
   font-size: 11px;
   line-height: 1;
   padding: 6px 8px;
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  white-space: nowrap; /* 强制单行显示 */
+  white-space: nowrap;
 }
 .tooltip-bubble::after {
   content: '';
@@ -651,16 +750,17 @@ const updateQualityState = () => {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  width: 0; height: 0;
+  width: 0;
+  height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid rgba(30, 41, 59, 0.96);
+  border-top: 6px solid rgba(15, 23, 42, 0.96);
 }
 :deep(.dark) .tooltip-bubble {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  background: rgba(2, 6, 23, 0.96);
   border-color: rgba(100, 116, 139, 0.25);
 }
 :deep(.dark) .tooltip-bubble::after {
-  border-top-color: rgba(15, 23, 42, 0.96);
+  border-top-color: rgba(2, 6, 23, 0.96);
 }
 </style>

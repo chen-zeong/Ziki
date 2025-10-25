@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="zh-CN" class="h-full">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compressor Pro · 现代UI设计</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // 启用暗色模式切换
+            theme: {
+                extend: {
+                    colors: {
+                        // 亮色主题
+                        'background': '#ffffff',
+                        'foreground': '#0f172a',
+                        'muted': {
+                            DEFAULT: '#f1f5f9',
+                            foreground: '#64748b'
+                        },
+                        'card': '#ffffff',
+                        'border': '#e2e8f0',
+                        'primary': {
+                            DEFAULT: '#4f46e5',
+                            foreground: '#ffffff'
+                        },
+                        'destructive': {
+                            DEFAULT: '#dc2626',
+                            foreground: '#ffffff'
+                        },
+                        'success': {
+                            DEFAULT: '#16a34a',
+                            foreground: '#f0fdf4'
+                        },
+
+                        // 暗色主题
+                        'dark': {
+                            'background': '#020617',
+                            'foreground': '#e2e8f0',
+                            'muted': {
+                                DEFAULT: '#1e293b',
+                                foreground: '#94a3b8'
+                            },
+                            'card': '#0f172a',
+                            'border': '#1e293b',
+                            'primary': {
+                                DEFAULT: '#6366f1',
+                                foreground: '#ffffff'
+                            },
+                            'destructive': {
+                                DEFAULT: '#f87171',
+                                foreground: '#1e293b'
+                            },
+                            'success': {
+                                DEFAULT: '#4ade80',
+                                foreground: '#1A2E26'
+                            },
+                        }
+                    },
+                    borderRadius: {
+                        'lg': '0.5rem',
+                        'md': 'calc(0.5rem - 2px)',
+                        'sm': 'calc(0.5rem - 4px)'
+                    },
+                    boxShadow: {
+                        'glow': '0 0 20px rgba(79, 70, 229, 0.5), 0 0 8px rgba(79, 70, 229, 0.3)',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #718096; }
+        
+        /* 对比滑块 */
+        .comparison-slider { --position: 50%; position: relative; overflow: hidden; user-select: none; }
+        .comparison-slider .after-image { position: absolute; inset: 0; width: 100%; height: 100%; clip-path: polygon(var(--position) 0, 100% 0, 100% 100%, var(--position) 100%); }
+        .comparison-slider-line { position: absolute; inset: 0; left: var(--position); width: 3px; background-color: rgba(255, 255, 255, 0.9); cursor: ew-resize; transform: translateX(-1.5px); }
+        .comparison-slider-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; background-color: white; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); color: #4f46e5; }
+        .dark .comparison-slider-handle { background-color: #0f172a; color: #6366f1; }
+        
+        /* 多选模式下的 Checkbox 动画 */
+        .task-card-grid { display: grid; grid-template-columns: 0fr auto; transition: grid-template-columns 0.3s ease-in-out; }
+        #task-list-container.multi-select-active .task-card-grid { grid-template-columns: 1fr auto; }
+        .checkbox-wrapper { min-width: 0; opacity: 0; transform: scale(0.8); transition: opacity 0.3s ease, transform 0.3s ease; }
+        #task-list-container.multi-select-active .checkbox-wrapper { opacity: 1; transform: scale(1); }
+        
+        .task-card.is-selected {
+            background-color: hsla(243, 75%, 59%, 0.05);
+        }
+        .dark .task-card.is-selected {
+             background-color: hsla(240, 65%, 65%, 0.05);
+        }
+    </style>
+</head>
+
+<body class="h-full bg-background text-foreground dark:bg-dark-background dark:text-dark-foreground transition-colors duration-300">
+    <div class="flex h-screen w-full flex-col">
+        <main class="flex flex-1 overflow-hidden">
+            <!-- 侧边栏 -->
+            <aside class="w-[360px] flex-shrink-0 border-r border-border dark:border-dark-border bg-muted/50 dark:bg-dark-card flex flex-col">
+                <div class="flex items-center justify-between p-4 border-b border-border dark:border-dark-border flex-shrink-0">
+                    <div class="flex items-center gap-2">
+                        <button class="flex items-center justify-center gap-2 px-3 h-9 bg-primary-DEFAULT text-primary-foreground text-sm font-medium rounded-md hover:bg-opacity-90 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            添加文件
+                        </button>
+                        <button class="flex items-center justify-center gap-2 px-3 h-9 bg-muted-DEFAULT text-muted-foreground dark:bg-dark-muted-DEFAULT dark:text-dark-muted-foreground text-sm font-medium rounded-md hover:bg-muted-DEFAULT/80 dark:hover:bg-dark-muted-DEFAULT/80 transition">
+                            清空
+                        </button>
+                    </div>
+                     <div class="flex items-center gap-1">
+                        <button id="output-folder-button" class="h-9 w-9 flex items-center justify-center rounded-md bg-muted-DEFAULT dark:bg-dark-muted-DEFAULT text-muted-foreground dark:text-dark-muted-foreground hover:bg-muted-DEFAULT/80 dark:hover:bg-dark-muted-DEFAULT/80 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                        </button>
+                        <button id="theme-toggle" class="h-9 w-9 flex items-center justify-center rounded-md bg-muted-DEFAULT dark:bg-dark-muted-DEFAULT text-muted-foreground dark:text-dark-muted-foreground hover:bg-muted-DEFAULT/80 dark:hover:bg-dark-muted-DEFAULT/80 transition">
+                            <svg class="h-5 w-5 block dark:hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                            <svg class="h-5 w-5 hidden dark:block" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        </button>
+                     </div>
+                </div>
+
+                <div id="task-list-container" class="flex-1 space-y-2 p-3 overflow-y-auto">
+                    <!-- 任务卡片: 完成 -->
+                    <label for="task-1" class="task-card block p-2 rounded-lg border border-transparent hover:border-border dark:hover:border-dark-border cursor-pointer transition-all duration-200">
+                         <div class="task-card-grid items-center gap-3">
+                            <div class="checkbox-wrapper flex items-center justify-center">
+                                 <input type="checkbox" id="task-1" data-task-id="1" class="task-checkbox hidden">
+                                 <div class="custom-checkbox h-5 w-5 rounded-md border-2 border-border dark:border-dark-border grid place-content-center flex-shrink-0 bg-card dark:bg-dark-card"><svg class="h-3.5 w-3.5 hidden text-primary-DEFAULT" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                            </div>
+                            <div class="flex items-center gap-3 p-1">
+                                <img src="https://placehold.co/64x64/6366f1/ffffff?text=MP4" alt="thumbnail" class="h-12 w-12 rounded-md object-cover flex-shrink-0" />
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-foreground dark:text-dark-foreground truncate">City-night-loop.mp4</p>
+                                    <p class="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">128.4MB → <span class="font-medium text-success-DEFAULT dark:text-dark-success-DEFAULT">42.7MB</span></p>
+                                </div>
+                                <div class="h-8 w-8 rounded-full bg-success-DEFAULT/10 dark:bg-dark-success-DEFAULT/10 grid place-content-center flex-shrink-0">
+                                    <svg class="h-5 w-5 text-success-DEFAULT dark:text-dark-success-DEFAULT" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- 任务卡片: 处理中 -->
+                    <label for="task-2" class="task-card block p-2 rounded-lg border border-transparent hover:border-border dark:hover:border-dark-border cursor-pointer transition-all duration-200">
+                        <div class="task-card-grid items-center gap-3">
+                            <div class="checkbox-wrapper flex items-center justify-center">
+                                <input type="checkbox" id="task-2" data-task-id="2" class="task-checkbox hidden">
+                                <div class="custom-checkbox h-5 w-5 rounded-md border-2 border-border dark:border-dark-border grid place-content-center flex-shrink-0 bg-card dark:bg-dark-card"><svg class="h-3.5 w-3.5 hidden text-primary-DEFAULT" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                            </div>
+                            <div class="flex flex-col gap-2 p-1">
+                                <div class="flex items-center gap-3">
+                                    <img src="https://placehold.co/64x64/a78bfa/ffffff?text=MOV" alt="thumbnail" class="h-12 w-12 rounded-md object-cover flex-shrink-0" />
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-foreground dark:text-dark-foreground truncate">Product-shot.mov</p>
+                                        <p class="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">682.9 MB</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="w-full bg-muted dark:bg-dark-muted-DEFAULT rounded-full h-2">
+                                        <div class="bg-primary-DEFAULT h-2 rounded-full" style="width: 74%"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center text-xs mt-1.5">
+                                        <span class="font-medium text-primary-DEFAULT dark:text-dark-primary-DEFAULT">压缩中... 74%</span>
+                                        <span class="text-muted-foreground dark:text-dark-muted-foreground">剩余 01:12</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                    
+                    <!-- 任务卡片: 排队中 -->
+                    <label for="task-3" class="task-card block p-2 rounded-lg border border-transparent hover:border-border dark:hover:border-dark-border cursor-pointer transition-all duration-200">
+                        <div class="task-card-grid items-center gap-3">
+                            <div class="checkbox-wrapper flex items-center justify-center">
+                                 <input type="checkbox" id="task-3" data-task-id="3" class="task-checkbox hidden">
+                                 <div class="custom-checkbox h-5 w-5 rounded-md border-2 border-border dark:border-dark-border grid place-content-center flex-shrink-0 bg-card dark:bg-dark-card"><svg class="h-3.5 w-3.5 hidden text-primary-DEFAULT" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+                            </div>
+                            <div class="flex items-center gap-3 p-1">
+                                <div class="h-12 w-12 rounded-md bg-orange-400 flex-shrink-0 grid place-items-center">
+                                    <svg class="h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 10 5 2-5 2Z"/><path d="m3.5 3.5 2 2"/><path d="m20.5 3.5-2 2"/><path d="m3.5 20.5 2-2"/><path d="m20.5 20.5-2-2"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-foreground dark:text-dark-foreground truncate">Campaign-final.mp4</p>
+                                    <p class="text-xs text-muted-foreground dark:text-dark-muted-foreground mt-1">等待 GPU 资源</p>
+                                </div>
+                                <div class="h-8 w-8 rounded-full bg-amber-500/10 grid place-content-center flex-shrink-0">
+                                    <svg class="h-5 w-5 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                
+                <div class="p-3 border-t border-border dark:border-dark-border mt-auto flex-shrink-0 bg-muted/50 dark:bg-dark-card/80 backdrop-blur-sm flex items-center gap-2">
+                    <button id="multi-select-toggle" class="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-md bg-muted-DEFAULT dark:bg-dark-muted-DEFAULT text-muted-foreground dark:text-dark-muted-foreground hover:bg-muted-DEFAULT/80 dark:hover:bg-dark-muted-DEFAULT/80 transition">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h6"/><path d="M12 9v6"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M21 7h-2"/><path d="M21 12h-2"/><path d="M21 17h-2"/><path d="M3 7H1"/><path d="M3 12H1"/><path d="M3 17H1"/></svg>
+                    </button>
+                    <button id="process-button" class="w-full h-10 flex items-center justify-center gap-2 rounded-md bg-primary-DEFAULT text-primary-foreground font-semibold hover:bg-opacity-90 transition shadow-lg shadow-primary-DEFAULT/20 disabled:bg-muted-foreground disabled:shadow-none disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span id="process-button-text">选择任务以开始</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <section class="flex-1 flex flex-col bg-background dark:bg-dark-background">
+                <div class="p-6">
+                    <div class="comparison-slider aspect-video rounded-lg ring-1 ring-border dark:ring-dark-border bg-muted dark:bg-dark-muted-DEFAULT">
+                        <img src="https://images.unsplash.com/photo-1534224039826-c7a0eda0e6b3?q=80&w=2070&auto=format&fit=crop" alt="原始" class="w-full h-full object-cover">
+                        <div class="after-image">
+                            <img src="https://images.unsplash.com/photo-1534224039826-c7a0eda0e6b3?q=80&w=2070&auto=format&fit=crop&cs=srgb&fm=jpg&monochrome=true" alt="压缩后" class="w-full h-full object-cover">
+                        </div>
+                        <div class="absolute top-3 left-3 text-xs px-2 py-1 rounded-full bg-black/50 text-white/90 backdrop-blur-sm">原始</div>
+                        <div class="absolute top-3 right-3 text-xs px-2 py-1 rounded-full bg-black/50 text-white/90 backdrop-blur-sm">压缩后</div>
+                        <div class="comparison-slider-line">
+                            <div class="comparison-slider-handle">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.5 4 10.5l4-4"/><path d="M16 14.5 20 10.5l-4-4"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 p-6 pt-0 overflow-y-auto">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="flex flex-col gap-5">
+                            <div class="p-5 rounded-lg border border-border dark:border-dark-border bg-muted/50 dark:bg-dark-card">
+                                <h3 class="font-semibold text-foreground dark:text-dark-foreground">格式与编码</h3>
+                                <div class="mt-4 space-y-3 text-sm"><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">封装格式</span><span class="font-medium">MP4</span></div><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">视频编码</span><span class="font-medium">H.265 (HEVC)</span></div><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">分辨率</span><span class="font-medium">1920x1080 (原尺寸)</span></div></div>
+                            </div>
+                             <div class="p-5 rounded-lg border border-border dark:border-dark-border bg-muted/50 dark:bg-dark-card">
+                                <h3 class="font-semibold text-foreground dark:text-dark-foreground">音频</h3>
+                                <div class="mt-4 space-y-3 text-sm"><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">音频编码</span><span class="font-medium">AAC</span></div><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">比特率</span><span class="font-medium">192 kbps</span></div></div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-5">
+                             <div class="p-5 rounded-lg border border-border dark:border-dark-border bg-muted/50 dark:bg-dark-card">
+                                <h3 class="font-semibold text-foreground dark:text-dark-foreground">画质 (CRF)</h3>
+                                <div class="mt-4 space-y-3 text-sm"><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">CRF 值 (越低越好)</span><span class="font-medium text-primary-DEFAULT dark:text-dark-primary-DEFAULT">22</span></div><input type="range" min="0" max="51" value="22" class="w-full h-2 bg-muted dark:bg-dark-muted-DEFAULT rounded-lg appearance-none cursor-pointer accent-primary-DEFAULT dark:accent-dark-primary-DEFAULT"><div class="flex justify-between text-xs text-muted-foreground dark:text-dark-muted-foreground"><span>更高质量</span><span>更小体积</span></div></div>
+                            </div>
+                            <div class="p-5 rounded-lg border border-border dark:border-dark-border bg-muted/50 dark:bg-dark-card">
+                                <h3 class="font-semibold text-foreground dark:text-dark-foreground">硬件加速</h3>
+                                <div class="mt-4 space-y-3 text-sm"><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">编码器</span><span class="font-medium">Apple M2</span></div><div class="flex justify-between items-center"><span class="text-muted-foreground dark:text-dark-muted-foreground">状态</span><span class="font-medium text-success-DEFAULT dark:text-dark-success-DEFAULT">已启用</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 主题切换
+            const themeToggle = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            themeToggle.addEventListener('click', () => html.classList.toggle('dark'));
+
+            // 对比滑块
+            const slider = document.querySelector('.comparison-slider');
+            if (slider) {
+                const sliderLine = slider.querySelector('.comparison-slider-line');
+                let isDragging = false;
+                const moveSlider = (x) => {
+                    const rect = slider.getBoundingClientRect();
+                    let pos = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+                    slider.style.setProperty('--position', `${pos * 100}%`);
+                };
+                sliderLine.addEventListener('mousedown', () => isDragging = true);
+                document.addEventListener('mouseup', () => isDragging = false);
+                document.addEventListener('mousemove', (e) => isDragging && moveSlider(e.clientX));
+                sliderLine.addEventListener('touchstart', (e) => { e.preventDefault(); isDragging = true; }, { passive: false });
+                document.addEventListener('touchend', () => isDragging = false);
+                document.addEventListener('touchmove', (e) => isDragging && moveSlider(e.touches[0].clientX));
+            }
+
+            // 任务选择逻辑
+            const taskListContainer = document.getElementById('task-list-container');
+            const multiSelectToggle = document.getElementById('multi-select-toggle');
+            const processButton = document.getElementById('process-button');
+            const processButtonText = document.getElementById('process-button-text');
+            const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+
+            const updateProcessButton = () => {
+                const selectedCount = document.querySelectorAll('.task-checkbox:checked').length;
+                if (selectedCount > 0) {
+                    processButton.disabled = false;
+                    processButtonText.textContent = `开始处理 ${selectedCount} 个任务`;
+                } else {
+                    processButton.disabled = true;
+                    processButtonText.textContent = '选择任务以开始';
+                }
+            };
+            
+            multiSelectToggle.addEventListener('click', () => {
+                taskListContainer.classList.toggle('multi-select-active');
+            });
+
+            taskCheckboxes.forEach(checkbox => {
+                const card = checkbox.closest('.task-card');
+                const customCheckbox = card.querySelector('.custom-checkbox');
+                const checkIcon = customCheckbox.querySelector('svg');
+
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        card.classList.add('is-selected', 'ring-2', 'ring-primary-DEFAULT');
+                        checkIcon.classList.remove('hidden');
+                    } else {
+                        card.classList.remove('is-selected', 'ring-2', 'ring-primary-DEFAULT');
+                        checkIcon.classList.add('hidden');
+                    }
+                    updateProcessButton();
+                });
+                
+                // 让点击整个卡片也能触发选择
+                 card.addEventListener('click', (e) => {
+                     // 只有在多选模式下，点击卡片才等同于点击 checkbox
+                    if (taskListContainer.classList.contains('multi-select-active')) {
+                        if (e.target.tagName !== 'INPUT') {
+                           checkbox.checked = !checkbox.checked;
+                           checkbox.dispatchEvent(new Event('change'));
+                        }
+                    }
+                 });
+            });
+
+            // 初始化按钮状态
+            updateProcessButton();
+        });
+    </script>
+</body>
+</html>
+

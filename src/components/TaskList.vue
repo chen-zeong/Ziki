@@ -10,6 +10,9 @@
     @pause-task="$emit('pause-task', $event)"
     @select-task="$emit('select-task', $event)"
     @clear-all-tasks="$emit('clear-all-tasks')"
+    @start-compress="$emit('start-compress', $event)"
+    @undo-compress="$emit('undo-compress')"
+    @toggle-output-folder="$emit('toggle-output-folder')"
   />
 </template>
 
@@ -22,6 +25,8 @@ interface Props {
   selectedTaskId?: string | null;
 }
 
+type StartCompressPayload = { mode: 'single' } | { mode: 'batch'; taskIds: string[] };
+
 interface Emits {
   (e: 'add-files'): void;
   (e: 'files-selected', files: FileList): void;
@@ -29,8 +34,11 @@ interface Emits {
   (e: 'delete-task', taskId: string): void;
   (e: 'resume-compression', taskId: string): void;
   (e: 'pause-task', taskId: string): void;
-  (e: 'select-task', taskId: string): void;
+  (e: 'select-task', taskId: string | null): void;
   (e: 'clear-all-tasks'): void;
+  (e: 'start-compress', payload?: StartCompressPayload): void;
+  (e: 'undo-compress'): void;
+  (e: 'toggle-output-folder'): void;
 }
 
 const props = defineProps<Props>();

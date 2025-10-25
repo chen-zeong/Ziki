@@ -41,13 +41,15 @@
         
         <!-- Theme Toggle -->
         <button 
-          class="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+          :class="['header-icon-button', { 'is-active': isDark }]"
           @click="$emit('toggleTheme')"
           data-tauri-drag-region="false"
         >
-        <Sun v-if="!isDark" class="w-4 h-4" />
-        <Moon v-else class="w-4 h-4" />
-      </button>
+          <Transition name="theme-icon" mode="out-in">
+            <Sun v-if="!isDark" key="sun" class="theme-icon" />
+            <Moon v-else key="moon" class="theme-icon" />
+          </Transition>
+        </button>
     </div>
   </div></div>
 </template>
@@ -76,3 +78,23 @@ defineEmits<{
   toggleTheme: [];
 }>();
 </script>
+
+<style scoped>
+.theme-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+.theme-icon-enter-active,
+.theme-icon-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.theme-icon-enter-from {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.6);
+}
+.theme-icon-leave-to {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.6);
+}
+</style>

@@ -1,133 +1,137 @@
 <template>
   <div class="hardware-acceleration-settings">
-    <div class="space-y-4 bg-gray-50 dark:bg-[#1e1e1e] p-4 rounded-lg">
-      
+    <div :class="['hardware-card transition-all duration-300', cardShellClasses]">
+      <div
+        :class="[
+          'hardware-inner space-y-4 pt-0',
+          { 'hardware-inner--embedded': !props.withCardShell }
+        ]"
+      >
         <!-- 显卡加速开关 -->
-         <div class="flex items-center justify-between">
-           <div class="flex items-center gap-3">
-             <h3 class="text-sm font-medium text-gray-700 dark:text-dark-text">{{ t('videoSettings.gpuAcceleration') }}</h3>
-             <div v-if="isHardwareAvailable" class="px-2 py-1 bg-green-100 dark:bg-dark-success/20 text-green-700 dark:text-dark-success text-xs rounded-full font-medium flex items-center space-x-1">
-               <Zap class="w-3 h-3" />
-               <span>{{ t('common.available') }}</span>
-             </div>
-             <div v-else class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium flex items-center space-x-1">
-               <Ban class="w-3 h-3" />
-               <span>{{ t('common.unavailable') }}</span>
-             </div>
-           </div>
-          
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <h3 class="text-sm font-medium text-gray-700 dark:text-dark-text">{{ t('videoSettings.gpuAcceleration') }}</h3>
+            <div v-if="isHardwareAvailable" class="px-2 py-1 bg-green-100 dark:bg-dark-success/20 text-green-700 dark:text-dark-success text-xs rounded-full font-medium flex items-center space-x-1">
+              <Zap class="w-3 h-3" />
+              <span>{{ t('common.available') }}</span>
+            </div>
+            <div v-else class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs rounded-full font-medium flex items-center space-x-1">
+              <Ban class="w-3 h-3" />
+              <span>{{ t('common.unavailable') }}</span>
+            </div>
+          </div>
+
           <!-- 可用时显示开关 -->
           <div v-if="isHardwareAvailable" class="flex items-center gap-2">
-            <span class="text-xs text-gray-500 dark:text-dark-secondary">{{ hardwareAcceleration.value === 'gpu' ? t('common.enabled') : t('common.disabled') }}</span>
+            <span class="text-xs text-gray-500 dark:text-dark-secondary">{{ isGpuSelected ? t('common.enabled') : t('common.disabled') }}</span>
             <button
               type="button"
-              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              :class="hardwareAcceleration.value === 'gpu' ? '' : 'bg-gray-200 dark:bg-dark-border'"
-              :style="{
-                backgroundColor: hardwareAcceleration.value === 'gpu' ? '#558ee1' : '',
-                '--tw-ring-color': '#558ee1'
-              }"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]"
+              :class="isGpuSelected ? '' : 'bg-slate-200/80 dark:bg-dark-border'"
+              :style="isGpuSelected ? { backgroundColor: 'var(--brand-primary)' } : {}"
               @click="toggleHardwareAcceleration"
             >
               <span
                 class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                :class="hardwareAcceleration.value === 'gpu' ? 'translate-x-6' : 'translate-x-1'"
+                :class="isGpuSelected ? 'translate-x-6' : 'translate-x-1'"
               ></span>
             </button>
           </div>
-          
+
           <!-- 不可用时显示查看支持列表按钮 -->
           <div v-else class="relative flex items-center gap-2 h-6">
             <button
               ref="supportBtnRef"
               @click="toggleSupportedFormats"
-              class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-              style="color: #9150e1; background-color: rgba(145, 80, 225, 0.1);"
-              @mouseover="($event.target as HTMLElement).style.color = '#7c3aed'"
-              @mouseleave="($event.target as HTMLElement).style.color = '#9150e1'"
+              class="px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 border border-slate-200/80 dark:border-white/15 bg-white dark:bg-white/5 text-[var(--brand-primary)] hover:text-[var(--brand-secondary)] hover:border-[var(--brand-primary)]/40"
             >
               {{ t('videoSettings.viewSupportedList') }}
             </button>
-            
+
             <!-- 使用 Teleport 将弹出框放到 body，避免被父容器裁剪或遮挡 -->
             <Teleport to="body">
               <transition name="fade-up">
                 <div
                   v-if="showSupportedFormats"
                   ref="supportPopupRef"
-                  class="fixed w-96 p-5 bg-white dark:bg-dark-panel border border-gray-200 dark:border-gray-600 rounded-2xl shadow-lg z-[10000]"
+                  class="fixed w-96 p-5 bg-white dark:bg-[#181b23] border border-slate-200/80 dark:border-white/10 rounded-xl shadow-lg z-[10000]"
                   :style="{ top: popupPosition.top + 'px', left: popupPosition.left + 'px' }"
                 >
                   <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-dark-text flex items-center space-x-2">
-                      <CheckCircle class="w-4 h-4 text-blue-500" />
+                    <h4 class="text-sm font-semibold text-slate-700 dark:text-white flex items-center space-x-2">
+                      <CheckCircle class="w-4 h-4 text-[var(--brand-primary)]" />
                       <span>{{ t('videoSettings.supportedHardwareEncodersTitle') }}</span>
                     </h4>
-                    <button @click="showSupportedFormats = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors">
+                    <button @click="showSupportedFormats = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                       <X class="w-4 h-4" />
                     </button>
                   </div>
-                  <div v-if="supportedCodecs.length === 0" class="text-sm text-gray-500 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 p-3 rounded-lg text-center">
-                    <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                  <div v-if="supportedCodecs.length === 0" class="text-sm text-slate-500 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 p-3 rounded-lg text-center">
+                    <AlertTriangle class="w-6 h-6 mx-auto mb-2 text-slate-400 dark:text-slate-200" />
                     {{ t('videoSettings.noHardwareEncoders') }}
                   </div>
                   <div v-else class="space-y-2 max-h-48 overflow-y-auto">
-                     <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-gray-700 dark:text-dark-text bg-gray-50 dark:bg-dark-border/50 p-2 rounded-lg flex items-center space-x-2">
-                       <Check class="w-3 h-3 text-dark-success flex-shrink-0" />
-                       <span>{{ codec }}</span>
-                     </div>
-                   </div>
-  
-                   <!-- 分割线 -->
-                   <div class="border-t border-gray-100 dark:border-dark-border my-4"></div>
-  
-                   <!-- 仅 Intel Mac 显示的小字说明（英文标点 + 圆角背景 + 暗色适配） -->
+                    <div v-for="(codec, index) in supportedCodecs" :key="index" class="text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 p-2 rounded-lg flex items-center space-x-2">
+                      <Check class="w-3 h-3 text-[var(--brand-primary)] flex-shrink-0" />
+                      <span>{{ codec }}</span>
+                    </div>
+                  </div>
+
+                  <!-- 分割线 -->
+                  <div class="border-t border-white/70 dark:border-white/10 my-4"></div>
+
+                  <!-- 仅 Intel Mac 显示的小字说明 -->
                   <div
                     v-if="platform === 'macos' && arch === 'x86_64'"
-                    class="text-[11px] leading-4 text-gray-600 dark:text-dark-secondary bg-gray-50 dark:bg-dark-border/50 border border-gray-200 dark:border-dark-border rounded-md px-3 py-2 mb-4"
+                    class="text-[11px] leading-4 text-slate-500 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-md px-3 py-2 mb-4"
                   >
                     {{ t('videoSettings.intelMacNoQvNotice') }}
                   </div>
-                   <!-- 检测信息与操作 -->
-                   <div class="flex items-center justify-between">
-                     <div class="flex items-center text-xs text-gray-500 dark:text-dark-secondary">
-                       <Clock class="w-3 h-3 mr-1 opacity-70" />
-                       <span>{{ t('videoSettings.lastChecked') }}{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
-                     </div>
-                     <button
-                       class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-all duration-200"
-                       :class="{
-                         'bg-[#5492dc] hover:bg-[#4a82c6]': !isDetectingHardwareEncoders,
-                         'bg-[#6ba3e8] cursor-not-allowed': isDetectingHardwareEncoders
-                       }"
-                       @click="refreshHardware"
-                       :disabled="isDetectingHardwareEncoders"
-                     >
-                       <RefreshCw v-if="!isDetectingHardwareEncoders" class="w-3 h-3" />
-                       <div v-if="isDetectingHardwareEncoders" class="flex items-center gap-1">
-                         <Loader2 class="w-3 h-3 animate-spin" />
-                         <span class="text-xs font-mono">
-                           {{ detectProgress.current }}/{{ detectProgress.total }}
-                         </span>
-                       </div>
-                       <span class="transition-all duration-200">
-                         {{ isDetectingHardwareEncoders ? t('videoSettings.detecting') : t('videoSettings.recheck') }}
-                       </span>
-                     </button>
-                   </div>
-                 </div>
-               </transition>
-             </Teleport>
-           </div>
-         </div>
-
-        <!-- 移除外部的检测状态与重新检测行，内容已移动到弹出框内 -->
-        
+                  <!-- 检测信息与操作 -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center text-xs text-slate-500 dark:text-slate-300">
+                      <Clock class="w-3 h-3 mr-1 opacity-70" />
+                      <span>{{ t('videoSettings.lastChecked') }}{{ hardwareSupport ? formatTime(hardwareSupport.tested_at) : '—' }}</span>
+                    </div>
+                    <button
+                      class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full text-white transition-all duration-200"
+                      :class="{
+                        'bg-[var(--brand-primary)] hover:bg-[var(--brand-secondary)]': !isDetectingHardwareEncoders,
+                        'bg-[var(--brand-secondary)]/60 cursor-not-allowed': isDetectingHardwareEncoders
+                      }"
+                      @click="refreshHardware"
+                      :disabled="isDetectingHardwareEncoders"
+                    >
+                      <RefreshCw v-if="!isDetectingHardwareEncoders" class="w-3 h-3" />
+                      <div v-if="isDetectingHardwareEncoders" class="flex items-center gap-1">
+                        <Loader2 class="w-3 h-3 animate-spin" />
+                        <span class="text-xs font-mono">
+                          {{ detectProgress.current }}/{{ detectProgress.total }}
+                        </span>
+                      </div>
+                      <span class="transition-all duration-200">
+                        {{ isDetectingHardwareEncoders ? t('videoSettings.detecting') : t('videoSettings.recheck') }}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </transition>
+            </Teleport>
+          </div>
+        </div>
+        <div
+          v-if="isHardwareAvailable"
+          class="mt-3 text-xs text-slate-500 dark:text-slate-300 leading-relaxed"
+        >
+          {{ isGpuSelected
+            ? t('videoSettings.gpuSupportedDesc')
+            : t('videoSettings.cpuEncodingDesc') }}
+        </div>
+      </div>
     </div>
-    
-
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
@@ -136,15 +140,6 @@ import { CheckCircle, X, AlertTriangle, Check, Zap, Ban, Clock, RefreshCw, Loade
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
-
-interface HardwareOption {
-  value: string;
-  name: string;
-  description: string;
-  icon: string;
-  available: boolean;
-  reason?: string;
-}
 
 interface Codec {
   name: string;
@@ -175,14 +170,23 @@ interface Props {
     name: string;
   };
   currentVideoCodec?: string;
+  withCardShell?: boolean;
 }
 
 interface Emits {
   'update:modelValue': [value: { value: string; name: string }];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  withCardShell: true
+});
 const emit = defineEmits<Emits>();
+
+const cardShellClasses = computed(() =>
+  props.withCardShell
+    ? 'bg-white dark:bg-[#262624] border border-slate-200/70 dark:border-white/10 rounded-xl px-5 pb-5 pt-0 shadow-[0_18px_42px_-24px_rgba(15,23,42,0.45)]'
+    : 'p-0 bg-transparent border-0 shadow-none'
+);
 
 // 监听硬件加速设置变化
 watch(() => props.modelValue, () => {
@@ -207,6 +211,8 @@ const hardwareAcceleration = computed({
     emit('update:modelValue', newValue);
   }
 });
+
+const isGpuSelected = computed(() => hardwareAcceleration.value.value === 'gpu');
 
 // 旧：检测编解码器支持（保留作为回退）
 const detectCodecs = async () => {
@@ -342,29 +348,6 @@ const supportedCodecs = computed(() => {
   return supported.map(e => `${nameMap[e.codec]} (${e.vendor})`);
 });
 
-// 硬件加速选项
-const hardwareOptions = computed<HardwareOption[]>(() => {
-  const isHardwareSupported = props.currentVideoCodec ? checkHardwareSupport(props.currentVideoCodec) : false;
-  
-  return [
-    {
-      value: 'cpu',
-      name: t('videoSettings.cpuEncoding'),
-      description: t('videoSettings.cpuEncodingDesc'),
-      icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9Vz',
-      available: true
-    },
-    {
-      value: 'gpu',
-      name: t('videoSettings.gpuAcceleration'),
-      description: isHardwareSupported ? t('videoSettings.gpuSupportedDesc') : t('videoSettings.gpuUnsupportedDesc'),
-      icon: 'M13 10V3L4 14h7v7l9-11h-7z',
-      available: isHardwareSupported,
-      reason: isHardwareSupported ? t('common.available') : t('common.unavailable')
-    }
-  ];
-});
-
 // 硬件加速是否可用
 const isHardwareAvailable = computed(() => {
   // Intel Mac 上强制不可用
@@ -382,21 +365,6 @@ const unavailableReason = computed(() => {
   }
   return '';
 });
-
-// 选择硬件加速
-const selectHardware = (option: HardwareOption) => {
-  hardwareAcceleration.value = {
-    value: option.value,
-    name: option.name
-  };
-  
-  // 为显卡加速添加实际功能
-  if (option.value === 'gpu') {
-    handleGpuAcceleration();
-  } else {
-    handleCpuEncoding();
-  }
-};
 
 // 处理显卡加速功能
 const handleGpuAcceleration = () => {
@@ -483,13 +451,11 @@ watch(() => props.currentVideoCodec, async (newCodec) => {
   }
   
   if (hardwareAcceleration.value.value === 'gpu' && newCodec && !checkHardwareSupport(newCodec)) {
-    selectHardware({
+    hardwareAcceleration.value = {
       value: 'cpu',
-      name: t('videoSettings.cpuEncoding'),
-      description: t('videoSettings.cpuEncodingDesc'),
-      icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z',
-      available: true
-    });
+      name: t('videoSettings.cpuEncoding')
+    };
+    handleCpuEncoding();
   }
 // 修正为标准写法
 }, { immediate: true }
@@ -514,6 +480,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.hardware-inner--embedded {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(248, 250, 255, 0.92);
+  border-radius: 16px;
+  padding: 18px 20px;
+}
+.dark .hardware-inner--embedded {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: #262624;
+}
 .fade-up-enter-active,
 .fade-up-leave-active {
   transition: opacity 0.18s ease, transform 0.18s ease;

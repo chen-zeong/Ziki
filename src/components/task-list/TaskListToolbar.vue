@@ -1,54 +1,38 @@
 <template>
-  <div class="mt-4 mb-3 flex items-center justify-between flex-shrink-0">
+  <div class="px-4 pt-8 pb-4 flex items-center justify-between flex-shrink-0">
     <!-- 左侧工具栏按钮 -->
-    <div class="flex items-center space-x-3 pl-4">
-      <!-- 添加文件按钮 -->
-      <button 
-         class="flex items-center space-x-1 px-3 rounded-md text-white transition-colors"
-         style="background-color: #578ae6; height: 32px;"
-         @click="handleAddFiles"
-         :title="t('toolbar.addFiles')"
-       >
+    <div class="flex items-center gap-2">
+      <button
+        class="flex items-center gap-1.5 h-8 px-3 rounded-xl text-sm font-medium transition-colors duration-200 bg-white dark:bg-white/10 border border-slate-200/70 dark:border-white/15 text-slate-700 dark:text-slate-300 hover:border-[var(--brand-primary)]/45 hover:text-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 shadow-sm dark:shadow-none"
+        @click="handleAddFiles"
+        :title="t('toolbar.addFiles')"
+      >
         <Plus class="w-4 h-4" />
-        <span class="text-xs">{{ t('toolbar.addFiles') }}</span>
+        <span>{{ t('toolbar.addFiles') }}</span>
       </button>
-      
-      <!-- 清空任务按钮 -->
-      <button 
-        class="flex items-center space-x-1 px-3 rounded-md text-white"
-        style="background-color: #eb534b; height: 32px;"
+
+      <button
+        class="flex items-center gap-1.5 h-8 px-3 rounded-xl text-sm font-medium transition-colors duration-200 text-red-500 dark:text-red-300 border border-slate-200/70 dark:border-white/15 bg-white dark:bg-white/5 hover:bg-red-50/80 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 shadow-sm dark:shadow-none"
         @click="handleClearAllTasks"
         :disabled="tasks.length === 0"
         :title="t('taskList.clearAllTasks')"
       >
         <BrushCleaning class="w-4 h-4" />
-        <span class="text-xs">{{ t('taskList.clear') }}</span>
+        <span>{{ t('taskList.clear') }}</span>
       </button>
     </div>
-    
-    <!-- 右侧状态筛选器 -->
-     <div class="flex items-center space-x-2 mr-3">
+
+    <div class="flex items-center gap-2">
       <button
-        v-for="status in statusFilters"
-        :key="status.key"
-        @click="toggleStatusFilter(status.key)"
-        class="w-4 h-4 rounded-full transition-all duration-200 relative flex items-center justify-center"
-        :style="{
-          border: '1.5px solid white',
-          boxShadow: selectedStatuses.size === 0 || selectedStatuses.has(status.key) 
-            ? '0 0 0 1.5px #ccc, inset 0 1px 2px rgba(0, 0, 0, 0.2)' 
-            : '0 0 0 0.5px #ccc, inset 0 1px 2px rgba(0, 0, 0, 0.2)',
-          opacity: selectedStatuses.size === 0 || selectedStatuses.has(status.key) ? 1 : 0.3
-        }"
-        :title="status.label"
+        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/60 disabled:opacity-40 disabled:pointer-events-none"
+        :class="multiSelectMode ? activeMultiSelectClasses : inactiveMultiSelectClasses"
+        :aria-pressed="multiSelectMode"
+        :disabled="tasks.length === 0"
+        @click="$emit('toggle-multi-select')"
+        :title="t('taskList.multiSelect')"
       >
-        <div 
-          class="w-full h-full rounded-full"
-          :style="{
-            background: status.gradient,
-            boxShadow: `inset 0 0 0 0.5px ${status.innerBorder}`
-          }"
-        ></div>
+        <ListChecks class="w-4 h-4" aria-hidden="true" />
+        <span class="sr-only">{{ t('taskList.multiSelect') }}</span>
       </button>
     </div>
   </div>
@@ -56,7 +40,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Plus, BrushCleaning } from 'lucide-vue-next';
+import { Plus, BrushCleaning, ListChecks } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { open } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
@@ -66,13 +50,10 @@ import type { CompressionTask } from '../../types';
 const { t } = useI18n();
 const taskStore = useTaskStore();
 
-interface Props {
-  // 保持props接口兼容性，但内部使用store
+const props = defineProps<{
   tasks?: CompressionTask[];
-  selectedStatuses: Set<string>;
-}
-
-const props = defineProps<Props>();
+  multiSelectMode?: boolean;
+}>();
 
 // 使用store中的任务数据，如果props中有tasks则使用props（向后兼容）
 const tasks = computed(() => props.tasks || taskStore.tasks);
@@ -82,47 +63,14 @@ const emit = defineEmits<{
   filesSelected: [files: FileList];
   'clear-all-tasks': [];
   toggleStatusFilter: [status: string];
+  'toggle-multi-select': [];
 }>();
 
-// 状态筛选器配置（标签使用 i18n）
-const statusFilters = computed(() => [
-  {
-    key: 'pending',
-    label: t('taskList.statusPending'),
-    bgColor: '#dbebfd',
-    borderColor: '#dbebfd',
-    textColor: '#1e40af',
-    gradient: 'linear-gradient(to top, #4981f9, #87a9ff)',
-    innerBorder: '#4275d1'
-  },
-  {
-    key: 'queued',
-    label: t('taskList.statusQueued'),
-    bgColor: '#fff5dc',
-    borderColor: '#fff5dc',
-    textColor: '#d97706',
-    gradient: 'linear-gradient(to top, #ffa500, #ffc96b)',
-    innerBorder: '#d99a26'
-  },
-  {
-    key: 'processing',
-    label: t('taskList.statusProcessing'),
-    bgColor: '#f3e8ff',
-    borderColor: '#f3e8ff',
-    textColor: '#7c3aed',
-    gradient: 'linear-gradient(to top, #8a2be2, #d6a4ff)',
-    innerBorder: '#813cc9'
-  },
-  {
-    key: 'completed',
-    label: t('taskList.statusCompleted'),
-    bgColor: '#dcfce7',
-    borderColor: '#dcfce7',
-    textColor: '#16a34a',
-    gradient: 'linear-gradient(to top, #2e8b57, #8fbc8f)',
-    innerBorder: '#388e61'
-  }
-]);
+const multiSelectMode = computed(() => !!props.multiSelectMode);
+const inactiveMultiSelectClasses =
+  'border-slate-200/80 bg-white text-slate-500 hover:text-[#2563eb] hover:border-[#2563eb]/45 dark:border-white/12 dark:bg-[#1f1f26] dark:text-slate-300 dark:hover:border-[#6366f1]/50 dark:hover:text-[#6366f1]';
+const activeMultiSelectClasses =
+  'border-[#60a5fa]/60 bg-[#e6efff] text-[#1d4ed8] shadow-[0_6px_16px_-12px_rgba(59,130,246,0.35)] hover:bg-[#d8e4ff] dark:border-[rgba(129,140,248,0.35)] dark:bg-[rgba(98,104,241,0.22)] dark:text-[#eef2ff] dark:shadow-[0_12px_28px_-18px_rgba(99,102,241,0.62)] dark:ring-1 dark:ring-inset dark:ring-[rgba(129,140,248,0.3)] dark:hover:bg-[rgba(98,104,241,0.3)] dark:hover:text-[#ffffff]';
 
 // 清空所有任务
 const handleClearAllTasks = () => {
@@ -206,17 +154,3 @@ const toggleStatusFilter = (status: string) => {
   emit('toggleStatusFilter', status);
 };
 </script>
-
-<style scoped>
-.status-filter {
-  transition: all 0.2s ease;
-}
-
-.status-filter:hover {
-  transform: translateY(-1px);
-}
-
-.status-filter.active {
-  transform: scale(1.05);
-}
-</style>

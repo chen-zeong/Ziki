@@ -1,49 +1,39 @@
 <template>
-  <div class="bg-gray-50 dark:bg-[#1e1e1e] p-3 rounded-lg overflow-visible max-h-full quality-slider-container">
+  <div :class="['quality-settings-shell transition-all duration-300', shellClasses]">
     <div class="space-y-4">
-      <!-- 标题和质量等级 -->
-      <div class="flex justify-between items-center mb-4">
-        <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ t('videoSettings.quality') }}</label>
-        <div class="text-right">
-          <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ qualityText }}</span>
-        </div>
+      <div class="flex items-center justify-between">
+        <label class="text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ t('videoSettings.quality') }}
+        </label>
+        <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border border-slate-200/80 dark:border-white/15 text-slate-600 dark:text-slate-100">
+          {{ qualityText }}
+        </span>
       </div>
 
-      <!-- 滑动条 -->
-      <div class="relative mb-2">
-        <!-- 滑动条轨道和自定义UI -->
-        <div class="relative h-8 flex items-center">
-          <!-- 轨道背景 -->
-          <div class="absolute w-full h-3 bg-slate-300 dark:bg-slate-600 rounded-full shadow-inner z-0"></div>
-
-          <!-- 已填充的进度条 -->
+      <div class="relative mt-3 pt-0.5 pb-0">
+        <div class="slider-shell">
+          <div class="slider-track">
+            <div
+              class="slider-default-marker"
+              :style="{ left: `calc(${defaultSliderPosition}% - 1px)` }"
+            ></div>
+            <div
+              class="slider-fill"
+              :style="{ width: qualityValue + '%' }"
+            ></div>
+          </div>
           <div
-            class="absolute h-3 rounded-full shadow-sm z-10"
-            :style="{ width: qualityValue + '%', background: 'linear-gradient(90deg, #4f89db, #558ee1)' }"
-          ></div>
-
-          <!-- 默认值平衡点 (在进度条之上) -->
-          <div
-            class="absolute top-1/2 -translate-y-1/2 w-[3px] h-3 rounded-[1px] overflow-hidden bg-white/95 dark:bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.12)] pointer-events-none z-20 before:content-[''] before:absolute before:left-1/2 before:-translate-x-1/2 before:top-0 before:border-l-[1.5px] before:border-r-[1.5px] before:border-b-[4px] before:border-l-transparent before:border-r-transparent before:border-b-white dark:before:border-b-white after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0 after:border-l-[1.5px] after:border-r-[1.5px] after:border-t-[4px] after:border-l-transparent after:border-r-transparent after:border-t-white dark:after:border-t-white"
-            :style="{ left: `calc(${defaultSliderPosition}% - 1.5px)` }"
-            aria-hidden="true"
-          ></div>
-
-          <!-- 自定义的滑块 -->
-          <div
-            class="absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-gray-100 rounded-full shadow-lg border-4 cursor-pointer transition-transform duration-100 ease-out hover:scale-105 z-30"
-            :class="{ 'scale-105': showTooltip }"
-            :style="{ left: `calc(${qualityValue}% - 14px)`, willChange: 'transform', borderColor: '#558ee1' }"
+            class="slider-thumb"
+            :class="{ 'is-active': showTooltip }"
+            :style="{ left: `calc(${qualityValue}% - 14px)` }"
           >
-             <!-- 滑块内部高光效果 -->
-             <div class="absolute inset-1 bg-gradient-to-br from-white to-gray-100 dark:from-gray-50 dark:to-gray-200 rounded-full opacity-60"></div>
-           </div>
-          
-          <!-- 气泡提示框 -->
-          <div 
-            class="absolute bottom-full mb-2 pointer-events-none transform -translate-x-1/2 z-10 transition duration-150 ease-out"
-            :class="{ 'opacity-100 translate-y-0 scale-100': showTooltip, 'opacity-0 -translate-y-1 scale-95': !showTooltip }"
-            :style="{ left: qualityValue + '%', willChange: 'transform, opacity' }"
+            <span class="thumb-core"></span>
+            <span class="thumb-ring"></span>
+          </div>
+          <div
+            class="slider-tooltip"
+            :class="{ 'slider-tooltip--visible': showTooltip }"
+            :style="{ left: qualityValue + '%' }"
           >
             <div class="tooltip-bubble">
               {{ currentParamDisplay }}
@@ -51,97 +41,60 @@
           </div>
         </div>
 
-        <!-- 透明的 range input 处理逻辑 -->
         <input
-          type="range"
           id="quality-slider"
-          v-model="qualityValue"
+          v-model.number="qualityValue"
+          type="range"
           min="2"
           max="98"
           step="1"
-          class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-40"
+          class="slider-input"
           @input="updateQualityState"
           @mouseenter="showTooltip = true"
           @mouseleave="showTooltip = false"
           @mousedown="showTooltip = true"
           @mouseup="showTooltip = false"
+          @touchstart.passive="showTooltip = true"
+          @touchend.passive="showTooltip = false"
         />
-        </div>
       </div>
-      
-      <!-- 高bit率选项 -->
-      <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-        <div class="flex justify-between items-center mb-3">
-          <label class="font-medium text-sm text-slate-600 dark:text-dark-secondary">{{ t('videoSettings.colorDepth') }}</label>
-          <div class="text-right">
-            <span class="font-medium text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-600">{{ bitDepthText }}</span>
-          </div>
+
+      <div class="pt-2 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ t('videoSettings.colorDepth') }}
+          </span>
+          <span class="text-xs text-slate-500 dark:text-slate-300">{{ bitDepthText }}</span>
         </div>
-        
-        <div class="flex gap-1.5">
-          <!-- 8bit按钮（默认） -->
+
+        <div class="grid grid-cols-3 gap-2">
           <button
-            @click="setBitDepth(8)"
-            :class="[
-              'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
-              selectedBitDepth === 8
-                ? 'text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]'
-            ]"
-            :style="selectedBitDepth === 8 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
+            v-for="depth in [8, 10, 12]"
+            :key="depth"
+            class="h-9 rounded-md border text-xs font-medium transition-colors"
+            :class="bitDepthButtonClass(depth)"
+            :disabled="!canUseDepth(depth)"
+            :title="bitDepthTooltip(depth)"
+            @click="setBitDepth(depth as 8 | 10 | 12)"
           >
-            8bit
-          </button>
-          
-          <!-- 10bit按钮 -->
-          <button
-            @click="setBitDepth(10)"
-            :disabled="!canUse10bit"
-            :title="!canUse10bit ? t('videoSettings.bitDepth10Unavailable') : ''"
-            :class="[
-              'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
-              selectedBitDepth === 10
-                ? 'text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
-              !canUse10bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-            ]"
-            :style="selectedBitDepth === 10 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
-          >
-            10bit
-          </button>
-          
-          <!-- 12bit按钮 -->
-          <button
-            @click="setBitDepth(12)"
-            :disabled="!canUse12bit"
-            :title="!canUse12bit ? t('videoSettings.bitDepth12Unavailable') : ''"
-            :class="[
-              'flex-1 h-8 px-3 rounded-md text-xs font-medium transition-all duration-150 border',
-              selectedBitDepth === 12
-                ? 'text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm active:scale-[0.98]',
-              !canUse12bit ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-            ]"
-            :style="selectedBitDepth === 12 ? { backgroundColor: '#558ee1', borderColor: '#558ee1' } : {}"
-          >
-            12bit
+            {{ depth }}bit
           </button>
         </div>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, inject, nextTick } from 'vue';
 import type { CompressionSettings } from '../../types';
-import { 
-  getQualityLevelIndex, 
-  getEncoderQualityParam, 
+import {
+  getEncoderQualityParam,
   getDefaultQualityParam,
-  QUALITY_LEVELS 
+  QUALITY_LEVELS
 } from '../../config/qualityMappings';
 import { useI18n } from 'vue-i18n';
-// 注入当前文件信息
+
 const currentFile = inject<{ value: any }>('currentFile');
 const { t } = useI18n();
 
@@ -150,87 +103,39 @@ interface Props {
   resolution?: string;
   isHardwareAccelerated?: boolean;
   currentVideoCodec?: string;
-}
-
-interface Emits {
-  'update:modelValue': [value: Partial<CompressionSettings>];
+  withCardShell?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isHardwareAccelerated: false,
-  currentVideoCodec: ''
+  currentVideoCodec: '',
+  withCardShell: true
 });
-const emit = defineEmits<Emits>();
 
-// 质量滑动条值 (0-100)
+const emit = defineEmits<{
+  'update:modelValue': [value: Partial<CompressionSettings>];
+}>();
+
+const shellClasses = computed(() =>
+  props.withCardShell
+    ? 'p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10'
+    : 'p-0 bg-transparent border-0 shadow-none'
+);
+
 const qualityValue = ref(80);
-
-// 默认值位置（根据当前编码器与硬件加速状态）
-const defaultSliderPosition = computed(() => {
-  const codec = props.currentVideoCodec || 'h264';
-  const isHW = props.isHardwareAccelerated || false;
-  const d = getDefaultQualityParam(codec, isHW);
-  return d.sliderValue;
-});
-
-// 由滑块驱动更新的标志，避免循环
-const isUpdatingFromSlider = ref(false);
-
-// 气泡提示框显示状态
 const showTooltip = ref(false);
-
-// bit深度相关
 const selectedBitDepth = ref<8 | 10 | 12>(8);
+const isInternalModelUpdate = ref(false);
 
-// bit深度文本显示
-const bitDepthText = computed(() => {
-  return `${selectedBitDepth.value}bit`;
-});
-
-// 是否可以使用10bit
-const canUse10bit = computed(() => {
-  const depth = getOriginalBitDepth();
-  return depth >= 10;
-});
-
-// 是否可以使用12bit
-const canUse12bit = computed(() => {
-  const depth = getOriginalBitDepth();
-  return depth >= 12;
-});
-
-
-
-// 设置bit深度
-const setBitDepth = (depth: 8 | 10 | 12) => {
-  const originalDepth = getOriginalBitDepth();
-  // 只能向下转换：禁止选择高于原始位深的目标位深
-  if (depth > originalDepth) return;
-
-  selectedBitDepth.value = depth;
-  
-  // 更新设置
-  const newSettings: Partial<CompressionSettings> = {
-    ...settings.value,
-    bitDepth: depth
-  };
-  
-  settings.value = newSettings;
-  emit('update:modelValue', settings.value);
-};
-
-// 解析视频原始bit深度（兼容字符串/数字），默认返回8
 const getOriginalBitDepth = (): number => {
   const val = currentFile?.value?.metadata?.colorDepth as unknown;
   if (typeof val === 'number') return val;
   if (!val) return 8;
   const s = String(val).toLowerCase();
-  // 优先匹配更高位深
   if (s.includes('16')) return 16;
   if (s.includes('12')) return 12;
   if (s.includes('10')) return 10;
   if (s.includes('8')) return 8;
-  // Regex兜底（提取第一个1-2位数字）
   const m = s.match(/(\d{1,2})/);
   if (m) {
     const n = parseInt(m[1], 10);
@@ -239,89 +144,55 @@ const getOriginalBitDepth = (): number => {
   return 8;
 };
 
-// 初始化设置
-const initializeSettings = () => {
-  const defaultParam = getDefaultQualityParam(
-    props.currentVideoCodec || 'h264',
-    props.isHardwareAccelerated || false
-  );
-  
-  const baseSettings: Partial<CompressionSettings> = {
-    qualityType: defaultParam.paramType as 'crf' | 'qv' | 'profile'
-  };
-  
-  // 根据参数类型设置对应的默认值
-  if (defaultParam.paramType === 'crf') {
-    baseSettings.crfValue = defaultParam.value as number;
-  } else if (defaultParam.paramType === 'qv') {
-    baseSettings.qvValue = defaultParam.value as number;
-  } else if (defaultParam.paramType === 'profile') {
-    baseSettings.profileValue = defaultParam.value as string;
+const originalBitDepth = computed(() => getOriginalBitDepth());
+const maxSupportedBitDepth = computed<8 | 10 | 12>(() => {
+  const value = originalBitDepth.value;
+  if (value >= 12) return 12;
+  if (value >= 10) return 10;
+  return 8;
+});
+const resolveBitDepth = (depth?: number | null): 8 | 10 | 12 => {
+  const candidates: Array<8 | 10 | 12> = [8, 10, 12];
+  if (depth && candidates.includes(depth as 8 | 10 | 12) && depth <= maxSupportedBitDepth.value) {
+    return depth as 8 | 10 | 12;
   }
-  
-  // 初始化bit深度 - 根据视频原始bit深度自动选择
-  const originalDepth = getOriginalBitDepth();
-  let initialBitDepth: 8 | 10 | 12;
-  if (originalDepth >= 12) {
-    initialBitDepth = 12;
-  } else if (originalDepth >= 10) {
-    initialBitDepth = 10;
-  } else {
-    initialBitDepth = 8;
-  }
-  
-  // 如果props中有指定的bitDepth，则使用props的值，否则使用初始化的值
-  const finalBitDepth = props.modelValue.bitDepth ?? initialBitDepth;
-  selectedBitDepth.value = finalBitDepth;
-  
-  return {
-    ...baseSettings,
-    bitDepth: finalBitDepth,
-    ...props.modelValue
-  };
+  const lowerCandidates = candidates.filter(d => d <= maxSupportedBitDepth.value);
+  return (lowerCandidates[lowerCandidates.length - 1] ?? 8) as 8 | 10 | 12;
 };
 
-const settings = ref<Partial<CompressionSettings>>(initializeSettings());
-
-// 从现有设置推导滑块值（记忆与回填）
 const deriveSliderFromModel = (): number => {
   const codec = props.currentVideoCodec || 'h264';
   const isHW = props.isHardwareAccelerated || false;
   const type = (props.modelValue.qualityType ?? getDefaultQualityParam(codec, isHW).paramType) as 'crf' | 'qv' | 'profile';
 
-  // 取目标参数值
   let target: number | string | undefined;
   if (type === 'crf') target = props.modelValue.crfValue;
   else if (type === 'qv') target = props.modelValue.qvValue;
   else target = props.modelValue.profileValue;
 
-  // 若无目标值，返回默认滑块
   if (target === undefined || target === null) {
-    const d = getDefaultQualityParam(codec, isHW);
-    return d.sliderValue;
+    return getDefaultQualityParam(codec, isHW).sliderValue;
   }
 
-  // profile 离散映射
   if (type === 'profile') {
-    const idx = ['proxy', 'lt', 'standard', 'hq', '4444'].indexOf(String(target).toLowerCase());
+    const profiles = ['proxy', 'lt', 'standard', 'hq', '4444'];
+    const idx = profiles.indexOf(String(target).toLowerCase());
     const clamped = idx >= 0 ? idx : 3;
     const level = QUALITY_LEVELS[clamped];
     return Math.round((level.range[0] + level.range[1]) / 2);
   }
 
-  // 数值型：遍历寻找最接近的滑块位置
   const targetNum = Number(target);
   if (Number.isNaN(targetNum)) {
-    const d = getDefaultQualityParam(codec, isHW);
-    return d.sliderValue;
+    return getDefaultQualityParam(codec, isHW).sliderValue;
   }
 
   let bestSlider = 60;
   let bestDelta = Number.POSITIVE_INFINITY;
   for (let s = 2; s <= 98; s++) {
-    const p = getEncoderQualityParam(codec, isHW, s);
-    if (p.paramType !== type) continue;
-    const v = Number(p.value);
+    const param = getEncoderQualityParam(codec, isHW, s);
+    if (param.paramType !== type) continue;
+    const v = Number(param.value);
     const delta = Math.abs(v - targetNum);
     if (delta < bestDelta) {
       bestDelta = delta;
@@ -332,170 +203,292 @@ const deriveSliderFromModel = (): number => {
   return bestSlider;
 };
 
-// 初始化滑动条值（优先根据已存在的modelValue推导）
-const initializeQualityValue = () => {
+const initializeSettings = () => {
+  const defaults = getDefaultQualityParam(props.currentVideoCodec || 'h264', props.isHardwareAccelerated || false);
+  const incomingDepth = props.modelValue.bitDepth as number | undefined;
+  selectedBitDepth.value = resolveBitDepth(incomingDepth);
+
   qualityValue.value = deriveSliderFromModel();
-};
 
-// 初始化
-initializeQualityValue();
-
-
-
-// 将滑动条值映射到质量描述文本
-const qualityText = computed(() => {
-  const value = qualityValue.value;
-  if (value <= 20) return t('videoSettings.qualityVeryLow'); // 2-20
-  if (value <= 40) return t('videoSettings.qualityLow');   // 21-40
-  if (value <= 60) return t('videoSettings.qualityMedium'); // 41-60
-  if (value <= 85) return t('videoSettings.qualityHigh');   // 61-85
-  return t('videoSettings.qualityVeryHigh');                  // 86-98
-});
-
-// 当前参数显示（用于气泡提示框）
-const currentParamDisplay = computed(() => {
-  const param = getEncoderQualityParam(
-    props.currentVideoCodec || 'h264',
-    props.isHardwareAccelerated || false,
-    qualityValue.value
-  );
-  
-  if (param.paramType === 'crf') {
-    return `CRF: ${param.value}`;
-  } else if (param.paramType === 'qv') {
-    return `-q:v ${param.value}`;
-  } else if (param.paramType === 'profile') {
-    return `Profile: ${param.value}`;
-  }
-  
-  return `${param.paramType}: ${param.value}`;
-});
-
-
-
-// 更新质量状态
-const updateQualityState = () => {
-  isUpdatingFromSlider.value = true;
-  // 更新滑动条填充百分比
-  const percentage = qualityValue.value;
-  const slider = document.getElementById('quality-slider') as HTMLInputElement;
-  if (slider) {
-    slider.style.setProperty('--value-percent', `${percentage}%`);
-  }
-  
-  // 获取当前编码器的质量参数（连续调节）
-  const param = getEncoderQualityParam(
-    props.currentVideoCodec || 'h264',
-    props.isHardwareAccelerated || false,
-    qualityValue.value
-  );
-  
-
-  
-  // 更新设置
-  const newSettings: Partial<CompressionSettings> = {
-    ...settings.value,
-    qualityType: param.paramType as 'crf' | 'qv' | 'profile'
+  return {
+    qualityType: defaults.paramType as 'crf' | 'qv' | 'profile',
+    bitDepth: selectedBitDepth.value,
+    ...props.modelValue
   };
-  
-  // 根据参数类型设置对应的值
-  if (param.paramType === 'crf') {
-    newSettings.crfValue = param.value as number;
-  } else if (param.paramType === 'qv') {
-    newSettings.qvValue = param.value as number;
-  } else if (param.paramType === 'profile') {
-    newSettings.profileValue = param.value as string;
-  }
-  
-  // 确保保留bitDepth字段
-  newSettings.bitDepth = settings.value.bitDepth || selectedBitDepth.value;
-  
-  settings.value = newSettings;
-  
-
-  
-  // 发送更新事件
-  emit('update:modelValue', settings.value);
-
-  // 下一帧再清除标志，避免本轮 props 回流触发二次推导
-  nextTick(() => { isUpdatingFromSlider.value = false; });
 };
 
-// 监听外部modelValue变化
-watch(() => props.modelValue, (newVal) => {
-  // 合并到内部设置
-  settings.value = { ...settings.value, ...newVal };
-  // 更新bit深度状态
-  if (newVal.bitDepth !== undefined) {
-    selectedBitDepth.value = newVal.bitDepth as 8 | 10 | 12;
-  }
-  // 若不是滑块主动触发的更新，则根据新的模型值推导滑块位置，实现“记忆”
-  if (!isUpdatingFromSlider.value) {
-    const derived = deriveSliderFromModel();
-    if (derived !== qualityValue.value) {
-      qualityValue.value = derived;
-    }
-  }
-}, { deep: true, immediate: true });
+const settings = ref<Partial<CompressionSettings>>(initializeSettings());
 
-// 监听当前文件位深变化，智能默认选择（仅当外部未指定bitDepth时）
-watch(() => currentFile?.value?.metadata?.colorDepth, () => {
-  if (props.modelValue.bitDepth !== undefined) return;
-  const d = getOriginalBitDepth();
-  const auto = d >= 12 ? 12 : d >= 10 ? 10 : 8;
-  if (auto !== selectedBitDepth.value) {
-    selectedBitDepth.value = auto;
-    settings.value = { ...settings.value, bitDepth: auto };
-    emit('update:modelValue', settings.value);
+const computeQualityMetadata = (sliderValue: number) => {
+  const value = sliderValue;
+  const defaults = getDefaultQualityParam(props.currentVideoCodec || 'h264', props.isHardwareAccelerated || false);
+  let labelKey = 'videoSettings.qualityVeryHigh';
+  if (value <= 20) labelKey = 'videoSettings.qualityVeryLow';
+  else if (value <= 40) labelKey = 'videoSettings.qualityLow';
+  else if (value <= 60) labelKey = 'videoSettings.qualityMedium';
+  else if (value <= 85) labelKey = 'videoSettings.qualityHigh';
+
+  const param = getEncoderQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false,
+    sliderValue
+  );
+
+  let hint = '';
+  if (param.paramType === 'crf') {
+    const defaultParam = getEncoderQualityParam(
+      props.currentVideoCodec || 'h264',
+      props.isHardwareAccelerated || false,
+      defaults.sliderValue
+    );
+    const delta = Number(param.value) - Number(defaultParam.value);
+    const magnitude = Math.abs(delta);
+    const direction = delta === 0 ? 'same' : delta < 0 ? 'better' : 'worse';
+    hint = t('videoSettings.qualityChange', {
+      delta: magnitude,
+      direction: direction === 'better'
+        ? t('videoSettings.qualityBetter')
+        : direction === 'worse'
+          ? t('videoSettings.qualityWorse')
+          : t('videoSettings.qualitySame')
+    });
+  } else if (param.paramType === 'profile') {
+    hint = t('videoSettings.profileHint', { profile: String(param.value).toUpperCase() });
+  } else if (param.paramType === 'qv') {
+    hint = t('videoSettings.qvHint', { value: param.value });
+  }
+
+  return {
+    labelKey,
+    param,
+    hint
+  };
+};
+
+// ===== 新增：模板所需的计算属性与方法 =====
+const defaultSliderPosition = computed(() => {
+  return getDefaultQualityParam(props.currentVideoCodec || 'h264', props.isHardwareAccelerated || false).sliderValue;
+});
+
+const qualityMeta = computed(() => computeQualityMetadata(qualityValue.value));
+const qualityText = computed(() => t(qualityMeta.value.labelKey));
+
+const currentParamDisplay = computed(() => {
+  const { param } = qualityMeta.value;
+  if (param.paramType === 'crf') return `CRF ${param.value}`;
+  if (param.paramType === 'qv') return `-q:v ${param.value}`;
+  if (param.paramType === 'profile') return `Profile ${String(param.value).toUpperCase()}`;
+  return '';
+});
+
+const bitDepthText = computed(() => `${selectedBitDepth.value}bit`);
+const bitDepthTooltip = (depth: number) => `${depth}bit`;
+
+const canUseDepth = (depth: number) => {
+  return [8, 10, 12].includes(depth) && depth <= maxSupportedBitDepth.value;
+};
+
+const setBitDepth = (depth: number) => {
+  if (![8, 10, 12].includes(depth) || !canUseDepth(depth)) return;
+  selectedBitDepth.value = depth as 8 | 10 | 12;
+  const updates: Partial<CompressionSettings> = {
+    ...settings.value,
+    bitDepth: selectedBitDepth.value
+  };
+  settings.value = updates;
+  isInternalModelUpdate.value = true;
+  emit('update:modelValue', updates);
+};
+
+const bitDepthButtonClass = (depth: number) => {
+  const isSelected = selectedBitDepth.value === depth;
+  const disabled = !canUseDepth(depth);
+  return [
+    isSelected
+      ? 'border-transparent text-white bg-[#6776ec] shadow-[0_16px_32px_-18px_rgba(103,118,236,0.65)]'
+      : 'border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 bg-white dark:bg-white/5',
+    disabled
+      ? 'opacity-45 cursor-not-allowed'
+      : 'hover:border-[#6776ec]/45 hover:text-[#6776ec] dark:hover:border-[#6776ec]/55 dark:hover:text-[#aeb6ff]'
+  ].join(' ');
+};
+
+const updateQualityState = () => {
+  const param = getEncoderQualityParam(
+    props.currentVideoCodec || 'h264',
+    props.isHardwareAccelerated || false,
+    qualityValue.value
+  );
+
+  const updates: Partial<CompressionSettings> = {
+    qualityType: param.paramType as 'crf' | 'qv' | 'profile',
+    bitDepth: selectedBitDepth.value
+  };
+
+  if (param.paramType === 'crf') {
+    updates.crfValue = Number(param.value);
+    updates.qvValue = undefined;
+    updates.profileValue = undefined;
+  } else if (param.paramType === 'qv') {
+    updates.qvValue = Number(param.value);
+    updates.crfValue = undefined;
+    updates.profileValue = undefined;
+  } else if (param.paramType === 'profile') {
+    updates.profileValue = String(param.value);
+    updates.crfValue = undefined;
+    updates.qvValue = undefined;
+  }
+
+  settings.value = { ...settings.value, ...updates };
+  isInternalModelUpdate.value = true;
+  emit('update:modelValue', settings.value);
+};
+
+// 同步外部传入的 modelValue 到内部状态
+watch(() => props.modelValue, () => {
+  if (isInternalModelUpdate.value) {
+    isInternalModelUpdate.value = false;
+    return;
+  }
+  selectedBitDepth.value = resolveBitDepth(props.modelValue.bitDepth as number | undefined);
+  qualityValue.value = deriveSliderFromModel();
+}, { deep: true });
+
+watch(maxSupportedBitDepth, (maxDepth) => {
+  if (selectedBitDepth.value > maxDepth) {
+    setBitDepth(maxDepth);
   }
 });
 
-// 监听编码器和硬件加速变化，重新初始化参数
-watch([() => props.currentVideoCodec, () => props.isHardwareAccelerated], () => {
-  // 重新初始化设置
-  settings.value = initializeSettings();
-  // 根据最新的（可能来自外部记忆的）值推导滑块
-  const derived = deriveSliderFromModel();
-  qualityValue.value = derived;
-  // 同步一次状态
-  updateQualityState();
-}, { immediate: false });
-
-// 监听质量值变化
-watch(qualityValue, updateQualityState);
-
-// 组件挂载时初始化滑动条状态
-onMounted(() => {
-  updateQualityState();
+onMounted(async () => {
+  await nextTick();
+  isInternalModelUpdate.value = true;
+  emit('update:modelValue', settings.value);
 });
-
-
 
 </script>
 
 <style scoped>
-/* 隐藏原生 range 输入框的滑块 */
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none; 
-  width: 0;
-  height: 0;
+.slider-shell {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
 }
-
-input[type="range"]::-moz-range-thumb {
-  width: 0;
-  height: 0;
-  border: 0;
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+.slider-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.25), transparent 65%);
+  pointer-events: none;
+}
+.dark .slider-track {
+  background: rgba(71, 85, 105, 0.45);
+  box-shadow: inset 0 1px 1px rgba(2, 6, 23, 0.55);
+}
+.slider-default-marker {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 70%;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, rgba(79, 70, 229, 0.82), rgba(129, 140, 248, 0.72));
+  pointer-events: none;
+  opacity: 0.95;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.dark .slider-default-marker {
+  background: linear-gradient(180deg, rgba(234, 236, 244, 0.92), rgba(148, 163, 184, 0.7));
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5);
+  opacity: 1;
+}
+.slider-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(99, 102, 241, 0.92);
+  transition: width 0.18s cubic-bezier(0.33, 1, 0.68, 1);
+  box-shadow: 0 10px 22px -16px rgba(99, 102, 241, 0.45);
+}
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+.slider-thumb.is-active {
+  transform: translateY(-50%) scale(1.08);
+  filter: brightness(1.05);
+}
+.thumb-core {
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: #6366f1;
+  border: none;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+.dark .thumb-core {
+  background: rgba(99, 102, 241, 0.92);
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.7);
+}
+.thumb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(99, 102, 241, 0.32);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.slider-thumb.is-active .thumb-ring {
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: none;
+}
+.slider-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(6px) scale(0.96);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.slider-tooltip--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+.slider-input {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 40;
+  touch-action: none;
 }
 .tooltip-bubble {
   position: relative;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  background: rgba(15, 23, 42, 0.96);
   color: white;
   font-size: 11px;
   line-height: 1;
   padding: 6px 8px;
   border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(148, 163, 184, 0.25);
   white-space: nowrap;
 }
@@ -505,16 +498,14 @@ input[type="range"]::-moz-range-thumb {
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  width: 0; height: 0;
+  width: 0;
+  height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid rgba(30, 41, 59, 0.96);
+  border-top: 6px solid rgba(15, 23, 42, 0.96);
 }
 :deep(.dark) .tooltip-bubble {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.96));
+  background: rgba(2, 6, 23, 0.96);
   border-color: rgba(100, 116, 139, 0.25);
-}
-:deep(.dark) .tooltip-bubble::after {
-  border-top-color: rgba(15, 23, 42, 0.96);
 }
 </style>

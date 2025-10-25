@@ -50,6 +50,14 @@ import { useI18n } from 'vue-i18n';
 import { useTaskStateController } from './composables/useTaskStateController';
 const { t } = useI18n();
 
+// Tauri 环境检测与对话框兜底
+const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+const safeConfirm = async (message: string, options?: { title?: string; okLabel?: string; cancelLabel?: string }) => {
+  if (isTauri) {
+    try { return await confirm(message, options); } catch { /* ignore */ }
+  }
+  return Promise.resolve(window.confirm(message));
+};
 // 全局缓存清理函数
 const clearAllCaches = () => {
   // 清理VideoPreview组件的全局缓存
@@ -115,7 +123,9 @@ const handlePauseTask = async (taskId: string) => {
   const task = tasks.value.find(t => t.id === taskId);
   if (!task || task.status !== 'processing') return;
   try {
-    await invoke('pause_task', { taskId });
+    if (isTauri) {
+      await invoke('pause_task', { taskId });
+    }
   } catch (e) {
     const msg = String(e);
     if (msg.includes('Process was interrupted') || msg.includes('not found')) {
@@ -345,23 +355,37 @@ const onReset = () => {
 };
 
 // 批量压缩处理函数
-const handleBatchCompress = async () => {
+const handleBatchCompress = async (taskIds?: string[]) => {
   if (isProcessingBatch.value) {
     // 如果正在批量处理，则停止
     stopBatchCompression();
     return;
   }
-  
-  // 获取当前选中任务类型
-  const selectedTask = currentFile.value && tasks.value.find(t => t.file.id === currentFile.value?.id);
-  const selectedTaskType = selectedTask?.type || null;
-  
-  if (!selectedTaskType) {
+
+  let filteredTasks: CompressionTask[] = [];
+  if (Array.isArray(taskIds) && taskIds.length > 0) {
+    const idSet = new Set(taskIds);
+    filteredTasks = tasks.value.filter(t => idSet.has(t.id));
+  } else {
+    // 获取当前选中任务类型
+    const currentFileTask = currentFile.value && tasks.value.find(t => t.file.id === currentFile.value?.id);
+    const targetType = currentFileTask?.type || null;
+    if (!targetType) {
+      return;
+    }
+    filteredTasks = tasks.value.filter(t => t.type === targetType);
+  }
+
+  if (filteredTasks.length === 0) {
     return;
   }
-  
-  // 仅限定于相同类型的任务
-  const filteredTasks = tasks.value.filter(t => t.type === selectedTaskType);
+
+  const resolvedTargetType = Array.isArray(taskIds) && taskIds.length > 0
+    ? filteredTasks[0]?.type || null
+    : (selectedTask.value?.type || filteredTasks[0]?.type || null);
+  if (resolvedTargetType) {
+    filteredTasks = filteredTasks.filter(t => t.type === resolvedTargetType);
+  }
 
   // 仅当存在 pending 时才启动批量
   const hasPending = filteredTasks.some(t => t.status === 'pending');
@@ -404,6 +428,10 @@ const handleUndoCompress = async () => {
   const task = selectedTask.value;
 
   try {
+    const defaultSettings: CompressionSettings = task.type === 'video'
+      ? taskSettingsStore.getDefaultVideoSettings()
+      : taskSettingsStore.getDefaultImageSettings();
+
     // 1. 删除压缩后的文件(如果存在)
     if (task.file.compressedPath) {
       try {
@@ -431,6 +459,7 @@ const handleUndoCompress = async () => {
       compressedSize: 0,
       startedAt: undefined,
       completedAt: undefined,
+      settings: { ...defaultSettings },
       file: {
         ...task.file,
         compressedPath: undefined,
@@ -440,11 +469,22 @@ const handleUndoCompress = async () => {
 
     // 4. 更新任务store
     taskStore.updateTask(updatedTask);
+    taskSettingsStore.setTaskSettings(task.id, updatedTask.settings);
 
     // 5. 更新当前文件的显示
     if (currentFile.value && currentFile.value.id === task.file.id) {
       currentFile.value = {
         ...currentFile.value,
+        compressedPath: undefined,
+        compressedUrl: undefined
+      };
+    }
+
+    const selectedIndex = selectedFiles.value.findIndex((file: any) => file.id === task.file.id);
+    if (selectedIndex !== -1) {
+      const targetFile = selectedFiles.value[selectedIndex];
+      selectedFiles.value[selectedIndex] = {
+        ...targetFile,
         compressedPath: undefined,
         compressedUrl: undefined
       };
@@ -471,7 +511,13 @@ const updateTask = (updatedTask: CompressionTask) => {
 };
 
 // 处理任务选中
-const selectTask = (taskId: string) => {
+const selectTask = (taskId: string | null) => {
+  if (!taskId) {
+    taskStore.selectedTaskId = null;
+    switchToTask(null);
+    applyTaskTimeRangeToUI(null);
+    return;
+  }
   taskStore.selectTask(taskId);
   switchToTask(taskId);
   // 将该任务的时间段设置应用到右下角时间段UI
@@ -494,7 +540,7 @@ const handleResumeCompression = async (taskId: string) => {
       if (isProcessingBatch.value) {
         const processingTask = tasks.value.find(t => t.status === 'processing');
         if (processingTask) {
-          try { await invoke('pause_task', { taskId: processingTask.id }); } catch {}
+          try { if (isTauri) { await invoke('pause_task', { taskId: processingTask.id }); } } catch {}
           const updatedTask = { ...processingTask, status: 'paused' as const };
           updateTask(updatedTask);
         }
@@ -565,17 +611,6 @@ watch(
   { immediate: true }
 );
 
-// 删除压缩文件的公共函数
-const deleteCompressedFile = async (task: CompressionTask) => {
-  if (globalSettingsStore.deleteCompressedFileOnTaskDelete && task.file.compressedPath) {
-    try {
-      await invoke('remove_file', { path: task.file.compressedPath });
-    } catch (error) {
-      console.error('Failed to delete compressed file:', error);
-    }
-  }
-};
-
 // 清空所有任务
 const handleClearAllTasks = async () => {
   const activeTasks = tasks.value.filter(task => 
@@ -584,7 +619,7 @@ const handleClearAllTasks = async () => {
   
   if (activeTasks.length > 0) {
     // 如果有活跃任务，显示确认对话框
-    const confirmed = await confirm(
+    const confirmed = await safeConfirm(
       t('taskList.clearAllTasksConfirmActive', { count: activeTasks.length }),
       {
         title: t('common.confirm'),
@@ -598,7 +633,7 @@ const handleClearAllTasks = async () => {
     }
   } else if (tasks.value.length > 0) {
     // 如果只有已完成或失败的任务，简单确认
-    const confirmed = await confirm(
+    const confirmed = await safeConfirm(
       t('taskList.clearAllTasksConfirmSimple'),
       {
         title: t('common.confirm'),
@@ -615,7 +650,7 @@ const handleClearAllTasks = async () => {
   // 停止所有活跃任务
   for (const task of activeTasks) {
     try {
-      if (task.status === 'processing' || task.status === 'paused') {
+      if (isTauri && (task.status === 'processing' || task.status === 'paused')) {
         await invoke('pause_task', { taskId: task.id });
       }
     } catch (error) {
@@ -630,22 +665,25 @@ const handleClearAllTasks = async () => {
   const allTaskIds = [...tasks.value.map(t => t.id)];
   for (const taskId of allTaskIds) {
     try {
-      await invoke('delete_task', { taskId });
-      
-      // 删除压缩文件
-      const task = tasks.value.find(t => t.id === taskId);
-      if (task) {
-        await deleteCompressedFile(task);
+      if (isTauri) {
+        await invoke('delete_task', { taskId });
       }
-      
+
       deleteTask(taskId);
     } catch (error) {
       // Failed to delete task during clear all
     }
   }
-  
+
   // 重置选中状态
   taskStore.selectedTaskId = null;
+  switchToTask(null);
+  resetUploader();
+  applyTaskTimeRangeToUI(null);
+  clearAllCaches();
+  if (appLayoutRef.value && typeof (appLayoutRef.value as any).refreshPreview === 'function') {
+    (appLayoutRef.value as any).refreshPreview();
+  }
 };
 
 // 组件挂载时初始化
@@ -654,7 +692,9 @@ onMounted(async () => {
   await globalSettingsStore.initialize();
   
   // 预加载硬件编码器支持，避免后续切换视频时卡顿
-  await invoke('get_hardware_encoder_support');
+  if (isTauri) {
+    try { await invoke('get_hardware_encoder_support'); } catch {}
+  }
   
   // 添加应用关闭时的缓存清理
   window.addEventListener('beforeunload', clearAllCaches);
@@ -696,4 +736,3 @@ watch(tasks, (newTasks) => {
 onUnmounted(() => {
   try { clearBatchSettingsCache(); } catch {}
 });
-

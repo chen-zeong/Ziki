@@ -1,29 +1,41 @@
 <template>
   <div id="drop-zone" class="transition-all duration-300">
-    <h3 class="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">{{ $t('common.upload') }}</h3>
-    <div 
-      class="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-8 sm:p-12 text-center transition-colors duration-300 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-gray-800/50 cursor-pointer"
+    <div
+      class="relative flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300/70 bg-transparent px-10 py-16 text-center transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]/45 dark:border-white/15"
       :class="{
-        'border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-gray-800/50': isDragOver
+        'border-[var(--brand-primary)]/70 bg-[var(--brand-primary)]/5 dark:bg-white/5': isDragOver
       }"
+      role="button"
+      tabindex="0"
       @click="triggerFileInput"
+      @keydown.enter.prevent="triggerFileInput"
+      @keydown.space.prevent="triggerFileInput"
+      @dragenter.prevent="handleDragOver"
       @dragover.prevent="handleDragOver"
       @dragleave.prevent="handleDragLeave"
       @drop="handleDrop"
     >
-      <CloudUpload class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-      <p class="mt-4 text-gray-600 dark:text-gray-300">
-        <span class="font-semibold text-amber-600 dark:text-amber-400">{{ $t('fileUpload.selectFiles') }}</span> {{ $t('fileUpload.subtitle') }}
-      </p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 whitespace-pre-line max-w-md leading-relaxed">{{ $t('fileUpload.supportedFormats') }}</p>
-      <input 
-        ref="fileInputRef"
-        type="file" 
-        class="hidden" 
-        multiple 
-        accept="video/*,image/*"
-        @change="handleFileSelect"
-      >
+      <div class="flex w-full max-w-2xl flex-col items-center gap-6">
+        <div class="inline-flex items-center gap-3 rounded-full border border-slate-200/70 px-6 py-3 text-base font-semibold text-slate-500 transition-colors duration-200 hover:border-[var(--brand-primary)]/60 hover:text-[var(--brand-primary)] dark:border-white/12 dark:text-slate-200 dark:hover:border-[var(--brand-primary)]/50">
+          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white shadow-sm">
+            <CloudUpload class="h-5 w-5" />
+          </span>
+          <span>{{ $t('fileUpload.dragHere') }}</span>
+        </div>
+
+        <p class="max-w-xl text-xs font-medium uppercase tracking-[0.22em] text-slate-400 whitespace-pre-line dark:text-slate-500">
+          {{ $t('fileUpload.supportedFormats') }}
+        </p>
+
+        <input
+          ref="fileInputRef"
+          type="file"
+          class="hidden"
+          multiple
+          accept="video/*,image/*"
+          @change="handleFileSelect"
+        >
+      </div>
     </div>
   </div>
 </template>
@@ -102,7 +114,14 @@ const handleDragOver = () => {
   isDragOver.value = true;
 };
 
-const handleDragLeave = () => {
+const handleDragLeave = (event?: DragEvent) => {
+  if (event) {
+    const current = event.currentTarget as HTMLElement | null;
+    const related = event.relatedTarget as Node | null;
+    if (current && related && current.contains(related)) {
+      return;
+    }
+  }
   isDragOver.value = false;
 };
 

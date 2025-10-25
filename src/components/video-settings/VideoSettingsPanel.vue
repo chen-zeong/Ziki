@@ -1,28 +1,34 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col transition-all duration-300">
     <!-- 参数设置内容 -->
     <div class="flex-grow overflow-hidden text-sm">
       <div class="h-full relative">
         <!-- 已完成任务时的交互遮罩 -->
         <div v-if="isSettingsLocked" class="absolute inset-0 z-10 cursor-not-allowed" style="background: transparent;"></div>
         <!-- 基础设置内容 -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-60': isSettingsLocked }">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-50': isSettingsLocked }">
           <div class="space-y-4">
             <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" :hide-quality="true" />
           </div>
           <div class="space-y-4">
-            <!-- 画质设置 -->
-            <QualitySettings 
-              v-model="qualitySettings" 
-              :resolution="formatSettings.resolution"
-              :is-hardware-accelerated="hardwareSettings.value === 'gpu'"
-              :current-video-codec="formatSettings.videoCodec"
-            />
-            <!-- 硬件加速设置 -->
-            <HardwareAccelerationSettings 
-              v-model="hardwareSettings" 
-              :current-video-codec="formatSettings.videoCodec"
-            />
+            <div class="rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 p-4 transition-all duration-300 space-y-6">
+              <!-- 画质设置 -->
+              <QualitySettings 
+                v-model="qualitySettings" 
+                :resolution="formatSettings.resolution"
+                :is-hardware-accelerated="hardwareSettings.value === 'gpu'"
+                :current-video-codec="formatSettings.videoCodec"
+                :with-card-shell="false"
+              />
+              <div class="space-y-5">
+                <!-- 硬件加速设置 -->
+                <HardwareAccelerationSettings 
+                  v-model="hardwareSettings" 
+                  :current-video-codec="formatSettings.videoCodec"
+                  :with-card-shell="false"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -67,10 +73,15 @@ interface Props {
   videoPath?: string;
   taskStatus?: string;
   isProcessingBatch?: boolean;
+  // 新增：时间段设置
+  timeRangeSettings?: any;
 }
 
 interface Emits {
   compress: [settings: CompressionSettings];
+  // 新增：向父组件透传时间段设置与校验状态
+  'update:timeRangeSettings': [settings: any];
+  'time-validation-change': [isValid: boolean];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -126,8 +137,6 @@ const detectPlatform = async () => {
   }
 };
 
-const isTimeValid = ref(true);
-
 // 处理画质设置更新，避免循环依赖
 const handleQualitySettingsUpdate = (newQualitySettings: Partial<CompressionSettings>) => {
   // 使用Object.assign来更新，避免直接赋值
@@ -158,7 +167,7 @@ const applySettingsFromTask = (s: CompressionSettings | null | undefined) => {
   // 硬件加速
   const accel = s.hardwareAcceleration ?? 'cpu';
   hardwareSettings.value = accel === 'gpu' 
-    ? { value: 'gpu', name: platform.value === 'macos' ? '显卡加速' : 'GPU加速' }
+    ? { value: 'gpu', name: platform.value === 'macos' ? '显卡' : 'GPU加速' }
     : { value: 'cpu', name: 'CPU编码' };
 };
 

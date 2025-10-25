@@ -4,21 +4,47 @@
 
 /* CSS变量定义 */
 :root {
-  --slider-bg-color: #558ee1;
+  --brand-primary: #5162ff;
+  --brand-primary-soft: rgba(81, 98, 255, 0.12);
+  --brand-secondary: #7c4dff;
+  --brand-accent: #4fe3c1;
+  --brand-muted: #eef2ff;
+  --brand-surface: #f7f9ff;
+  --brand-border: rgba(82, 106, 255, 0.15);
+  --slider-bg-color: var(--brand-primary);
 }
 
 .dark {
+  --brand-primary: #7a8bff;
+  --brand-primary-soft: rgba(122, 139, 255, 0.2);
+  --brand-secondary: #a18bff;
+  --brand-accent: #4fe3c1;
+  --brand-muted: rgba(110, 120, 255, 0.12);
+  --brand-surface: #15161c;
+  --brand-border: rgba(110, 128, 255, 0.2);
   --slider-bg-color: #e5e7eb;
 }
 
 /* 让根元素填满窗口，并在亮/暗主题下使用一致的背景色，避免窗口边缘露出默认黑底 */
-html, body, #app {
+html,
+body,
+#app {
   width: 100%;
   height: 100dvh; /* 使用动态视口高度，避免 Windows 拉伸时出现 1px 缝隙 */
-  background-color: #f5f5f5; /* 与 Header/Footer 一致的浅灰 */
+  background-image:
+    radial-gradient(960px 540px at 8% 12%, rgba(81, 98, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(600px 360px at 92% 8%, rgba(79, 227, 193, 0.18) 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(180deg, #ffffff 0%, var(--brand-surface) 100%);
+  background-color: var(--brand-surface);
 }
-.dark html, .dark body, .dark #app {
-  background-color: #1e1e1e; /* 与暗色背景一致 */
+.dark html,
+.dark body,
+.dark #app {
+  background-image:
+    radial-gradient(1100px 620px at 12% 16%, rgba(122, 139, 255, 0.25) 0%, rgba(0, 0, 0, 0) 60%),
+    radial-gradient(720px 420px at 85% 10%, rgba(79, 227, 193, 0.2) 0%, rgba(0, 0, 0, 0) 55%),
+    linear-gradient(180deg, #0f1016 0%, #161821 100%);
+  background-color: #0f1016; /* 与暗色背景一致 */
 }
 
 body {
@@ -47,7 +73,116 @@ html {
   display: none;
 }
 
+/* 玻璃态通用卡片样式（不改变布局结构） */
+.glass-panel {
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 18px 35px rgba(17, 24, 39, 0.08);
+}
+.dark .glass-panel {
+  background: rgba(19, 22, 32, 0.55);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 35px rgba(3, 7, 18, 0.6);
+}
 
+/* 柔和投影, 轻微浮动状态 */
+.soft-shadow {
+  box-shadow: 0 14px 30px rgba(79, 83, 210, 0.08);
+}
+
+.hover-lift {
+  transition: transform 180ms ease, box-shadow 220ms ease, background 220ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px rgba(81, 98, 255, 0.18);
+}
+
+.header-icon-button {
+  position: relative;
+  height: 24px;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #475569;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.22s ease;
+  outline: none;
+}
+.header-icon-button:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: #1e293b;
+}
+.header-icon-button.is-active {
+  transform: scale(1.05);
+  background: rgba(99, 102, 241, 0.14);
+  color: #4338ca;
+}
+.header-icon-button:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline-offset: 2px;
+}
+.dark .header-icon-button {
+  color: #cbd5f5;
+}
+.dark .header-icon-button:hover {
+  background: rgba(100, 116, 139, 0.2);
+  color: #f8fafc;
+}
+.dark .header-icon-button.is-active {
+  background: rgba(129, 140, 248, 0.24);
+  color: #e0e7ff;
+}
+.dark .header-icon-button:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.5);
+}
+
+/* 选择高亮 */
+::selection {
+  background: rgba(81, 98, 255, 0.3);
+  color: #0f172a;
+}
+.dark ::selection {
+  background: rgba(122, 139, 255, 0.28);
+  color: #e5e7eb;
+}
+
+/* Windows header alignment */
+.windows-header {
+  padding-right: 0;
+  align-items: stretch;
+}
+
+.windows-header .header-actions {
+  margin-top: 0 !important;
+  height: 100%;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.windows-header .header-actions > *:not(.win-controls-separator) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.windows-header .header-actions .header-icon-button {
+  height: 32px;
+  width: 32px;
+  border-radius: 0.6rem;
+}
+
+.windows-header .header-actions .header-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 弹层动画（与 <transition name="fade-up"> 配合） */
+.fade-up-enter-active, .fade-up-leave-active { transition: all 180ms ease; transform-origin: bottom right; }
+.fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(8px) scale(0.98); }
 
 /* Comparison slider styles */
 .comparison-slider {
@@ -78,7 +213,7 @@ html {
   transform: translateX(-50%);
   width: 4px;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.85);
   cursor: ew-resize;
   z-index: 10;
 }
@@ -90,12 +225,13 @@ html {
   transform: translate(-50%, -50%);
   width: 44px;
   height: 44px;
-  background-color: white;
+  background-image: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  color: white;
+  box-shadow: 0 10px 24px rgba(81, 98, 255, 0.35);
   transition: transform 0.2s ease;
 }
 
@@ -125,4 +261,26 @@ input, textarea, select, [contenteditable="true"] {
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
   -ms-user-select: text !important;
+}
+
+/* 通用按钮样式 */
+.pill-button {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(81, 98, 255, 0.28);
+  transition: transform 140ms ease, box-shadow 200ms ease, opacity 160ms ease;
+}
+
+.pill-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(81, 98, 255, 0.32);
+}
+
+.pill-button:disabled {
+  opacity: 0.55;
+  background: rgba(148, 163, 184, 0.6);
+  box-shadow: none;
+}
+.multi-select-active .checkbox-wrapper button {
+  box-shadow: 0 8px 20px rgba(81, 98, 255, 0.16);
 }

@@ -1,20 +1,22 @@
 <template>
-  <div v-if="props.videoPath" class="frame-selector flex justify-center">
-    <div class="flex items-center gap-2 px-3 py-1">
-      <div 
-        v-for="index in 10" 
+  <div v-if="props.videoPath" class="frame-selector flex items-center justify-center">
+    <div class="frame-selector__pill">
+      <button
+        v-for="index in 10"
         :key="index"
-        class="w-8 h-1.5 rounded-full cursor-pointer transition-all duration-200"
-        :class="{
-          'bg-gray-300 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500': selectedFrame !== index - 1
-        }"
-        :style="{
-          backgroundColor: selectedFrame === index - 1 ? '#faa539' : ''
-        }"
-        @click="selectFrame(index - 1)"
         :title="`第 ${index} 帧`"
+        type="button"
+        class="frame-selector__tick"
+        :class="{
+          'is-active': selectedFrame === index - 1,
+          'is-hover': hoveredIndicator === index - 1 && selectedFrame !== index - 1
+        }"
+        @mouseenter="handleHover(index - 1)"
+        @mouseleave="handleHover(null)"
+        @click="selectFrame(index - 1)"
       >
-      </div>
+        <span class="frame-selector__bar"></span>
+      </button>
     </div>
   </div>
 </template>
@@ -45,6 +47,7 @@ const emit = defineEmits<Emits>();
 
 // 帧选择器状态
 const selectedFrame = ref<number | null>(props.selectedFrame ?? 0);
+const hoveredIndicator = ref<number | null>(null);
 
 // 选择帧
 const selectFrame = (frameIndex: number) => {
@@ -75,6 +78,10 @@ const selectFrame = (frameIndex: number) => {
   emit('frameSelected', frameIndex);
 };
 
+const handleHover = (frameIndex: number | null) => {
+  hoveredIndicator.value = frameIndex;
+};
+
 // 监听视频路径变化
 watch(() => props.videoPath, (newPath) => {
   if (!newPath) {
@@ -91,3 +98,74 @@ watch(() => props.selectedFrame, (newFrame) => {
   selectedFrame.value = newFrame;
 });
 </script>
+
+<style scoped>
+.frame-selector {
+  padding: 6px 4px;
+}
+.frame-selector__pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.frame-selector__tick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  appearance: none;
+  transition: transform 0.22s ease, filter 0.22s ease;
+}
+
+.frame-selector__tick:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.4);
+  outline-offset: 2px;
+}
+
+.frame-selector__tick.is-hover,
+.frame-selector__tick:hover {
+  transform: none;
+}
+
+.frame-selector__bar {
+  display: block;
+  width: 26px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.55);
+  transition: background 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+}
+
+.frame-selector__tick.is-hover .frame-selector__bar,
+.frame-selector__tick:hover .frame-selector__bar {
+  background: rgba(148, 163, 184, 0.85);
+}
+
+.frame-selector__tick.is-active .frame-selector__bar {
+  background: rgba(99, 102, 241, 0.95);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.32);
+  transform: scaleX(1.05);
+}
+
+:global(.dark) .frame-selector__bar {
+  background: rgba(148, 163, 184, 0.55);
+}
+
+:global(.dark) .frame-selector__tick.is-hover .frame-selector__bar,
+:global(.dark) .frame-selector__tick:hover .frame-selector__bar {
+  background: rgba(226, 232, 240, 0.8);
+}
+
+:global(.dark) .frame-selector__tick.is-active .frame-selector__bar {
+  background: rgba(129, 140, 248, 0.92);
+  box-shadow: 0 14px 26px rgba(129, 140, 248, 0.38);
+}
+</style>
