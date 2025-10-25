@@ -17,7 +17,7 @@
 
     <div class="flex-1 overflow-y-auto px-4 pb-4 transition-all duration-200">
       <div v-if="tasks.length === 0" class="flex h-full items-center justify-center px-4">
-        <div class="w-full max-w-lg rounded-2xl border border-dashed border-slate-300/70 px-10 py-14 text-center dark:border-white/15">
+        <div class="w-full max-w-lg rounded-2xl px-10 py-14 text-center">
           <p class="text-2xl font-semibold tracking-wide text-slate-400 dark:text-slate-500">
             {{ $t('taskList.noTasks') }}
           </p>

@@ -180,11 +180,6 @@ html {
   height: 16px;
 }
 
-.windows-header .header-preview-toggle {
-  height: 32px;
-  align-self: center;
-}
-
 /* 弹层动画（与 <transition name="fade-up"> 配合） */
 .fade-up-enter-active, .fade-up-leave-active { transition: all 180ms ease; transform-origin: bottom right; }
 .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(8px) scale(0.98); }

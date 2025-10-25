@@ -12,11 +12,9 @@ import WindowsTitlebarControls from '../components/window/WindowsTitlebarControl
 const globalSettings = useGlobalSettingsStore();
 
 const isWindows = ref(false);
-const platformChecked = ref(false);
-const previewWindowsControls = ref(false);
 let appWindow: TauriWindow | null = null;
 
-const shouldShowWindowsControls = computed(() => isWindows.value || previewWindowsControls.value);
+const shouldShowWindowsControls = computed(() => isWindows.value);
 
 // 从父组件接收输出路径和弹窗显隐
 interface Props {
@@ -35,7 +33,6 @@ onMounted(async () => {
   // 仅在 Tauri 环境下检查平台并隐藏原生标题栏（Windows）
   const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
   if (!isTauri) {
-    platformChecked.value = true;
     return;
   }
 
@@ -53,7 +50,6 @@ onMounted(async () => {
     const platform = await invoke<string>('get_platform');
     isWindows.value = platform === 'windows';
     if (isWindows.value) {
-      previewWindowsControls.value = false;
       try {
         await appWindow.setDecorations(false);
       } catch (e) {
@@ -63,15 +59,12 @@ onMounted(async () => {
   } catch (e) {
     console.warn('Failed to detect platform or initialize app window:', e);
   } finally {
-    platformChecked.value = true;
+    // no-op
   }
 });
 
 const toggleOutputFolderPopup = () => emit('toggle-output-folder-popup');
 const handleOutputPathUpdate = (path: string) => emit('output-path-update', path);
-const togglePreviewWindowsControls = () => {
-  previewWindowsControls.value = !previewWindowsControls.value;
-};
 
 const separatorStyle = computed(() => ({
   backgroundColor: globalSettings.isDarkMode ? 'rgba(255, 255, 255, 0.65)' : 'rgba(17, 24, 39, 0.22)',
@@ -129,17 +122,6 @@ const separatorStyle = computed(() => ({
         <LogPanel />
       </div>
       
-      <button
-        v-if="platformChecked && !isWindows"
-        class="header-preview-toggle"
-        :class="{ active: previewWindowsControls }"
-        type="button"
-        @click="togglePreviewWindowsControls"
-      >
-        <span class="preview-dot" aria-hidden="true" />
-        <span>{{ previewWindowsControls ? $t('window.previewToggleOn') : $t('window.previewToggleOff') }}</span>
-      </button>
-
       <LanguageSwitcher />
       <button 
         :class="['header-icon-button', 'theme-toggle', { 'windows-theme': shouldShowWindowsControls }]"
@@ -200,55 +182,4 @@ const separatorStyle = computed(() => ({
   border-radius: 9999px;
 }
 
-.header-preview-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.35rem 0.65rem;
-  border-radius: 9999px;
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: rgba(17, 24, 39, 0.72);
-  background-color: rgba(17, 24, 39, 0.06);
-  transition: background-color 160ms ease, color 160ms ease;
-  line-height: 1;
-}
-
-.header-preview-toggle:hover {
-  background-color: rgba(17, 24, 39, 0.12);
-}
-
-.header-preview-toggle:active {
-  background-color: rgba(17, 24, 39, 0.18);
-}
-
-.header-preview-toggle.active {
-  color: #2563eb;
-  background-color: rgba(37, 99, 235, 0.12);
-}
-
-.header-preview-toggle .preview-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background-color: currentColor;
-}
-
-:global(.dark) .header-preview-toggle {
-  color: rgba(226, 232, 240, 0.74);
-  background-color: rgba(148, 163, 184, 0.12);
-}
-
-:global(.dark) .header-preview-toggle:hover {
-  background-color: rgba(148, 163, 184, 0.2);
-}
-
-:global(.dark) .header-preview-toggle:active {
-  background-color: rgba(148, 163, 184, 0.26);
-}
-
-:global(.dark) .header-preview-toggle.active {
-  color: #93c5fd;
-  background-color: rgba(37, 99, 235, 0.32);
-}
 </style>

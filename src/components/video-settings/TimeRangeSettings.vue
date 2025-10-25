@@ -33,6 +33,20 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
+                selectedQuickOption === 'random15s'
+                  ? 'bg-[var(--brand-primary)] text-white'
+                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
+                isRandomButtonDisabled('random15s') ? 'opacity-50 cursor-not-allowed' : ''
+              ]"
+              @click="selectQuickOption('random15s')"
+              :disabled="!enableTimeRange || isRandomButtonDisabled('random15s')"
+            >
+              {{ $t('videoSettings.random15s') }}
+            </button>
+            <button
+              type="button"
+              class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
+              :class="[
                 selectedQuickOption === 'random30s'
                   ? 'bg-[var(--brand-primary)] text-white'
                   : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
@@ -47,29 +61,15 @@
               type="button"
               class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
               :class="[
-                selectedQuickOption === 'random1m'
+                selectedQuickOption === 'random60s'
                   ? 'bg-[var(--brand-primary)] text-white'
                   : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
-                isRandomButtonDisabled('random1m') ? 'opacity-50 cursor-not-allowed' : ''
+                isRandomButtonDisabled('random60s') ? 'opacity-50 cursor-not-allowed' : ''
               ]"
-              @click="selectQuickOption('random1m')"
-              :disabled="!enableTimeRange || isRandomButtonDisabled('random1m')"
+              @click="selectQuickOption('random60s')"
+              :disabled="!enableTimeRange || isRandomButtonDisabled('random60s')"
             >
-              {{ $t('videoSettings.random1min') }}
-            </button>
-            <button
-              type="button"
-              class="flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors"
-              :class="[
-                selectedQuickOption === 'random5m'
-                  ? 'bg-[var(--brand-primary)] text-white'
-                  : 'bg-white dark:bg-white/5 text-slate-600 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 hover:border-[var(--brand-primary)]/30',
-                isRandomButtonDisabled('random5m') ? 'opacity-50 cursor-not-allowed' : ''
-              ]"
-              @click="selectQuickOption('random5m')"
-              :disabled="!enableTimeRange || isRandomButtonDisabled('random5m')"
-            >
-              {{ $t('videoSettings.random5min') }}
+              {{ $t('videoSettings.random60s') }}
             </button>
           </div>
         </div>
@@ -212,12 +212,12 @@ const updateQuickOptionFromTimeRange = () => {
   // 如果开始时间是00:00:00，检查结束时间是否匹配快速选项
   if (startTime === '00:00:00') {
     const endSeconds = timeToSeconds(endTime);
-    if (endSeconds === 30) {
+    if (endSeconds === 15) {
+      selectedQuickOption.value = 'random15s';
+    } else if (endSeconds === 30) {
       selectedQuickOption.value = 'random30s';
     } else if (endSeconds === 60) {
-      selectedQuickOption.value = 'random1m';
-    } else if (endSeconds === 300) {
-      selectedQuickOption.value = 'random5m';
+      selectedQuickOption.value = 'random60s';
     } else {
       selectedQuickOption.value = null;
     }
@@ -257,12 +257,12 @@ const isRandomButtonDisabled = (option: string): boolean => {
   const videoDuration = props.metadata.duration;
   
   switch (option) {
+    case 'random15s':
+      return videoDuration < 15;
     case 'random30s':
       return videoDuration < 30;
-    case 'random1m':
+    case 'random60s':
       return videoDuration < 60;
-    case 'random5m':
-      return videoDuration < 300;
     default:
       return false;
   }
@@ -288,14 +288,14 @@ const selectQuickOption = (option: string) => {
   let duration: number;
   
   switch (option) {
+    case 'random15s':
+      duration = 15;
+      break;
     case 'random30s':
       duration = 30;
       break;
-    case 'random1m':
+    case 'random60s':
       duration = 60;
-      break;
-    case 'random5m':
-      duration = 300;
       break;
     default:
       return;

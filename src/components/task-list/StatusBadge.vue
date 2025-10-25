@@ -1,13 +1,13 @@
 <template>
   <span
-    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border transition-colors"
+    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-colors"
     :class="badgeClass"
   >
     <component :is="iconMap[status]" class="w-3.5 h-3.5" />
     <span v-if="label">{{ label }}</span>
     <span
       v-if="progressLabel"
-      class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tracking-tight shadow-sm transition-colors"
+      class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tracking-tight shadow-sm transition-colors"
       :class="progressBadgeClass"
     >
       {{ progressLabel }}
@@ -87,7 +87,7 @@ const progressBadgeClass = computed(() => {
       return 'bg-emerald-100/70 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200';
     }
     if (props.trend === 'up') {
-      return 'bg-rose-100/70 text-rose-600 dark:bg-rose-400/20 dark:text-rose-200';
+      return 'bg-emerald-100/70 text-rose-600 dark:bg-emerald-400/20 dark:text-rose-200';
     }
     return 'bg-slate-100/75 text-slate-600 dark:bg-white/12 dark:text-slate-200';
   }

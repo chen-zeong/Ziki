@@ -23,24 +23,14 @@
          >
        </div>
        
-       <!-- 文字标签 - 只在任务完成时显示 -->
-       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg白色/20 text白色 px-2 py-1 rounded text-sm z-20 ">
-         {{ $t('videoComparison.original') }}
-       </div>
-       <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg白色/20 text白色 px-2 py-1 rounded text-sm z-20">
-         {{ $t('videoComparison.compressed') }}
-       </div>
-       
-
-
        <!-- 放大镜图标 -->
        <button 
           @click="toggleFullscreen"
-          class="absolute bottom-4 right-4 backdrop-blur-md bg白色/20 hover:bg白色/30 text白色 p-2 rounded-full transition-all duration-200"
+          class="absolute bottom-4 right-4 backdrop-blur-md bg白色/20 hover:bg白色/30 text-white dark:text-white p-2 rounded-full transition-all duration-200"
           title="全屏查看"
           style="z-index: 50; pointer-events: auto;"
         >
-          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
           </svg>
         </button>
@@ -103,34 +93,21 @@
                   class="w-full h-full object-contain"
                 >
               </div>
-              
-              
-              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 left-4 backdrop-blur-md bg白色/20 text白色 px-3 py-2 rounded text-base z-20">
-                {{ $t('videoComparison.original') }}
+              <div v-if="props.videoPath" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style="pointer-events: auto;">
+                <div class="fullscreen-frame-selector-wrapper flex justify-center">
+                  <div class="flex items-center gap-2 backdrop-blur-lg bg白色/20 px-4 py-2 rounded-full border border白色/40 shadow-[0_16px_30px_rgba(15,23,42,0.18)]">
+                    <FrameSelector
+                      class="fullscreen-frame-selector"
+                      :video-path="props.videoPath"
+                      :selected-frame="selectedFrameIndex"
+                      :time-range="props.timeRange"
+                      :task-id="props.taskId"
+                      :compressed-video-path="props.compressedVideoFilePath"
+                      @frame-selected="handleFullscreenFrameSelected"
+                    />
+                  </div>
+                </div>
               </div>
-              <div v-if="props.taskStatus === 'completed'" class="absolute top-4 right-4 backdrop-blur-md bg白色/20 text白色 px-3 py-2 rounded text-base z-20">
-                {{ $t('videoComparison.compressed') }}
-              </div>
-              
-              
-               <div v-if="props.videoPath" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30" style="pointer-events: auto;">
-                 <div class="frame-selector flex justify-center">
-                   <div class="flex items-center gap-2 backdrop-blur-lg bg白色/20 px-4 py-2 rounded-full border border白色/40 shadow-[0_16px_30px_rgba(15,23,42,0.18)]">
-                     <div 
-                       v-for="index in 10" 
-                       :key="index"
-                       class="w-6 h-1.5 rounded-full cursor-pointer transition-all duration-200 bg白色/50"
-                       :style="{
-                         backgroundColor: selectedFrameIndex === index - 1 ? 'var(--brand-accent)' : ''
-                       }"
-                       @click="selectFrame(index - 1)"
-                       :title="`第 ${index} 帧`"
-                       style="pointer-events: auto;"
-                     >
-                     </div>
-                   </div>
-                 </div>
-               </div>
                
               
               <div v-if="props.taskStatus === 'completed'" class="fullscreen-slider-line" @mousedown="startFullscreenDragging">
@@ -158,6 +135,7 @@ import { useComparison } from '../composables/useComparison';
 import { invoke } from '@tauri-apps/api/core';
 import { useVideoPreviewStore } from '../stores/useVideoPreviewStore';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import FrameSelector from './FrameSelector.vue';
 
 interface Props {
   title?: string;
@@ -520,6 +498,10 @@ const selectFrame = async (index: number) => {
   }
 };
 
+const handleFullscreenFrameSelected = (index: number) => {
+  void selectFrame(index);
+};
+
 // 组件挂载时的初始化逻辑
 onMounted(() => {
   console.log('VideoPreview mounted:', { videoPath: props.videoPath, beforeImage: !!props.beforeImage, afterImage: !!props.afterImage });
@@ -856,6 +838,14 @@ defineExpose({
   z-index: 15;
   border-radius: 3px;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.fullscreen-frame-selector-wrapper {
+  pointer-events: auto;
+}
+
+:deep(.fullscreen-frame-selector.frame-selector) {
+  padding: 0;
 }
 
 .fullscreen-slider .fullscreen-slider-handle {

@@ -32,10 +32,16 @@
 
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium text-slate-700 dark:text-slate-100 truncate" :title="task.file.name">{{ task.file.name }}</p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
             {{ formatFileSize(task.file.size || task.originalSize) }}
-            <span v-if="task.status === 'completed' && task.compressedSize" class="ml-2 text-slate-400 dark:text-slate-500">
-              → {{ formatFileSize(task.compressedSize) }}
+            <span
+              v-if="task.status === 'completed' && task.compressedSize"
+              class="inline-flex items-center gap-2"
+            >
+              <span>→ {{ formatFileSize(task.compressedSize) }}</span>
+              <span v-if="estimatedFullSizeLabel" class="estimated-size-pill">
+                {{ estimatedFullSizeLabel }}
+              </span>
             </span>
           </p>
         </div>
@@ -292,14 +298,56 @@ const handleThumbnailError = (event: Event) => {
   img.style.display = 'none';
 };
 
+const estimatedFullSize = computed(() => {
+  if (props.task.type !== 'video' || props.task.status !== 'completed') return null;
+  const timeRange = props.task.settings?.timeRange;
+  if (!timeRange) return null;
+
+  const originalDuration = props.task.file.metadata?.duration;
+  if (!originalDuration || !Number.isFinite(originalDuration) || originalDuration <= 0) return null;
+
+  const compressedSizeSource = props.task.compressedSize ?? props.task.file.compressedSize;
+  const compressedSize = compressedSizeSource === undefined || compressedSizeSource === null ? null : Number(compressedSizeSource);
+  if (!compressedSize || !Number.isFinite(compressedSize) || compressedSize <= 0) return null;
+
+  const start = typeof timeRange.start === 'number' && Number.isFinite(timeRange.start) ? Math.max(timeRange.start, 0) : 0;
+  const end = typeof timeRange.end === 'number' && Number.isFinite(timeRange.end) ? Math.max(timeRange.end, 0) : null;
+
+  let rangeDuration: number | null = null;
+  if (end !== null) {
+    rangeDuration = Math.max(end - start, 0);
+  }
+
+  if (!rangeDuration || rangeDuration <= 0) {
+    const compressedDuration = props.task.compressedMetadata?.duration;
+    if (compressedDuration && Number.isFinite(compressedDuration) && compressedDuration > 0) {
+      rangeDuration = compressedDuration;
+    }
+  }
+
+  if (!rangeDuration || rangeDuration <= 0) return null;
+  if (rangeDuration >= originalDuration * 0.95) return null;
+
+  const estimate = (compressedSize / rangeDuration) * originalDuration;
+  if (!Number.isFinite(estimate) || estimate <= 0) return null;
+  return estimate;
+});
+
+const estimatedFullSizeLabel = computed(() => {
+  if (!estimatedFullSize.value) return '';
+  return formatFileSize(estimatedFullSize.value);
+});
+
 const compressionChange = computed(() => {
   if (props.task.status !== 'completed') return null;
   const original = Number(props.task.originalSize ?? props.task.file.size ?? 0);
   const compressedSource = props.task.compressedSize ?? props.task.file.compressedSize;
   const compressed = compressedSource === undefined || compressedSource === null ? null : Number(compressedSource);
   if (!original || !Number.isFinite(original) || original <= 0) return null;
-  if (compressed === null || !Number.isFinite(compressed)) return null;
-  const delta = ((compressed - original) / original) * 100;
+  const estimatedSize = estimatedFullSize.value;
+  const comparisonSize = estimatedSize && Number.isFinite(estimatedSize) && estimatedSize > 0 ? estimatedSize : compressed;
+  if (comparisonSize === null || comparisonSize === undefined || !Number.isFinite(comparisonSize) || comparisonSize <= 0) return null;
+  const delta = ((comparisonSize - original) / original) * 100;
   if (!Number.isFinite(delta)) return null;
   const magnitude = Math.abs(delta);
   if (magnitude < 0.1) {
@@ -410,6 +458,22 @@ const failureHint = computed(() => t('taskList.statusFailed'));
 </script>
 
 <style scoped>
+.estimated-size-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.dark .estimated-size-pill {
+  background: rgba(129, 140, 248, 0.22);
+  color: rgba(219, 234, 254, 0.92);
+}
 .task-card {
   position: relative;
   isolation: isolate;

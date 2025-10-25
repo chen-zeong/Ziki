@@ -226,9 +226,9 @@ const videoCodecOptions = computed(() => {
 // 获取视频编码标签
 const getVideoCodecTags = (codec: string): string[] => {
   const c = (codec || '').toUpperCase();
-  if (c.includes('H.264') || c === 'H264') return [t('videoSettings.tagHighCompatibility'), t('videoSettings.tagPopular')];
-  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return [t('videoSettings.tagHighEfficiency'), t('videoSettings.tagTenBitSupport')];
-  if (c.includes('AV1')) return [t('videoSettings.tagMoreEfficient'), t('videoSettings.tagComplexEncoding')];
+  if (c.includes('H.264') || c === 'H264') return [t('videoSettings.tagPopular')];
+  if (c.includes('H.265') || c.includes('HEVC') || c === 'H265') return [t('videoSettings.tagTenBitSupport')];
+  if (c.includes('AV1')) return [t('videoSettings.tagMoreEfficient')];
   if (c.includes('VP9')) return ['Web', 'Google'];
   if (c.includes('VP8')) return ['Web', t('videoSettings.tagLegacy')];
   if (c.includes('PRORES')) return [t('videoSettings.tagProfessional'), t('videoSettings.tagApple')];

@@ -70,9 +70,9 @@ export default {
     first30s: '前30秒',
     first1min: '前1分钟',
     middle30s: '中间30秒',
+    random15s: '随机15秒',
     random30s: '随机30秒',
-    random1min: '随机1分钟',
-    random5min: '随机5分钟',
+    random60s: '随机60秒',
     endTimePlaceholder: '留空表示到视频末尾',
     timeRangeHint: '提示：结束时间设为 00:00:00 或留空表示处理到视频末尾',
     hardwareAcceleration: '硬件加速',
@@ -128,12 +128,9 @@ export default {
     height: '高度',
     lockAspectRatio: '等比例缩放',
     selectResolution: '选择分辨率',
-    tagHighCompatibility: '高兼容性',
     tagPopular: '流行',
-    tagHighEfficiency: '高效',
     tagTenBitSupport: '支持10bit',
     tagMoreEfficient: '更高效',
-    tagComplexEncoding: '编码复杂',
     tagLegacy: '传统',
     tagProfessional: '专业',
     tagApple: '苹果',
@@ -148,7 +145,6 @@ export default {
     tagOutdated: '过时',
     tagHighQualityImage: '高质量动态图片',
     tagMainstream: '主流',
-    tagStrongCompatibility: '兼容性强',
     tagAppleEcosystem: 'Apple生态',
     tagMultiTrackSubtitle: '多音轨字幕',
     tagOldFormat: '老牌格式',
@@ -231,7 +227,7 @@ export default {
     fileNameFormat: '输出文件名格式',
     optionOriginal: '原文件名',
     optionWithTime: '+时间',
-    optionWithRandom: '+随机编号',
+    optionWithRandom: '+编号',
     descOriginal: '保持原始文件名',
     descWithTime: '文件名_20240101_120000',
     descWithRandom: '文件名_abc123'
@@ -333,8 +329,6 @@ export default {
     minimize: '最小化',
     maximizeRestore: '最大化/还原',
     maximize: '最大化',
-    close: '关闭',
-    previewToggleOff: '预览 Win 控件',
-    previewToggleOn: '退出 Win 控件预览'
+    close: '关闭'
   }
 };

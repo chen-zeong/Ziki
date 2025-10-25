@@ -488,7 +488,7 @@ onBeforeUnmount(() => {
 }
 .dark .hardware-inner--embedded {
   border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(24, 30, 43, 0.88);
+  background: #262624;
 }
 .fade-up-enter-active,
 .fade-up-leave-active {

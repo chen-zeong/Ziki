@@ -111,7 +111,7 @@ export function useVideoFormats() {
   const getFormatTags = (key: string): string[] => {
     const t = i18n.global.t;
     switch (key) {
-      case 'mp4': return [t('videoSettings.tagMainstream'), t('videoSettings.tagStrongCompatibility')];
+      case 'mp4': return [t('videoSettings.tagMainstream')];
       case 'mov': return [t('videoSettings.tagAppleEcosystem')];
       case 'mkv': return [t('videoSettings.tagOpenSource'), t('videoSettings.tagMultiTrackSubtitle')];
       case 'avi': return [t('videoSettings.tagOldFormat'), t('videoSettings.tagLargeSize')];

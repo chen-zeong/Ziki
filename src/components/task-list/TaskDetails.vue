@@ -171,26 +171,14 @@ const updatePopoverPosition = async () => {
     const minLeft = viewportLeft + 16;
     popoverLeft.value = Math.max(minLeft, Math.min(desiredLeft, maxLeft));
 
-    const anchorTop = rect.top + viewportTop;
-    const anchorBottom = rect.bottom + viewportTop;
-    const anchorCenter = anchorTop + rect.height / 2;
-    const verticalOffset = Math.min(Math.max(rect.height * 0.3, 28), 96);
-    let desiredCenter = anchorCenter - verticalOffset;
+    const margin = 32;
     if (height > 0) {
-      const margin = 24;
-      const safeTop = viewportTop + margin + height / 2;
-      const safeBottom = viewportBottom - margin - height / 2;
-      const availableBelow = viewportBottom - margin - anchorBottom;
-      const shortage = Math.max(0, height / 2 - availableBelow);
-      if (shortage > 0) {
-        const smoothing = Math.min(Math.max(shortage * 0.45, 18), 72);
-        desiredCenter -= shortage + smoothing;
-      }
-      const maxAnchorAlignedCenter = anchorTop - 16 + height / 2;
-      desiredCenter = Math.min(desiredCenter, maxAnchorAlignedCenter);
-      popoverTop.value = Math.max(safeTop, Math.min(desiredCenter, safeBottom));
+      const desiredTop = viewportTop + 80;
+      const minTop = viewportTop + margin;
+      const maxTop = Math.max(minTop, viewportBottom - margin - height);
+      popoverTop.value = Math.min(Math.max(desiredTop, minTop), maxTop);
     } else {
-      popoverTop.value = desiredCenter;
+      popoverTop.value = viewportTop + Math.max(80, margin);
     }
 
     isAnchored.value = true;
@@ -430,12 +418,15 @@ const hasAfterData = computed(() =>
   position: absolute;
   pointer-events: auto;
   width: min(360px, calc(100vw - 48px));
+  min-height: 340px;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 22px 44px -26px rgba(15, 23, 42, 0.32);
   padding: 16px 0 0;
   backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
   transform-origin: top left;
 }
 .dark .task-detail-popover {
@@ -510,6 +501,7 @@ const hasAfterData = computed(() =>
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1 1 auto;
 }
 .detail-table {
   display: flex;
