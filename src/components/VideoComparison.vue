@@ -1,93 +1,94 @@
 <template>
-  <!-- 预览窗口 -->
-  <div
-    class="relative w-full aspect-[5/3] lg:aspect-[25/16] rounded-2xl bg-white dark:bg-[#181b23] flex items-center justify-center transition-all duration-300"
-  >
-    <VideoPreview
-      ref="videoPreviewRef"
-      :title="title"
-      :before-image="beforeImage"
-      :after-image="afterImage"
-      :video-path="videoPath"
-      :compressed-video-path="compressedVideoPath"
-      :compressed-video-file-path="compressedVideoFilePath"
-      :task-status="taskStatus"
-      :task-id="taskId"
-      :time-range="timeRange"
-
-      @reset="$emit('reset')"
-      @update-images="handleUpdateImages"
-    />
-  </div>
-  
-  <!-- 帧选择器（仅视频显示） -->
-  <div v-if="videoPath" class="mt-0.5 mb-1 flex items-center justify-center w-full gap-3.5">
-    <div class="relative flex-shrink-0">
-      <button
-        type="button"
-        class="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200/70 dark:border-white/15 bg-white dark:bg-[#1b2130] text-slate-600 dark:text-slate-200 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-[#222a3b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
-        :aria-pressed="showTimeRange"
-        :aria-label="t('videoComparison.timeRange') || 'Time range'"
-        @click.stop="toggleTimeRange"
-        ref="timeRangeButtonRef"
-      >
-        <Scissors class="w-4 h-4" />
-      </button>
-      <Transition name="time-range-pop">
-        <div
-          v-if="showTimeRange"
-          class="time-range-dropdown absolute left-full top-0 ml-3 z-30 w-[min(22rem,calc(100vw-4rem))] origin-left rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#222221] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
-          @click.stop
-          ref="timeRangeDropdownRef"
-        >
-          <TimeRangeSettings
-            :modelValue="timeRangeSettings"
-            :metadata="currentVideoMetadata"
-            @update:modelValue="handleTimeRangeUpdate"
-            @validationChange="handleTimeValidation"
-          />
-        </div>
-      </Transition>
-    </div>
-    <div class="flex-1 flex justify-center items-center py-0">
-      <FrameSelector
+  <div class="flex h-full flex-col overflow-hidden" :class="videoPath ? 'gap-4' : 'gap-6'">
+    <!-- 预览窗口 -->
+    <div
+      class="relative w-full aspect-[5/3] lg:aspect-[25/16] rounded-2xl bg-white dark:bg-[#181b23] flex items-center justify-center transition-all duration-300 flex-none"
+    >
+      <VideoPreview
+        ref="videoPreviewRef"
+        :title="title"
+        :before-image="beforeImage"
+        :after-image="afterImage"
         :video-path="videoPath"
-        :selected-frame="selectedFrame"
-        :time-range="timeRange"
+        :compressed-video-path="compressedVideoPath"
+        :compressed-video-file-path="compressedVideoFilePath"
+        :task-status="taskStatus"
         :task-id="taskId"
-        :compressed-video-path="compressedVideoFilePath"
-        @frame-selected="handleFrameSelected"
+        :time-range="timeRange"
+
+        @reset="$emit('reset')"
+        @update-images="handleUpdateImages"
       />
     </div>
-  </div>
-  
-  <!-- 设置区域 -->
-  <div
-    class="h-2/5 flex flex-col gap-4 transition-all duration-300"
-    :class="videoPath ? '' : 'mt-2'"
-  >
-    <template v-if="videoPath">
-      <VideoSettingsPanel
-        ref="settingsPanelRef"
-        :video-path="videoPath"
-        :is-processing="isProcessing"
-        :is-processing-batch="isProcessingBatch"
-        :task-status="taskStatus"
-        :time-range-settings="timeRangeSettings"
-        @compress="handleCompress"
-        @update:timeRangeSettings="$emit('update:timeRangeSettings', $event)"
-        @time-validation-change="$emit('time-validation-change', $event)"
-      />
-    </template>
-    <template v-else>
-      <ImageSettingsPanel
-        ref="settingsPanelRef"
-        :is-processing="isProcessing"
-        :is-processing-batch="isProcessingBatch"
-        :task-status="taskStatus"
-        @compress="handleCompress"
-      />
-    </template>
+    
+    <!-- 帧选择器（仅视频显示） -->
+    <div v-if="videoPath" class="flex items-center justify-center w-full gap-3.5 flex-none">
+      <div class="relative flex-shrink-0">
+        <button
+          type="button"
+          class="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200/70 dark:border-white/15 bg-white dark:bg-[#1b2130] text-slate-600 dark:text-slate-200 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-[#222a3b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/50"
+          :aria-pressed="showTimeRange"
+          :aria-label="t('videoComparison.timeRange') || 'Time range'"
+          @click.stop="toggleTimeRange"
+          ref="timeRangeButtonRef"
+        >
+          <Scissors class="w-4 h-4" />
+        </button>
+        <Transition name="time-range-pop">
+          <div
+            v-if="showTimeRange"
+            class="time-range-dropdown absolute left-full top-0 ml-3 z-30 w-[min(22rem,calc(100vw-4rem))] origin-left rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#222221] px-4 py-3 shadow-[0_24px_45px_rgba(15,23,42,0.18)] dark:shadow-[0_24px_48px_rgba(0,0,0,0.65)]"
+            @click.stop
+            ref="timeRangeDropdownRef"
+          >
+            <TimeRangeSettings
+              :modelValue="timeRangeSettings"
+              :metadata="currentVideoMetadata"
+              @update:modelValue="handleTimeRangeUpdate"
+              @validationChange="handleTimeValidation"
+            />
+          </div>
+        </Transition>
+      </div>
+      <div class="flex-1 flex justify-center items-center py-0">
+        <FrameSelector
+          :video-path="videoPath"
+          :selected-frame="selectedFrame"
+          :time-range="timeRange"
+          :task-id="taskId"
+          :compressed-video-path="compressedVideoFilePath"
+          @frame-selected="handleFrameSelected"
+        />
+      </div>
+    </div>
+    
+    <!-- 设置区域 -->
+    <div
+      class="flex-1 min-h-0 flex flex-col gap-4 transition-all duration-300 overflow-auto"
+    >
+      <template v-if="videoPath">
+        <VideoSettingsPanel
+          ref="settingsPanelRef"
+          :video-path="videoPath"
+          :is-processing="isProcessing"
+          :is-processing-batch="isProcessingBatch"
+          :task-status="taskStatus"
+          :time-range-settings="timeRangeSettings"
+          @compress="handleCompress"
+          @update:timeRangeSettings="$emit('update:timeRangeSettings', $event)"
+          @time-validation-change="$emit('time-validation-change', $event)"
+        />
+      </template>
+      <template v-else>
+        <ImageSettingsPanel
+          ref="settingsPanelRef"
+          :is-processing="isProcessing"
+          :is-processing-batch="isProcessingBatch"
+          :task-status="taskStatus"
+          @compress="handleCompress"
+        />
+      </template>
+    </div>
   </div>
 </template>
 <script setup lang="ts">
