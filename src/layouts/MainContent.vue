@@ -154,7 +154,7 @@ defineExpose({
   <!-- 主内容区域 -->
   <main class="flex-grow flex overflow-hidden pr-6 gap-6 bg-transparent dark:bg-[#181917] transition-all duration-300" style="pointer-events: auto;">
     <!-- 左侧面板: 任务队列 -->
-    <div class="flex h-full w-1/3 max-w-[420px]">
+    <div class="relative z-20 flex h-full w-1/3 max-w-[420px]">
       <div class="flex-1 flex flex-col overflow-hidden bg-white/95 dark:bg-[#181917] border-r border-slate-200/60 dark:border-white/10 backdrop-blur-sm">
         <div class="flex-1 flex flex-col overflow-hidden">
           <div
