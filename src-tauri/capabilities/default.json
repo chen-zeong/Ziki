@@ -28,6 +28,18 @@
         { "name": "bin/ffmpeg", "sidecar": true },
         { "name": "bin/ffprobe", "sidecar": true }
       ]
+    },
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "**" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "**" }]
     }
   ]
 }

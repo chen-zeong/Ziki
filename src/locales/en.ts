@@ -267,7 +267,8 @@ Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     compressionFailed: 'Compression failed',
     fileNotFound: 'File not found',
     invalidTimeRange: 'Invalid time range',
-    networkError: 'Network error'
+    networkError: 'Network error',
+    outputPathUnavailable: 'Output folder is not accessible. Please reselect or check permissions.\nPath: {path}'
   },
 
   // Success Messages

@@ -8,6 +8,7 @@ import { useLogStore } from '../stores/useLogStore';
 import type { VideoFile, CompressionTask, CompressionSettings, CompressionResult, VideoMetadata } from '../types';
 import i18n from '../i18n';
 import { join, normalize } from '@tauri-apps/api/path';
+import { mkdir, exists } from '@tauri-apps/plugin-fs';
 
 
 
@@ -495,7 +496,20 @@ export function useFileHandler() {
 
     let outDir = outputDirectory || task.outputDirectory;
     if (!outDir) { try { outDir = await invoke<string>('get_desktop_path'); } catch {} }
-    if (outDir) { const live2 = taskStore.getTaskById(task.id) || task; taskStore.updateTask({ ...live2, outputDirectory: outDir }); }
+    if (outDir) {
+      try {
+        const dirExists = await exists(outDir);
+        if (!dirExists) {
+          await mkdir(outDir, { recursive: true });
+          console.log('[OUTPUT_DIR] Recreated missing output directory:', outDir);
+        }
+      } catch (ensureErr) {
+        console.error('[OUTPUT_DIR] Failed to ensure output directory', ensureErr);
+        throw new Error(i18n.global.t('errors.outputPathUnavailable', { path: outDir }) as string);
+      }
+      const live2 = taskStore.getTaskById(task.id) || task;
+      taskStore.updateTask({ ...live2, outputDirectory: outDir });
+    }
 
     const isImageTask = task.type === 'image';
     const lowerFormat = String((settings as any)?.format || '').toLowerCase();

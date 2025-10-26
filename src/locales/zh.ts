@@ -267,7 +267,8 @@ export default {
     compressionFailed: '压缩失败',
     fileNotFound: '文件未找到',
     invalidTimeRange: '无效的时间范围',
-    networkError: '网络错误'
+    networkError: '网络错误',
+    outputPathUnavailable: '输出文件夹不可用，请重新选择或检查权限。\n路径：{path}'
   },
 
   // 成功信息
