@@ -3,7 +3,7 @@
     <!-- 视频预览功能 -->
   <div 
     ref="sliderRef"
-    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-xl border-4 border-sky-300/80 dark:border-[#2c353e]"
+    class="comparison-slider w-full h-full bg-slate-950/95 dark:bg-black relative overflow-hidden rounded-lg"
     v-show="!isFullscreen"
       :style="{ '--position': `${sliderPosition}%` }"
     >
@@ -62,14 +62,15 @@
           
           <button 
             @click="closeFullscreen" 
-            class="absolute top-2 right-2 z-50 w-9 h-9 rounded-full flex items-center justify-center bg白色/60 dark:bg白色/10 border border白色/70 dark:border白色/20 backdrop-blur-lg transition-all duration-300 hover:scale-110 hover:rotate-90 hover:bg白色/80 dark:hover:bg白色/20 shadow"
-            title="关闭全屏 (ESC)"
+            class="absolute top-6 right-6 z-[60] h-10 w-10 rounded-full bg-white/90 dark:bg-white/10 text-slate-700 dark:text-white/90 hover:bg-white dark:hover:bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/60 dark:border-white/20 shadow-[0_10px_22px_rgba(0,0,0,0.25)]"
+            title="退出全屏"
           >
-            <svg class="w-4 h-4 text-blue-500 dark:text白色" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
           
+          <!-- 全屏内容略 -->
           <div class="relative w-full h-full p-3 flex items-center justify-center">
             
             <div 
@@ -778,6 +779,21 @@ defineExpose({
   backdrop-filter: blur(4px);
 }
 
+/* 边框覆盖层：让边框显示在视频上方（浅色模式降低透明度） */
+.comparison-slider::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.75rem; /* rounded-lg 对应 12px */
+  border: 4px solid rgba(125, 211, 252, 0.8); /* sky-300/60: 降低透明度 */
+  box-shadow: inset 0 0 0 0 rgba(0,0,0,0);
+  pointer-events: none;
+  z-index: 12; /* 高于图片，低于滑块手柄 */
+}
+.dark .comparison-slider::after {
+  border-color: #2c353e;
+}
+
 /* 全屏预览样式 */
 .comparison-slider img {
   max-width: 100%;
@@ -794,7 +810,7 @@ defineExpose({
   height: 100%;
   background: white;
   cursor: ew-resize;
-  z-index: 15;
+  z-index: 1; /* 下调，避免遮挡弹窗 */
   border-radius: 2px;
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
@@ -814,6 +830,7 @@ defineExpose({
   box-shadow: 0 6px 20px rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.15);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1.5px solid rgba(255,255,255,0.25);
+  z-index: 14; /* 位于边框之上 */
 }
 
 .comparison-slider .slider:hover .slider-handle {
@@ -835,7 +852,7 @@ defineExpose({
   height: 100%;
   background: white;
   cursor: ew-resize;
-  z-index: 15;
+  z-index: 1; /* 下调，避免遮挡弹窗 */
   border-radius: 3px;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
 }
@@ -863,6 +880,7 @@ defineExpose({
   box-shadow: 0 8px 25px rgba(0,0,0,0.3), 0 0 0 4px rgba(255,255,255,0.2);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid rgba(255,255,255,0.3);
+  z-index: 14; /* 位于边框之上 */
 }
 
 .fullscreen-slider .fullscreen-slider-line:hover .fullscreen-slider-handle {

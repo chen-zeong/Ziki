@@ -78,7 +78,7 @@ defineExpose({
   <div class="w-full h-[100dvh] min-h-[100dvh] bg-transparent dark:bg-transparent flex flex-col overflow-hidden transition-colors duration-300">
     <!-- 顶部标题栏（改为绝对定位覆盖层，透明背景，不占据布局高度） -->
     <HeaderBar 
-      class="absolute top-0 left-0 right-0 z-10"
+      class="absolute top-0 left-0 right-0 z-[2000]"
       :output-path="props.outputPath"
       :show-output-folder-popup="props.showOutputFolderPopup"
       @toggle-output-folder-popup="emit('toggle-output-folder-popup')"
