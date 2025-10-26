@@ -281,7 +281,7 @@ const onTrackClick = (ev: MouseEvent) => {
   position: absolute;
   right: 0;
   margin-top: 8px;
-  width: min(480px, calc(100vw - 40px));
+  width: min(400px, calc(100vw - 40px));
   z-index: 1050;
 }
 .log-popover {
