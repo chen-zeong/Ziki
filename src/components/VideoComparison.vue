@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full flex-col overflow-hidden" :class="videoPath ? 'gap-4' : 'gap-6'">
+  <div class="flex h-full flex-col overflow-hidden" :class="videoPath ? 'gap-3' : 'gap-6'">
     <!-- 预览窗口 -->
     <div
       class="relative w-full aspect-[25/16] rounded-xl bg-white dark:bg-[#181b23] flex items-center justify-center overflow-hidden transition-all duration-300 flex-none"

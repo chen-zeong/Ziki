@@ -101,14 +101,14 @@ watch(() => props.selectedFrame, (newFrame) => {
 
 <style scoped>
 .frame-selector {
-  padding: 6px 4px;
+  padding: 3px 4px;
 }
 .frame-selector__pill {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  padding: 4px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
 }
 

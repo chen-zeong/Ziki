@@ -24,6 +24,7 @@ export interface VideoFile {
   originalUrl?: string;
   compressedUrl?: string;
   compressedPath?: string;
+  compressedSize?: number;
   metadata?: VideoMetadata; // 视频元数据
 }
 

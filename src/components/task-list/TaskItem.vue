@@ -173,6 +173,8 @@ const isHovering = ref(false);
 const isLeavingSelection = ref(false);
 const leavingTimer = ref<number | null>(null);
 const MotionCard = motion.div;
+const cardEase = [0.22, 1, 0.36, 1] as const;
+const travelEase = [0.16, 1, 0.3, 1] as const;
 
 const cardVariants = {
   rest: { y: 0, scale: 1, opacity: 1 },
@@ -183,15 +185,15 @@ const cardVariants = {
 const cardTransition = computed(() => {
   if (isDarkMode.value) {
     return {
-      default: { duration: 0.13, ease: [0.22, 1, 0.36, 1] },
-      scale: { type: 'spring', stiffness: 220, damping: 24, mass: 0.82 },
-      y: { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
+      default: { duration: 0.13, ease: cardEase },
+      scale: { type: 'spring' as const, stiffness: 220, damping: 24, mass: 0.82 },
+      y: { duration: 0.18, ease: travelEase }
     };
   }
   return {
-    default: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
-    scale: { type: 'spring', stiffness: 220, damping: 28, mass: 0.85 },
-    y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] }
+    default: { duration: 0.26, ease: cardEase },
+    scale: { type: 'spring' as const, stiffness: 220, damping: 28, mass: 0.85 },
+    y: { duration: 0.32, ease: travelEase }
   };
 });
 

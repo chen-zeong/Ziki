@@ -31,7 +31,7 @@
             aria-hidden="true"
             :initial="false"
             :animate="multiSelectMode ? { opacity: 0.32, scale: 1.02 } : { opacity: 0.12, scale: 1 }"
-            :transition="{ duration: 0.32, easing: 'ease-out' }"
+            :transition="{ duration: 0.32, ease: 'easeOut' }"
           />
           <TransitionGroup
             name="task-stagger"

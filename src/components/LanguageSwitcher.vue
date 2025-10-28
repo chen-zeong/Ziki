@@ -29,7 +29,7 @@
               class="language-item__check"
               :initial="{ opacity: 0, scale: 0.7 }"
               :animate="{ opacity: 1, scale: 1 }"
-              :transition="{ duration: 0.18, easing: 'ease-out' }"
+              :transition="{ duration: 0.18, ease: 'easeOut' }"
             >
               <Check class="w-4 h-4" />
             </MotionCheck>
