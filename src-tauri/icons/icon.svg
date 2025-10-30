@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Full-bleed rounded background, no external transparent padding -->
-  <rect x="0" y="0" width="100" height="100" rx="20" ry="20" fill="#000000"/>
-  <!-- Inner shapes -->
-  <path d="M28 30 H 72 L 53 50 H 28 Z" fill="#FBBF24"/>
-  <path d="M72 70 H 28 L 47 50 H 72 Z" fill="#F59E0B"/>
-</svg>

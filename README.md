@@ -1,7 +1,7 @@
 <p align="left"><strong>English</strong> | <a href="./README.zh.md">中文</a></p>
 
 <p align="center">
-  <img src="./assets/icon.svg" width="96" alt="App Icon" />
+  <img src="./assets/icon.png" width="96" alt="App Icon" />
 </p>
 <h1 align="center">Ziki</h1>
 <p align="center">

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/icon.svg" width="96" alt="App Icon" />
+  <img src="./assets/icon.png" width="96" alt="App Icon" />
 </p>
 <h1 align="center">Ziki · 即刻压缩</h1>
 <p align="center">

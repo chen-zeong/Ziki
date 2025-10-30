@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- Black rounded background with stricter safe padding -->
-  <rect x="10" y="10" width="80" height="80" rx="18" ry="18" fill="#000000"/>
-  <!-- Inner shapes kept within safe area -->
-  <path d="M30 30 H 70 L 53 50 H 30 Z" fill="#FBBF24"/>
-  <path d="M70 70 H 30 L 47 50 H 70 Z" fill="#F59E0B"/>
-</svg>
