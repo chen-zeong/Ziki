@@ -2,7 +2,8 @@
   <div class="flex h-full flex-col overflow-hidden" :class="videoPath ? 'gap-3' : 'gap-6'">
     <!-- 预览窗口 -->
     <div
-      class="relative w-full aspect-[25/16] rounded-xl bg-white dark:bg-[#181b23] flex items-center justify-center overflow-hidden transition-all duration-300 flex-none"
+      class="relative w-full rounded-xl bg-white dark:bg-[#181b23] flex items-center justify-center overflow-hidden transition-all duration-300 flex-1 min-h-[220px]"
+      style="flex-basis: clamp(240px, 40vh, 520px);"
     >
       <VideoPreview
         ref="videoPreviewRef"
@@ -64,7 +65,8 @@
     
     <!-- 设置区域 -->
     <div
-      class="flex-1 min-h-0 flex flex-col gap-4 transition-all duration-300 overflow-auto"
+      class="flex-none transition-all duration-300 overflow-auto flex flex-col gap-4 pr-1"
+      :style="{ maxHeight: settingsMaxHeight }"
     >
       <template v-if="videoPath">
         <VideoSettingsPanel
@@ -139,6 +141,12 @@ const { t } = useI18n();
 const showTimeRange = ref(false);
 const timeRangeButtonRef = ref<HTMLButtonElement | null>(null);
 const timeRangeDropdownRef = ref<HTMLElement | null>(null);
+const settingsMaxHeight = computed(() => {
+  if (props.videoPath) {
+    return 'max(300px, calc(100vh - 360px))';
+  }
+  return 'max(280px, calc(100vh - 320px))';
+});
 
 const currentFile = inject<{ value: VideoFile | null }>('currentFile', { value: null });
 const currentVideoMetadata = computed(() => currentFile?.value?.metadata);

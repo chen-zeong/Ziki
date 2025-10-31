@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible min-h-[280px] flex flex-col transition-all duration-300">
+  <div class="p-4 rounded-xl bg-white dark:bg-[#222221] border border-slate-200/70 dark:border-white/10 overflow-visible flex flex-col transition-all duration-300">
     <div class="space-y-4">
       <div>
         <div class="flex items-center justify-between mb-2">

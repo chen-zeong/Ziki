@@ -1,12 +1,12 @@
 <template>
-  <div class="h-full flex flex-col transition-all duration-300">
+  <div class="flex flex-col transition-all duration-300">
     <!-- 参数设置内容 -->
-    <div class="flex-grow overflow-hidden text-sm">
-      <div class="h-full relative">
+    <div class="text-sm">
+      <div class="relative">
         <!-- 已完成任务时的交互遮罩 -->
         <div v-if="isSettingsLocked" class="absolute inset-0 z-10 cursor-not-allowed" style="background: transparent;"></div>
         <!-- 基础设置内容 -->
-        <div class="grid grid-cols-2 gap-x-6 gap-y-4 h-full" :class="{ 'opacity-50': isSettingsLocked }">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 content-start" :class="{ 'opacity-50': isSettingsLocked }">
           <div class="space-y-4">
             <VideoFormatSettings v-model="formatSettings" :metadata="currentVideoMetadata" :quality-settings="qualitySettings" @update:quality-settings="handleQualitySettingsUpdate" :hide-quality="true" />
           </div>
