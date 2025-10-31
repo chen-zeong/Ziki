@@ -16,7 +16,7 @@
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 - Image and video compression: Optimize size and transcode common image and video formats, including compression to animated AVIF
 - Batch processing and task queue: Add multiple files at once, with queueing, status filtering, and cleanup
@@ -29,18 +29,16 @@
 - Multi-language and theme: Supports Chinese/English, light/dark/auto themes
 - Cross-platform: macOS, Windows
 
-## 📋 System Requirements
+## System Requirements
 
 - **macOS**: 10.15 (Catalina) or later
 - **Windows**: 8 or later
 - **FFmpeg**: Integrated FFmpeg 7.1 - no local installation required
 
-## 🖼️ Screenshots
+## Screenshots
 
-### Demo
-<div>
-  <img src="./assets/demo.avif" alt="Demo" width="100%" />
-</div>
+
+
 
 ### macOS
 <div>
@@ -52,7 +50,7 @@
   <img src="./assets/screenshots/win.webp" alt="Windows UI" width="100%" />
 </div>
 
-## 🚀 Development
+## Development
 
 Requires Node.js, pnpm, and a Rust environment.
 
@@ -70,7 +68,7 @@ pnpm tauri build
 
 
 
-## 🙏 References
+## References
 
 - CompressO (open-source cross-platform video compression app): https://github.com/codeforreal1/compressO
 - Rotato Video Compressor (FFmpeg-based online/offline compression tool): https://tools.rotato.app/compress

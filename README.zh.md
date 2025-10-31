@@ -13,7 +13,7 @@
 
 ---
 
-## ✨ 功能亮点
+## 功能亮点
 
 - 图片与视频压缩：支持常见图片、视频格式的压缩与转码，支持生成 AVIF 动图
 - 批量处理与任务队列：一次添加多文件，支持队列、状态筛选与清理
@@ -26,18 +26,16 @@
 - 多语言与主题：支持中文/英文，明暗/自动主题
 - 跨平台：macOS、Windows
 
-## 📋 系统要求
+## 系统要求
 
 - **macOS**：10.15 (Catalina) 或更高版本
 - **Windows**：8 或更高版本
 - **FFmpeg**：已集成 FFmpeg 7.1 - 无需本地安装
 
-## 🖼️ 截图
+## 截图
 
-### Demo
-<div>
-  <img src="./assets/demo.avif" alt="Demo" width="100%" />
-</div>
+
+
 
 ### macOS
 <div>
@@ -49,7 +47,7 @@
   <img src="./assets/screenshots/win.webp" alt="Windows UI" width="100%" />
 </div>
 
-## 🚀 开发
+## 开发
 
 需要 Node.js、pnpm 与 Rust 环境。
 
@@ -66,7 +64,7 @@ pnpm tauri build
 ```
 
 
-## 🙏 参考
+## 参考
 
 - CompressO（开源跨平台视频压缩 App）：https://github.com/codeforreal1/compressO
 - Rotato Video Compressor（基于 FFmpeg 的在线/离线压缩工具）：https://tools.rotato.app/compress
