@@ -75,7 +75,7 @@
             
             <div 
                ref="fullscreenSliderRef"
-               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden border-[4px] border-sky-200/60 dark:border-[#2c353e] backdrop-blur-lg"
+               class="comparison-slider fullscreen-slider w-full h-full bg-[#10121a] dark:bg-black relative rounded-3xl overflow-hidden backdrop-blur-lg"
                :style="{ '--position': `${sliderPosition}%` }"
                @click.stop
             >
