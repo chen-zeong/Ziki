@@ -106,14 +106,14 @@ pub fn get_desktop_path() -> Result<String, String> {
     let desktop_path = get_desktop_directory()
         .ok_or("Failed to get desktop path")?;
     
-    let ziki_path = desktop_path.join("ziki");
+    let compressgo_path = desktop_path.join("CompressGo");
     
-    if !ziki_path.exists() {
-        std::fs::create_dir_all(&ziki_path)
-            .map_err(|e| format!("Failed to create ziki directory: {}", e))?;
+    if !compressgo_path.exists() {
+        std::fs::create_dir_all(&compressgo_path)
+            .map_err(|e| format!("Failed to create CompressGo directory: {}", e))?;
     }
     
-    ziki_path.to_str()
+    compressgo_path.to_str()
         .ok_or("Failed to convert path to string".to_string())
         .map(|s| s.to_string())
 }

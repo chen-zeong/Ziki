@@ -3,7 +3,7 @@
 <p align="center">
   <img src="./assets/icon.png" width="96" alt="App Icon" />
 </p>
-<h1 align="center">Ziki</h1>
+<h1 align="center">CompressGo</h1>
 <p align="center">
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2.x-24C8DB?logo=tauri&logoColor=white" />
   <img alt="Vue 3" src="https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js&logoColor=white" />

@@ -42,7 +42,7 @@ export default {
   fileUpload: {
     title: 'Drop videos or images to start',
     subtitle: 'or click to select files',
-    description: 'Batch import media and let Ziki detect video or image formats automatically.',
+    description: 'Batch import media and let CompressGo detect video or image formats automatically.',
     supportedFormats: `Video: MP4 / MOV / MKV / AVI / WEBM
 Image: JPG / PNG / WEBP / TIFF / SVG / HEIC / AVIF`,
     selectFiles: 'Choose Files',
