@@ -22,8 +22,11 @@
       />
     </div>
     
-    <!-- 帧选择器（仅视频显示） -->
-    <div v-if="videoPath" class="flex items-center justify-center w-full gap-3.5 flex-none">
+    <!-- 帧选择器区域（仅视频） -->
+    <div
+      v-if="videoPath"
+      class="flex items-center justify-center w-full gap-3.5 flex-none"
+    >
       <div class="relative flex-shrink-0">
         <button
           type="button"
@@ -91,6 +94,14 @@
         />
       </template>
     </div>
+
+    <!-- 图片模式占位 -->
+    <div
+      v-if="!videoPath"
+      class="flex-none"
+      :style="frameSelectorPlaceholderStyle"
+      aria-hidden="true"
+    />
   </div>
 </template>
 <script setup lang="ts">
@@ -147,6 +158,7 @@ const settingsMaxHeight = computed(() => {
   }
   return 'max(280px, calc(100vh - 320px))';
 });
+const frameSelectorPlaceholderStyle: Record<string, string> = { minHeight: '3.5rem' };
 
 const currentFile = inject<{ value: VideoFile | null }>('currentFile', { value: null });
 const currentVideoMetadata = computed(() => currentFile?.value?.metadata);
