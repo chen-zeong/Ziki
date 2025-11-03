@@ -16,6 +16,12 @@
 
 ---
 
+<a href="https://apps.microsoft.com/detail/9njnpscrpv28?referrer=appbadge&mode=direct">
+  <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" />
+</a>
+
+
+
 ## Key Features
 
 - Image and video compression: Optimize size and transcode common image and video formats, including compression to animated AVIF

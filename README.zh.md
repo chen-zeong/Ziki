@@ -13,6 +13,12 @@
 
 ---
 
+<a href="https://apps.microsoft.com/detail/9njnpscrpv28?referrer=appbadge&mode=direct">
+  <img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" />
+</a>
+
+
+
 ## 功能亮点
 
 - 图片与视频压缩：支持常见图片、视频格式的压缩与转码，支持生成 AVIF 动图
